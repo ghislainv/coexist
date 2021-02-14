@@ -63,13 +63,20 @@ rho <- scales::rescale(rho, to=c(0, 1))
 env <- matrix(rho, nrow=ncell_side, ncol=ncell_side, byrow=TRUE)
 
 # Plot
-plot(raster(env), main="Environment")
+png(file=here("outputs", "environment.png"))
+plot(raster(env), main="Environment", col=topo.colors(255))
+dev.off()
+
+# Habitat frequency
+png(file=here("outputs", "habitat_freq.png"))
 hist(env, main="Environment", freq=FALSE)
+dev.off()
 
 # =========================================
 # Species performance given the environment
 # =========================================
 
+# Number of species
 nsp <- 50
 # Remove last species (otherwise last species=first species)
 perf <- seq(0, 1, length.out=nsp+1)[-(nsp+1)]
@@ -98,7 +105,7 @@ for (i in 1:ncell) {
 # Number of repetitions
 nrep <- 10
 # Number of generations
-ngen <- 100
+ngen <- 500
 # Mortality probability
 theta <- 0.2
 
@@ -134,8 +141,9 @@ for (r in 1:nrep) {
   #hist(sp)
   scene_start <- matrix(sp, nrow=ncell_side, ncol=ncell_side, byrow=TRUE)
   if (r==1) {
-    pdf(file=here("outputs", "scene_start.pdf"))
-    plot(raster(scene_start), main="Species", col=c(rev(terrain.colors(255))))
+    png(file=here("outputs", "scene_start.png"))
+    plot(raster(scene_start), main="Species", zlim=c(0, 50),
+         col=c("black", rev(terrain.colors(50))))
     dev.off()
   }
   scene <- scene_start
@@ -166,8 +174,9 @@ for (r in 1:nrep) {
     scene[mortality==1] <- 0
     # Plot once
     if (r==1 & g==1) {
-      pdf(file=here("outputs", "mortality_events.pdf"))
-      plot(raster(scene), main="Species", col=c("black", rev(terrain.colors(255))))
+      png(file=here("outputs", "mortality_events.png"))
+      plot(raster(scene), main="Species - with vacant sites", zlim=c(0, 50),
+           col=c("black", rev(terrain.colors(50))))
       dev.off()
     }
 
@@ -202,6 +211,14 @@ for (r in 1:nrep) {
     
   } # End ngen
   
+  # Plot final scene once
+  if (r==1) {
+    png(file=here("outputs", "scene_end.png"))
+    plot(raster(scene), main="Species - End", zlim=c(0, 50),
+         col=c("black", rev(terrain.colors(50))))
+    dev.off()
+  }
+  
   # Species rank
   rank_sp[r, ] <- rank(-abund[ngen, ], ties.method="min")
   
@@ -227,7 +244,7 @@ p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
   geom_smooth(method=lm , color="red", fill="#69b3a2", se=TRUE) +
   xlab("Species habitat frequency") +
   ylab("Species mean rank (high rank = low abundance)")
-ggsave(p, filename=here("outputs", "mean_rank-habitat_freq.pdf"))
+ggsave(p, filename=here("outputs", "mean_rank-habitat_freq.png"))
 
 # =========================
 # End of file
