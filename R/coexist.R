@@ -10,9 +10,15 @@ library(raster)
 library(here)
 library(scales)
 library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(glue)
 
 # Seed for reproducibility
 seed <- 1234
+
+# Figure width
+fig_width <- 16.6 # in cm
 
 # =========================
 # Landscape and environment
@@ -61,14 +67,15 @@ rho <- c(rmvn(1, mu=rep(0,ncell), V=covrho, seed=seed)) # Spatial Random Effects
 rho <- rho-mean(rho) # Centering rhos on zero
 rho <- scales::rescale(rho, to=c(0, 1))
 env <- matrix(rho, nrow=ncell_side, ncol=ncell_side, byrow=TRUE)
+save(env, file=here("outputs", "m1", "env.rda"))
 
 # Plot
-png(file=here("outputs", "environment.png"))
+png(file=here("outputs", "m1", "environment.png"))
 plot(raster(env), main="Environment", col=topo.colors(255))
 dev.off()
 
 # Habitat frequency
-png(file=here("outputs", "habitat_freq.png"))
+png(file=here("outputs", "m1", "habitat_freq.png"))
 hist(env, main="Environment", freq=FALSE)
 dev.off()
 
@@ -83,18 +90,21 @@ perf <- seq(0, 1, length.out=nsp+1)[-(nsp+1)]
 
 # Habitat frequency for each species
 sp_hab_freq <- dnorm(perf, mean=mean(env), sd=sd(env))
-plot(sp_hab_freq)
+png(file=here("outputs", "m1", "species_habitat_freq.png"))
+plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
+dev.off()
 
 # Matrix of species performance on each cell (distances)
 # Cell in rows, Species in columns
 dist_E_Sp <- matrix(NA, nrow=ncell, ncol=nsp) 
 for (i in 1:ncell) {
+  env_i <- values(raster(env))[i] 
   for (j in 1:nsp) {
-    dist <- abs(perf[j]-env[i])
+    dist <- abs(perf[j]-env_i)
     if (dist>0.5) {
       dist <- 1-dist
     }
-    dist_E_Sp[i,j] <- dist
+    dist_E_Sp[i, j] <- dist
   }
 }
 
@@ -105,28 +115,28 @@ for (i in 1:ncell) {
 # Number of repetitions
 nrep <- 10
 # Number of generations
-ngen <- 500
+ngen <- 100
 # Mortality probability
-theta <- 0.2
+theta <- 0.1
 
-# Function to identifying the species with the highest performance
+# Function to identify the species with the highest performance
 high_perf_sp <- function(dist, sp_pres) {
   dist_pres <- dist[sp_pres]
   min_dist <- min(dist_pres)
-  sp_pref <- which(dist==min_dist)
+  sp_high_perf <- sp_pres[which(dist_pres==min_dist)]
   # If two species adapted, selection at random
-  if (length(sp_pref)==2) {
+  if (length(sp_high_perf)==2) {
     # Random permutation
-    sp_pref <- sample(sp_pref)
-    sp_pref <- sp_pref[1]
+    sp_high_perf <- sample(sp_high_perf)
+    sp_high_perf <- sp_high_perf[1]
   }
-  return(sp_pref)
+  return(sp_high_perf)
 }
 
 # Species richness
 sp_rich <- matrix(NA, nrow=ngen+1, ncol=nrep)
 
-# Species rank at the end of the simulations
+# Species rank at the end of the generations
 rank_sp <- matrix(NA, nrow=nrep, ncol=nsp)
 
 # Loop on repetitions
@@ -141,8 +151,8 @@ for (r in 1:nrep) {
   #hist(sp)
   scene_start <- matrix(sp, nrow=ncell_side, ncol=ncell_side, byrow=TRUE)
   if (r==1) {
-    png(file=here("outputs", "scene_start.png"))
-    plot(raster(scene_start), main="Species", zlim=c(0, 50),
+    png(file=here("outputs", "m1", "scene_start.png"))
+    plot(raster(scene_start), main="Species - Start", zlim=c(0, 50),
          col=c("black", rev(terrain.colors(50))))
     dev.off()
   }
@@ -153,11 +163,11 @@ for (r in 1:nrep) {
   # -----------------------------------------
   
   # Species richness
-  sp_rich[1, r] <- length(unique(scene[scene!=0]))
+  sp_rich[1, r] <- length(unique(c(scene)))
   
   # Abundances
   abund <- matrix(NA, ncol=nsp, nrow=ngen+1)
-  abund[1,] <- table(factor(scene, levels=1:nsp))
+  abund[1,] <- table(factor(c(scene), levels=1:nsp))
   
   # Simulating generation
   for (g in 1:ngen) {
@@ -174,7 +184,7 @@ for (r in 1:nrep) {
     scene[mortality==1] <- 0
     # Plot once
     if (r==1 & g==1) {
-      png(file=here("outputs", "mortality_events.png"))
+      png(file=here("outputs", "m1", "mortality_events.png"))
       plot(raster(scene), main="Species - with vacant sites", zlim=c(0, 50),
            col=c("black", rev(terrain.colors(50))))
       dev.off()
@@ -206,16 +216,16 @@ for (r in 1:nrep) {
     # Diversity
     # *********************
     
-    sp_rich[g+1, r] <- length(unique(scene[scene!=0]))
-    abund[g+1, ] <- table(factor(scene, levels=1:nsp))
+    sp_rich[g+1, r] <- length(unique(as.vector(scene)))
+    abund[g+1, ] <- table(factor(as.vector(scene), levels=1:nsp))
     
   } # End ngen
   
   # Plot final scene once
   if (r==1) {
-    png(file=here("outputs", "scene_end.png"))
-    plot(raster(scene), main="Species - End", zlim=c(0, 50),
-         col=c("black", rev(terrain.colors(50))))
+    png(file=here("outputs", "m1", "scene_end.png"))
+    plot(raster(scene), main=glue("Species - End (ngen={ngen})"),
+         zlim=c(0, 50), col=c("black", rev(terrain.colors(50))))
     dev.off()
   }
   
@@ -232,6 +242,22 @@ sp_rich
 rank_sp
 
 # ---------------------------------------------
+# Plot species richness
+# ---------------------------------------------
+
+sp_rich <- data.frame(sp_rich)
+sp_rich_long <- sp_rich %>%
+  mutate(gen=1:(ngen+1)) %>%
+  pivot_longer(cols=X1:X10, names_to="rep",
+               names_prefix="X", values_to="sp_rich")
+p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
+  geom_line() + 
+  xlab("Generations") + 
+  ylab("Species richness")
+ggsave(p, filename=here("outputs", "m1", "species_richness_with_time.png"),
+       width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+# ---------------------------------------------
 # Link between final rank and habitat frequency
 # ---------------------------------------------
 
@@ -244,7 +270,42 @@ p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
   geom_smooth(method=lm , color="red", fill="#69b3a2", se=TRUE) +
   xlab("Species habitat frequency") +
   ylab("Species mean rank (high rank = low abundance)")
-ggsave(p, filename=here("outputs", "mean_rank-habitat_freq.png"))
+ggsave(p, filename=here("outputs", "m1", "mean_rank-habitat_freq.png"),
+       width=fig_width, height=fig_width, units="cm", dpi=300)
+
+# ----------------------------------
+# Spatial autocorrelation of species
+# ----------------------------------
+
+library(geoR)
+
+# Species autocorrelation
+sp_XY <- data.frame(rasterToPoints(raster(scene)))
+names(sp_XY) <- c("x", "y", "sp")
+vario_sp <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
+# Environment autocorrelation
+vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=values(raster(env)))
+# Plot with correlation
+png(file=here("outputs", "m1", "sp_autocorrelation.png"),
+    width=fig_width, height=fig_width*0.8, units="cm", res=300)
+par(mfrow=c(2,2))
+plot(vario_sp, main="Species")
+plot(vario_env, main="Environment")
+plot(vario_env$v, vario_sp$v,
+     xlab="Semivariance for environment",
+     ylab="Semivariance for species")
+m <- lm(vario_sp$v ~ vario_env$v-1)
+abline(a=0, b=coef(m), col="red")
+dev.off()
+
+## Conclusions
+
+# 1. Because mortality rate is equal for all species, species with the lowest habitat frequency have a higher probability to disappear
+# 2. Stable coexistence (cf. species rank from one repetition to the other)
+# 3. Species abundance at the end correlated with species habitat frequency
+# 4. Species autocorrelation with correspondence between species and environment
+# 5. For a given habitat distribution, the number of species at the equilibrium depends on the mortality rate
+#    If the mortality rate is higher, a higher number of low abundance species disappear.   
 
 # =========================
 # End of file
