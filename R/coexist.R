@@ -14,6 +14,10 @@ library(tidyr)
 library(dplyr)
 library(glue)
 
+# Create output directories
+dir.create("outputs")
+dir.create("outputs/m1")
+
 # Seed for reproducibility
 seed <- 1234
 
@@ -135,9 +139,10 @@ high_perf_sp <- function(dist, sp_pres) {
 
 # Species richness
 sp_rich <- matrix(NA, nrow=ngen+1, ncol=nrep)
-
 # Species rank at the end of the generations
 rank_sp <- matrix(NA, nrow=nrep, ncol=nsp)
+# Environmental filtering
+env_filt <- matrix(NA, nrow=ngen+1, ncol=nrep)
 
 # Loop on repetitions
 for (r in 1:nrep) {
@@ -157,10 +162,6 @@ for (r in 1:nrep) {
     dev.off()
   }
   scene <- scene_start
-
-  # -----------------------------------------
-  # Dynamics
-  # -----------------------------------------
   
   # Species richness
   sp_rich[1, r] <- length(unique(c(scene)))
@@ -168,6 +169,14 @@ for (r in 1:nrep) {
   # Abundances
   abund <- matrix(NA, ncol=nsp, nrow=ngen+1)
   abund[1,] <- table(factor(c(scene), levels=1:nsp))
+  
+  # Environmental filtering
+  scene_perf <- matrix(perf[as.vector(scene)], ncol=ncell_side)
+  env_filt[1, r] <- mean(abs(env-scene_perf))
+
+  # -----------------------------------------
+  # Dynamics
+  # -----------------------------------------
   
   # Simulating generation
   for (g in 1:ngen) {
@@ -218,6 +227,10 @@ for (r in 1:nrep) {
     
     sp_rich[g+1, r] <- length(unique(as.vector(scene)))
     abund[g+1, ] <- table(factor(as.vector(scene), levels=1:nsp))
+    
+    # Environmental filtering
+    scene_perf <- matrix(perf[as.vector(scene)], ncol=ncell_side)
+    env_filt[g+1, r] <- mean(abs(env-scene_perf))
     
   } # End ngen
   
@@ -272,6 +285,23 @@ p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
   ylab("Species mean rank (high rank = low abundance)")
 ggsave(p, filename=here("outputs", "m1", "mean_rank-habitat_freq.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
+
+# ---------------------------------------------
+# Plot species richness
+# ---------------------------------------------
+
+sp_rich <- data.frame(sp_rich)
+sp_rich_long <- sp_rich %>%
+  mutate(gen=1:(ngen+1)) %>%
+  pivot_longer(cols=X1:X10, names_to="rep",
+               names_prefix="X", values_to="sp_rich")
+p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
+  geom_line() + 
+  xlab("Generations") + 
+  ylab("Species richness")
+ggsave(p, filename=here("outputs", "m1", "species_richness_with_time.png"),
+       width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
 
 # ----------------------------------
 # Spatial autocorrelation of species

@@ -14,6 +14,10 @@ library(tidyr)
 library(dplyr)
 library(glue)
 
+# Create output directories
+dir.create("outputs")
+dir.create("outputs/m2")
+
 # Seed for reproducibility
 seed <- 1234
 
