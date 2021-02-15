@@ -287,21 +287,21 @@ ggsave(p, filename=here("outputs", "m1", "mean_rank-habitat_freq.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
 # ---------------------------------------------
-# Plot species richness
+# Environmental filtering
 # ---------------------------------------------
 
-sp_rich <- data.frame(sp_rich)
-sp_rich_long <- sp_rich %>%
+env_filt <- data.frame(env_filt)
+env_filt_long <- env_filt %>%
   mutate(gen=1:(ngen+1)) %>%
   pivot_longer(cols=X1:X10, names_to="rep",
-               names_prefix="X", values_to="sp_rich")
-p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
-  geom_line() + 
+               names_prefix="X", values_to="env_filt")
+p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
+  geom_line() +
+  labs(title="Environmental filtering") +
   xlab("Generations") + 
-  ylab("Species richness")
-ggsave(p, filename=here("outputs", "m1", "species_richness_with_time.png"),
+  ylab("Mean env-species perf difference")
+ggsave(p, filename=here("outputs", "m1", "environmental_filtering.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
-
 
 # ----------------------------------
 # Spatial autocorrelation of species
