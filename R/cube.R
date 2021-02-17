@@ -14,6 +14,9 @@ library(tidyr)
 library(dplyr)
 library(glue)
 library(geoR) # variog()
+library(plot3D) # scatter3D()
+library(Rcpp)
+library(RcppArmadillo)
 
 # Create output directories
 dir.create(here("outputs"))
@@ -36,6 +39,9 @@ inv_logit <- function(x, min=0, max=1) {
   p <- ifelse( is.na(p) & !is.na(x), 1, p ) # fix problems with +Inf
   return(p * (max-min) + min)
 }
+
+# Cpp function to compute distance between Sites and Species
+Rcpp::sourceCpp(here("src", "dist_Site_Sp.cpp"))
 
 # =========================
 # Landscape and environment
@@ -125,18 +131,31 @@ nsp <- n_niche^n_axis
 base_coord <- seq(0, 1, length.out=n_niche+1)[-(n_niche+1)]+niche_width/2
 sp_x <- rep(rep(base_coord, n_niche), n_niche)
 sp_y <- rep(rep(base_coord, each=n_niche), n_niche)
-sp_z <- rep(rep(base_coord, each=n_niche^2), n_niche)
-niche_optimum <- cbind(sp_x, sp_y, sp_z)
+sp_z <- rep(base_coord, each=n_niche^2)
+niche_optimum <- as.data.frame(cbind(sp_x, sp_y, sp_z))
+
+# Random optimum for species
+randomOptSp <- TRUE
+if (randomOptSp) {
+  set.seed(seed)
+  niche_optimum <- data.frame(sp_x=runif(nsp), sp_y=runif(nsp), sp_z=runif(nsp))
+  niche_optimum <- niche_optimum[order(niche_optimum$sp_z, niche_optimum$sp_y, niche_optimum$sp_x), ]
+}
+
+# Plot the species niche
+png(file=here("outputs", "cube", "species_niche.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
+par(mar=c(1,1,2,2))
+scatter3D(niche_optimum$sp_x, niche_optimum$sp_y, niche_optimum$sp_z,
+          pch=16, 
+          colvar=1:64, col=rainbow(nsp),
+          bty = "f", main ="Three-dimensional niche", phi=0,
+          xlim=c(0,1), ylim=c(0,1), zlim=c(0,1))
+dev.off()
 
 # Matrix of species performance on each site (distances)
 # Sites in rows, Species in columns
-dist_E_Sp <- matrix(NA, nrow=nsite, ncol=nsp) 
-for (i in 1:nsite) {
-  for (j in 1:nsp) {
-    dist <- sqrt(sum((niche_optimum[j,]-sites[i,])^2))
-    dist_E_Sp[i, j] <- dist
-  }
-}
+dist_E_Sp <- dist_Site_Sp(as.matrix(sites), as.matrix(niche_optimum))
 dist_E_Sp <- rescale(dist_E_Sp)
 perf_E_Sp <- 1-dist_E_Sp
 
@@ -212,7 +231,7 @@ for (r in 1:nrep) {
     png(file=here("outputs", "cube", "community_start.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
     plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
-         col=c("black", rev(terrain.colors(nsp))))
+         col=c("black", rainbow(nsp)))
     dev.off()
   }
   community <- community_start
@@ -257,7 +276,7 @@ for (r in 1:nrep) {
       png(file=here("outputs", "cube", "mortality_events.png"),
           width=fig_width, height=fig_width, units="cm", res=300)
       plot(raster(community), main="Species - with vacant sites", zlim=c(0, nsp),
-           col=c("black", rev(terrain.colors(nsp))))
+           col=c("black", rainbow(nsp)))
       dev.off()
     }
 
@@ -306,7 +325,7 @@ for (r in 1:nrep) {
     png(file=here("outputs", "cube", "community_end.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
     plot(raster(community), main=glue("Species - End (ngen={ngen})"),
-         zlim=c(0, nsp), col=c("black", rev(terrain.colors(nsp))))
+         zlim=c(0, nsp), col=c("black", rainbow(nsp)))
     dev.off()
   }
   
@@ -376,12 +395,12 @@ png(file=here("outputs", "cube", "spatial_comp_env_sp.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 par(mfrow=c(2,2))
 plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
-     col=c("black", rev(terrain.colors(nsp))))
+     col=c("black", rainbow(nsp)))
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
-     col=c("black", rev(terrain.colors(nsp))))
+     col=c("black", rainbow(nsp)))
 plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
-     col=c("black", rev(terrain.colors(nsp))))
+     col=c("black", rainbow(nsp)))
 dev.off()
 
 # ---------------------------------------------
