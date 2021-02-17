@@ -1,0 +1,28 @@
+---
+title: "Theoretical model of species coexistence in high dimensions"
+subtitle: "Has intraspecific variability anything to do with species coexistence?"
+author: "Ghislain VIEILLEDENT, Isabelle MARECHAUX, Camille GIRARD-TERCIEUX"
+date: ""
+output:
+  bookdown::html_document2:
+    number_sections: no
+    toc: yes
+    toc_float: yes
+bibliography: _biblio/biblio.bib
+link-citations: yes
+csl: _biblio/journal-of-applied-ecology.csl
+---
+
+```{r lib-tab, echo=FALSE, message=FALSE, results="hide"}
+require(knitr)
+require(dplyr)
+options(knitr.table.format="html")
+```
+
+# Intro
+
+# Model
+
+# Result and discussion
+
+

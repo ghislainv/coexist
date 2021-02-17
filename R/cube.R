@@ -184,11 +184,10 @@ mortality_E_Sp <- inv_logit(logit(0.1) + b * scale_dist_E_Sp)
 hist(mortality_E_Sp)
 
 # Habitat frequency for each species
-x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
-y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
-z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
-sp_on_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
-sp_hab_freq <- table(factor(sp_on_site, levels=1:nsp))
+rank_dist_E <- t(apply(dist_E_Sp, 1, rank, ties.method="min"))
+sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
+sp_hab_freq <- as.table(sp_hab_freq)
+names(sp_hab_freq) <- 1:nsp
 png(file=here("outputs", "cube", "species_habitat_freq.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
@@ -367,7 +366,7 @@ sp_mean_rank <- apply(rank_sp, 2, mean)
 df <- data.frame(cbind(sp_mean_rank, sp_hab_freq))
 p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
   geom_point() +
-  geom_smooth(method="auto", color="red", fill="#69b3a2", se=TRUE) +
+  geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
   xlab("Species habitat frequency") +
   ylab("Species mean rank (higher rank = lower abundance)")
 ggsave(p, filename=here("outputs", "cube", "mean_rank-habitat_freq.png"),
