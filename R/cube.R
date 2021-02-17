@@ -42,26 +42,26 @@ inv_logit <- function(x, min=0, max=1) {
 # =========================
 
 # Landscape
-ncell_side <- 25
-mat <- matrix(0, nrow=ncell_side, ncol=ncell_side)
+nsite_side <- 25
+mat <- matrix(0, nrow=nsite_side, ncol=nsite_side)
 r <- raster(mat, crs="+proj=utm +zone=1")
-ncell <- ncell(r)
+nsite <- ncell(r)
 coords <- coordinates(r)
 
 # Environment on each site
-Sites <- data.frame(site=1:ncell, V1_env=NA, V2_env=NA, V3_env=NA)
+Sites <- data.frame(site=1:nsite, V1_env=NA, V2_env=NA, V3_env=NA)
 
 # Neighbourhood matrix
-neighbors.mat <- adjacent(r, cells=c(1:ncell), directions=8,
+neighbors.mat <- adjacent(r, cells=c(1:nsite), directions=8,
                           pairs=TRUE, sorted=TRUE)
-# Number of neighbours by cell
+# Number of neighbours by site
 n.neighbors <- as.data.frame(table(as.factor(neighbors.mat[,1])))[,2]
-# Adjacent cells
+# Adjacent sites
 adj <- neighbors.mat[,2]
 # Generate symmetric adjacency matrix, A
-A <- matrix(0,ncell,ncell)
+A <- matrix(0,nsite,nsite)
 index.start <- 1
-for (i in 1:ncell) {
+for (i in 1:nsite) {
   index.end <- index.start+n.neighbors[i]-1
   A[i,adj[c(index.start:index.end)]] <- 1
   index.start <- index.end+1
@@ -81,30 +81,34 @@ rmvn <- function(n, mu=0, V=matrix(1), seed=1234) {
 # Generate spatial random effects
 Vrho.target <- 1 # Variance of spatial random effects
 d <- 1 # Spatial dependence parameter = 1 for intrinsic CAR
-Q <- diag(n.neighbors)-d*A + diag(.0001,ncell) # Add small constant to make Q non-singular
+Q <- diag(n.neighbors)-d*A + diag(.0001,nsite) # Add small constant to make Q non-singular
 covrho <- Vrho.target*solve(Q) # Covariance of rhos
 
 # Number of axis for the niche
 n_axis <- 3
 
 # Environment on each site
-sites <- data.frame(V1_env=rep(NA, ncell), V2_env=NA, V3_env=NA)
+sites <- data.frame(V1_env=rep(NA, nsite), V2_env=NA, V3_env=NA)
 env <- list()
 for (i in 1:n_axis) {
   seed <- 1234 + i - 1
-  rho <- c(rmvn(1, mu=rep(0, ncell), V=covrho, seed=seed)) # Spatial Random Effects
+  rho <- c(rmvn(1, mu=rep(0, nsite), V=covrho, seed=seed)) # Spatial Random Effects
   rho <- rho-mean(rho) # Centering rhos on zero
   rho <- scales::rescale(rho, to=c(0, 1))
   sites[,i] <- rho
-  env[[i]] <- matrix(rho, nrow=ncell_side, ncol=ncell_side, byrow=TRUE)
+  env[[i]] <- matrix(rho, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
 }
+env_stack <- stack(raster(env[[1]]*255), raster(env[[2]]*255), raster(env[[3]]*255))
+crs(env_stack) <- "+proj=utm +zone=1"
 
 # Plot
-png(file=here("outputs", "cube", "environment.png"))
+png(file=here("outputs", "cube", "environment.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
 par(mfrow=c(2,2))
 plot(raster(env[[1]]), main="Environment var1", col=topo.colors(255))
 plot(raster(env[[2]]), main="Environment var2", col=topo.colors(255))
 plot(raster(env[[3]]), main="Environment var3", col=topo.colors(255))
+plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
 dev.off()
 
 # =========================================
@@ -126,8 +130,8 @@ niche_optimum <- cbind(sp_x, sp_y, sp_z)
 
 # Matrix of species performance on each site (distances)
 # Sites in rows, Species in columns
-dist_E_Sp <- matrix(NA, nrow=ncell, ncol=nsp) 
-for (i in 1:ncell) {
+dist_E_Sp <- matrix(NA, nrow=nsite, ncol=nsp) 
+for (i in 1:nsite) {
   for (j in 1:nsp) {
     dist <- sqrt(sum((niche_optimum[j,]-sites[i,])^2))
     dist_E_Sp[i, j] <- dist
@@ -150,7 +154,7 @@ high_perf_sp <- function(dist, sp_pres) {
   return(sp_high_perf)
 }
 
-# Probability of dying of each species on each cell
+# Probability of dying of each species on each site
 # Strength of unsuitability
 b <- 0.5
 m_dist <- mean(dist_E_Sp)
@@ -161,12 +165,13 @@ mortality_E_Sp <- inv_logit(logit(0.1) + b * scale_dist_E_Sp)
 hist(mortality_E_Sp)
 
 # Habitat frequency for each species
-x_cell <- pmin(floor(sites$V1_env/niche_width)+1, 4)
-y_cell <- pmin(floor(sites$V2_env/niche_width)+1, 4)
-z_cell <- pmin(floor(sites$V3_env/niche_width)+1, 4)
-sp_on_cell <- (z_cell-1)*n_niche^2+(y_cell-1)*n_niche+(x_cell-1)+1
-sp_hab_freq <- table(factor(sp_on_cell, levels=1:nsp))
-png(file=here("outputs", "m3", "species_habitat_freq.png"))
+x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
+y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
+z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
+sp_on_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
+sp_hab_freq <- table(factor(sp_on_site, levels=1:nsp))
+png(file=here("outputs", "cube", "species_habitat_freq.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
 plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
 dev.off()
 
@@ -199,12 +204,13 @@ for (r in 1:nrep) {
   # Initial conditions
   # -----------------------------------------
   
-  # Draw species at random in the landscape (one individual per cell)
-  sp <- sample(1:nsp, size=ncell, replace=TRUE)
+  # Draw species at random in the landscape (one individual per site)
+  sp <- sample(1:nsp, size=nsite, replace=TRUE)
   #hist(sp)
-  community_start <- matrix(sp, nrow=ncell_side, ncol=ncell_side, byrow=TRUE)
+  community_start <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
   if (r==1) {
-    png(file=here("outputs", "cube", "community_start.png"))
+    png(file=here("outputs", "cube", "community_start.png"),
+        width=fig_width, height=fig_width, units="cm", res=300)
     plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
          col=c("black", rev(terrain.colors(nsp))))
     dev.off()
@@ -219,12 +225,12 @@ for (r in 1:nrep) {
   abund[1,] <- table(factor(c(community), levels=1:nsp))
   
   # Environmental filtering
-  dist_cell <- diag(dist_E_Sp[, as.vector(t(community))])
-  env_filt[1, r] <- mean(dist_cell)
+  dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
+  env_filt[1, r] <- mean(dist_site)
   
   # Mean mortality rate
-  theta_cell <- diag(mortality_E_Sp[, as.vector(t(community))])
-  theta_comm[1, r] <- mean(theta_cell) 
+  theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
+  theta_comm[1, r] <- mean(theta_site) 
 
   # -----------------------------------------
   # Dynamics
@@ -237,18 +243,19 @@ for (r in 1:nrep) {
     # Mortality
     # ******************
     
-    # Mortality rate on each cell
-    theta_cell <- diag(mortality_E_Sp[, as.vector(t(community))])
+    # Mortality rate on each site
+    theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
     
     # Mortality events
-    mort_ev <- rbinom(ncell, size=1, prob=theta_cell)
-    mortality <- matrix(mort_ev, nrow=ncell_side, ncol=ncell_side, byrow=TRUE)
+    mort_ev <- rbinom(nsite, size=1, prob=theta_site)
+    mortality <- matrix(mort_ev, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
     
     # Update community
     community[mortality==1] <- 0
     # Plot once
     if (r==1 & g==1) {
-      png(file=here("outputs", "cube", "mortality_events.png"))
+      png(file=here("outputs", "cube", "mortality_events.png"),
+          width=fig_width, height=fig_width, units="cm", res=300)
       plot(raster(community), main="Species - with vacant sites", zlim=c(0, nsp),
            col=c("black", rev(terrain.colors(nsp))))
       dev.off()
@@ -285,18 +292,19 @@ for (r in 1:nrep) {
     abund[g+1, ] <- table(factor(as.vector(community), levels=1:nsp))
     
     # Environmental filtering
-    dist_cell <- diag(dist_E_Sp[, as.vector(t(community))])
-    env_filt[g+1, r] <- mean(dist_cell)
+    dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
+    env_filt[g+1, r] <- mean(dist_site)
 
     # Mean mortality rate in the community
-    theta_cell <- diag(mortality_E_Sp[, as.vector(t(community))])
-    theta_comm[g+1, r] <- mean(theta_cell)
+    theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
+    theta_comm[g+1, r] <- mean(theta_site)
     
   } # End ngen
   
   # Plot final community once
   if (r==1) {
-    png(file=here("outputs", "cube", "community_end.png"))
+    png(file=here("outputs", "cube", "community_end.png"),
+        width=fig_width, height=fig_width, units="cm", res=300)
     plot(raster(community), main=glue("Species - End (ngen={ngen})"),
          zlim=c(0, nsp), col=c("black", rev(terrain.colors(nsp))))
     dev.off()
@@ -342,7 +350,7 @@ p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
   geom_point() +
   geom_smooth(method="auto", color="red", fill="#69b3a2", se=TRUE) +
   xlab("Species habitat frequency") +
-  ylab("Species mean rank (high rank = low abundance)")
+  ylab("Species mean rank (higher rank = lower abundance)")
 ggsave(p, filename=here("outputs", "cube", "mean_rank-habitat_freq.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
@@ -362,6 +370,19 @@ p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
   ylab("Mean env-species perf difference")
 ggsave(p, filename=here("outputs", "cube", "environmental_filtering.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+# Plot
+png(file=here("outputs", "cube", "spatial_comp_env_sp.png"), 
+    width=fig_width, height=fig_width, units="cm", res=300)
+par(mfrow=c(2,2))
+plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
+     col=c("black", rev(terrain.colors(nsp))))
+plot(raster(community), main="Species - End", zlim=c(0, nsp),
+     col=c("black", rev(terrain.colors(nsp))))
+plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
+plot(raster(community), main="Species - End", zlim=c(0, nsp),
+     col=c("black", rev(terrain.colors(nsp))))
+dev.off()
 
 # ---------------------------------------------
 # Theta community
@@ -389,12 +410,13 @@ sp_XY <- data.frame(rasterToPoints(raster(community)))
 names(sp_XY) <- c("x", "y", "sp")
 vario_sp <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
 # Environment autocorrelation
-vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=values(raster(env)))
+# 3D pixel (equivalent to species number) for each site
+vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_on_site)
 # Plot with correlation
 png(file=here("outputs", "cube", "sp_autocorrelation.png"),
     width=fig_width, height=fig_width*0.8, units="cm", res=300)
 par(mfrow=c(2,2))
-plot(vario_sp, main="Species")
+plot(vario_sp, main="Species - End")
 plot(vario_env, main="Environment")
 plot(vario_env$v, vario_sp$v,
      xlab="Semivariance for environment",
@@ -418,26 +440,38 @@ dev.off()
 
 # Data-set
 df <- data.frame(perf_E_Sp)
-names(df) <- sprintf("Sp_%03d", 1:50)
+names(df) <- sprintf("Sp_%03d", 1:nsp)
 df_perf <- tibble(df) %>%
-  mutate(Env=values(raster(env))) %>%
+  mutate(Env=values(raster(env[[1]]))) %>%
   mutate(Env2=Env^2) %>%
-  pivot_longer(cols=Sp_001:Sp_050, names_to="Species", values_to="Perf")
+  pivot_longer(cols=Sp_001:glue("Sp_0{nsp}"), names_to="Species", values_to="Perf")
 
 # Observed niche
-df_Sp <- df_perf %>% filter(Species=="Sp_025")
-lm_fit <- lm(Perf~Env+Env2, data=df_Sp)
-df_Sp_pred <- data.frame(Perf=predict(lm_fit, df_Sp), Env=df_Sp$Env)
-ggplot(data=df_Sp, aes(x=Env, y=Perf)) +
+# Select 8 species at random
+set.seed(seed)
+sp_sel <- sample(unique(df_perf$Species), 9, replace=FALSE)
+df_sp_sel <- df_perf %>% filter(Species %in% sp_sel)
+p <- ggplot(data=df_sp_sel, aes(x=Env, y=Perf)) +
   geom_point() +
-  geom_line(data=df_Sp_pred, col="red")
-
+  geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE) +
+  facet_wrap(vars(Species), nrow=3) +
+  xlab("Environment (first axis)") +
+  ylab("Performance")
+ggsave(p, filename=here("outputs", "cube", "infering_species_niche.png"),
+       width=fig_width, height=fig_width, units="cm", dpi=300)
+  
 # Observed intraspecific variability
-lm_fit <- lm(Perf~Species, data=df_perf)
+lm_fit <- lm(Perf~Species+Species*Env+Species*Env2, data=df_perf)
 V_intra <- df_perf %>%
   mutate(res=lm_fit$residuals) %>%
   group_by(Species) %>%
   summarise(V=var(res))
+p <- ggplot(data=V_intra, aes(x=Species, y=V)) +
+  geom_col() +
+  theme(axis.text.x=element_text(angle=90, size=6)) +
+  ylab("Intraspecific variance")
+ggsave(p, filename=here("outputs", "cube", "intraspecific_variance.png"),
+       width=fig_width, height=fig_width, units="cm", dpi=300)
 
 # =========================
 # End of file
