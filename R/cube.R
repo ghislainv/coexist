@@ -117,6 +117,12 @@ plot(raster(env[[3]]), main="Environment var3", col=topo.colors(255))
 plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
 dev.off()
 
+# Habitat frequency
+png(file=here("outputs", "cube", "hab_freq.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
+hist(env[[1]], main="", xlab="Environment var1")    
+dev.off()
+
 # =========================================
 # Species niche
 # =========================================
@@ -156,8 +162,8 @@ dev.off()
 # Matrix of species performance on each site (distances)
 # Sites in rows, Species in columns
 dist_E_Sp <- dist_Site_Sp(as.matrix(sites), as.matrix(niche_optimum))
-dist_E_Sp <- rescale(dist_E_Sp)
-perf_E_Sp <- 1-dist_E_Sp
+dprim_E_Sp <- (dist_E_Sp-mean(dist_E_Sp))/sd(dist_E_Sp)
+perf_E_Sp <- -dprim_E_Sp
 
 # Function to identify the species with the highest performance
 high_perf_sp <- function(dist, sp_pres) {
@@ -175,13 +181,13 @@ high_perf_sp <- function(dist, sp_pres) {
 
 # Probability of dying of each species on each site
 # Strength of unsuitability
-b <- 0.5
-m_dist <- mean(dist_E_Sp)
-s_dist <- sd(dist_E_Sp)
-scale_dist_E_Sp <- (dist_E_Sp - m_dist)/s_dist
-mortality_E_Sp <- inv_logit(logit(0.1) + b * scale_dist_E_Sp)
+b <- -0.5
+mortality_E_Sp <- inv_logit(logit(0.1) + b * perf_E_Sp)
 # Mortality rate distribution
+png(file=here("outputs", "cube", "hist_mortality.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
 hist(mortality_E_Sp)
+dev.off()
 
 # Habitat frequency for each species
 rank_dist_E <- t(apply(dist_E_Sp, 1, rank, ties.method="min"))
@@ -368,7 +374,8 @@ p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
   geom_point() +
   geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
   xlab("Species habitat frequency") +
-  ylab("Species mean rank (higher rank = lower abundance)")
+  ylab("Species mean rank (higher rank = lower abundance)") +
+  theme(axis.title=element_text(size=16))
 ggsave(p, filename=here("outputs", "cube", "mean_rank-habitat_freq.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
@@ -428,8 +435,12 @@ sp_XY <- data.frame(rasterToPoints(raster(community)))
 names(sp_XY) <- c("x", "y", "sp")
 vario_sp <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
 # Environment autocorrelation
-# 3D pixel (equivalent to species number) for each site
-vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_on_site)
+# 3D voxel for each site
+x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
+y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
+z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
+class_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
+vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
 # Plot with correlation
 png(file=here("outputs", "cube", "sp_autocorrelation.png"),
     width=fig_width, height=fig_width*0.8, units="cm", res=300)
