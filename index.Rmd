@@ -19,6 +19,8 @@ require(dplyr)
 options(knitr.table.format="html")
 ```
 
+[GitHub](https://github.com/ghislainv/coexist) | [Webpage](https://ecology.ghislainv.fr/coexist)
+
 # Intro
 
 Coexistence is everywhere (coral reefs, tropical forests, grasslands, gut microbiota, etc.) and should be simple to obtain.
