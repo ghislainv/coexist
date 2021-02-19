@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Ghislain VIEILLEDENT, Isabelle MARECHAUX, Camille GIRARD-TERCIEUX" />
+
+
+<title>Theoretical model of species coexistence in high dimension</title>
+
+<script src="site_libs/header-attrs-2.6/header-attrs.js"></script>
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/readable.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+<style type="text/css">
+/* for pandoc --citeproc since 2.11 */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 66px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 71px;
+  margin-top: -71px;
+}
+.section h2 {
+  padding-top: 71px;
+  margin-top: -71px;
+}
+.section h3 {
+  padding-top: 71px;
+  margin-top: -71px;
+}
+.section h4 {
+  padding-top: 71px;
+  margin-top: -71px;
+}
+.section h5 {
+  padding-top: 71px;
+  margin-top: -71px;
+}
+.section h6 {
+  padding-top: 71px;
+  margin-top: -71px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">coexist</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">
+    <span class="fas fa-home"></span>
+     
+    Home
+  </a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/ghislainv/coexist">
+    <span class="fab fa-github"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Theoretical model of species coexistence in high dimension</h1>
+<h3 class="subtitle">Has intraspecific variability anything to do with species coexistence?</h3>
+<h4 class="author">Ghislain VIEILLEDENT, Isabelle MARECHAUX, Camille GIRARD-TERCIEUX</h4>
+
+</div>
+
+
+<div id="intro" class="section level1">
+<h1>Intro</h1>
+<p>Coexistence is everywhere (coral reefs, tropical forests, grasslands, gut microbiota, etc.) and should be simple to obtain.</p>
+<p><img src="images/coral_reef.jpg" style="width:24.0%" />
+<img src="images/tropical_forest.jpg" style="width:24.0%" />
+<img src="images/grassland.jpg" style="width:24.0%" />
+<img src="images/gut_microbiota.jpg" style="width:24.0%" /></p>
+<p>Coexistence is supposed to be <em>stable</em> in these communities <span class="citation">(<a href="#ref-Tilman1982" role="doc-biblioref">Tilman 1982</a>; <a href="#ref-Clark2003c" role="doc-biblioref">Clark &amp; McLachnan 2003</a>)</span>.</p>
+<p>Previous theoretical studies have shown that the <em>stable</em> coexistence of a <em>high number</em> of species can be obtained either:</p>
+<ul>
+<li>In heterogeneous environments</li>
+<li>In homogeneous environments, given appropriate trade-offs in species demographic traits <span class="citation">(<a href="#ref-Tilman1994" role="doc-biblioref">Tilman 1994</a>)</span>. The problem is that such low-dimensional demographic trade-offs have been rarely observed in real communities.</li>
+</ul>
+<p>Here, we propose a simple theoretical model of community dynamics to show that:</p>
+<ul>
+<li>Stable coexistence is easy to obtain in an heterogeneous environment, assuming each species is the best competitor in a given environment.</li>
+<li>Large intraspecific variability can emerge from (i) environmental variability and (ii) unobserved environmental factors.</li>
+</ul>
+<p>Main difference with Adam’s model: IV is not explicitly included in the model.</p>
+</div>
+<div id="model" class="section level1">
+<h1>Model</h1>
+<div id="environment" class="section level2">
+<h2>Environment</h2>
+<p>We consider <span class="math inline">\(n_s=w \times h\)</span> sites on a regular grid. Each site <span class="math inline">\(i\)</span> is characterized by a multidimensional environment defined by <span class="math inline">\(n_v\)</span> environmental variables <span class="math inline">\(x_1, \ldots, x_{n_v}\)</span> (<span class="math inline">\(n_v=3\)</span> in our example). Each environmental variable is spatially auto-correlated and derived from an intrinsic conditional autoregressive model (iCAR). Environment variables have values in <span class="math inline">\([0, 1]\)</span>. Environment on a particular site can be defined with a RGB colour. Similar sites (in terms of environment) have similar RGB colours. Environment is not uniformly distributed: some environments are more frequent than others.</p>
+<p><img src="outputs/m0/environment.png" style="width:100.0%" /></p>
+<p><img src="outputs/m0/hab_freq.png" style="width:50.0%" /></p>
+</div>
+<div id="species" class="section level2">
+<h2>Species</h2>
+<p>We consider <span class="math inline">\(n_{Sp}\)</span> species indexed on <span class="math inline">\(j\)</span> (<span class="math inline">\(n_{Sp}=64\)</span> in our example). Species niche is multidimensional. Species performance is <strong>optimal</strong> at one point in the multidimensional environmental space. Species performance on each site <span class="math inline">\(p_{ij}\)</span> is computed from the Euclidean distance <span class="math inline">\(d_{ij}\)</span> between the optimal point for species <span class="math inline">\(j\)</span> and the environment on each site <span class="math inline">\(i\)</span>, in the multidimensional environmental space: <span class="math inline">\(p_{ij}=-d&#39;_{ij}\)</span>, where <span class="math inline">\(d&#39;_{ij}\)</span> is the normalized distance (<span class="math inline">\(d&#39;_{ij}\)</span>=<span class="math inline">\((d_{ij}-\mu_d)/\sigma_d\)</span>). This means that one species will outcompete all the other species in one particular environment. Similar species have similar colours.</p>
+<p><img src="outputs/m0/species_niche.png" style="width:50.0%" /></p>
+<p>The number of sites where each species has a higher performance is variable between species. For some species, there is no sites where they would be the most competitive.</p>
+<p><img src="outputs/m0/species_habitat_freq.png" style="width:50.0%" /></p>
+</div>
+<div id="dynamics" class="section level2">
+<h2>Dynamics</h2>
+<div id="initial-conditions" class="section level3">
+<h3>Initial conditions</h3>
+<p>Each site is occupied by one individual of one species. Species are drawn at random on each site.</p>
+<p><img src="outputs/m0/community_start.png" style="width:50.0%" /></p>
+</div>
+<div id="mortality" class="section level3">
+<h3>Mortality</h3>
+<p>The mortality rate for each individual is a function of the species performance on each site. <span class="math inline">\(\alpha\)</span> is the mean mortality rate and <span class="math inline">\(b\)</span> is the effect of the species performance on the mortality. In our example, we use <span class="math inline">\(\alpha=0.1\)</span> and <span class="math inline">\(b=-0.5\)</span>. Mortality leads to vacant sites for which species will compete.</p>
+<p><span class="math display">\[\theta_{ij}=\text{logit}^{-1}(\text{logit}(\alpha) + b \times p_{ij})\]</span></p>
+<p><img src="outputs/m0/hist_mortality.png" style="width:45.0%" />
+<img src="outputs/m0/mortality_events.png" style="width:45.0%" /></p>
+</div>
+<div id="recruitment" class="section level3">
+<h3>Recruitment</h3>
+<p>There is no recruitment limitation (as in <span class="citation"><a href="#ref-Hurtt1995" role="doc-biblioref">Hurtt &amp; Pacala</a> (<a href="#ref-Hurtt1995" role="doc-biblioref">1995</a>)</span>) in our model. We assume that each species which is <strong>still</strong> present in the community has the ability to send a propagule on each vacant site. The species with the highest performance on each site outcompetes the other species and occupies the site.</p>
+</div>
+</div>
+<div id="simulations" class="section level2">
+<h2>Simulations</h2>
+<ul>
+<li>Number of generations: <span class="math inline">\(g=100\)</span>.</li>
+<li>Number of repetitions with changing initial conditions: <span class="math inline">\(r=10\)</span>.</li>
+</ul>
+</div>
+</div>
+<div id="result" class="section level1">
+<h1>Result</h1>
+<div id="species-coexistence" class="section level2">
+<h2>Species coexistence</h2>
+<p>Species without suitable environment are excluded from the community. Stable coexistence of the other species.</p>
+<p><img src="outputs/m0/species_richness_with_time.png" style="width:100.0%" /></p>
+<p>The mean species rank (over repetitions) at the end of the simulations is correlated to the frequency of suitable habitat for the species.</p>
+<p><img src="outputs/m0/mean_rank-habitat_freq.png" style="width:50.0%" /></p>
+</div>
+<div id="environmental-filtering" class="section level2">
+<h2>Environmental filtering</h2>
+<p>Species end up occupying the sites where they have the highest performance. Community is structured in space and follows the spatial structure of the environment.</p>
+<p><img src="outputs/m0/spatial_comp_env_sp.png" style="width:100.0%" /></p>
+<p><img src="outputs/m0/sp_autocorrelation.png" style="width:100.0%" /></p>
+<p>There is a decrease of the mean mortality rate with time associated to an increase of the mean species performance over all sites.</p>
+<p><img src="outputs/m0/mortality_rate_community.png" style="width:100.0%" /></p>
+</div>
+<div id="intraspecific-variability" class="section level2">
+<h2>Intraspecific variability</h2>
+<div id="niche-shape" class="section level3">
+<h3>Niche shape</h3>
+<p>Intraspecific variability emerges from the environmental variation in space: individuals perform differently depending on the environment. For example, we can plot the relationship between species performance and the first environmental variable <span class="math inline">\(x_1\)</span>, and fit a polynomial model <span class="math inline">\(p_{ij}=\beta_{0,j}+\beta_{1,j} x_{1,i}+\beta_{2,j} x_{1,i}^2 + \varepsilon_{ij}\)</span>, <span class="math inline">\(\varepsilon_{ij} \sim Normal(0, V_j)\)</span>. We obtain the classical relationships: bell shape, increasing, or decreasing relationship, depending on the position of the species on the environmental axis. <strong>Note</strong>: this relationship (showing intraspecific variability) can also be observed if the environment is unidimensional.</p>
+<p><img src="outputs/m0/infering_species_niche.png" style="width:100.0%" /></p>
+</div>
+<div id="individual-variability" class="section level3">
+<h3>Individual variability</h3>
+<p>Intraspecific variability <span class="math inline">\(V_j\)</span> emerges from environmental variables <span class="math inline">\(x_2\)</span> and <span class="math inline">\(x_3\)</span> (not considered in the above model). This variability can be structured at the individual scale (“individual variability”) when one individual is repeatedly observed at one site.</p>
+<p><img src="outputs/m0/intraspecific_variance.png" style="width:100.0%" /></p>
+</div>
+</div>
+</div>
+<div id="discussion" class="section level1">
+<h1>Discussion</h1>
+<div id="species-coexistence-and-iv" class="section level2">
+<h2>Species coexistence and IV</h2>
+<ul>
+<li>Two conditions for stable coexistence of species:
+<ul>
+<li>Variable environmental conditions</li>
+<li>Each species outperforms the others in a given particular environment</li>
+</ul></li>
+<li>IV emerges from (i) environmental variability, (ii) unobserved environmental axis</li>
+<li>IV is the result of a <em>variable</em> and <em>multidimensional</em> environment, and is not a mechanism determining species coexistence</li>
+</ul>
+</div>
+<div id="limitations-thoughts-and-perspectives" class="section level2">
+<h2>Limitations, thoughts, and perspectives</h2>
+<div id="competition-for-resources" class="section level3">
+<h3>Competition for resources</h3>
+<ul>
+<li>No competition mechanism <em>per se</em> in the model. We cannot define an intra- or inter-specific competition. Is it a problem?</li>
+<li>Resources are not explicit in the model.</li>
+<li>Coexistence might be too focused on <em>competition for resources</em> (cf. Lotka-Volterra)?</li>
+<li>With such a model, it seems that “competition” between species is important to explain species coexistence (species hierarchy in a given environment), but not the “competition for resources”. For example, some species might have a high performance in low-resource environment (eg. shade tolerant species).</li>
+<li>A species is not limited because of high intra-specific competition, but because it cannot dominate in all types of environment (environmental filtering).</li>
+</ul>
+</div>
+<div id="random-thoughts" class="section level3">
+<h3>Random thoughts</h3>
+<ul>
+<li>No limiting similarity in our model.</li>
+<li>“Each species outperforms the others in a given particular environment”: how does it translate exactly in real ecosystems? In terms of growth, mortality, fecundity?</li>
+<li>Add recruitment limitation (no recruitment limitation = strong hypothesis).</li>
+</ul>
+</div>
+</div>
+</div>
+<div id="references" class="section level1 unnumbered">
+<h1>References</h1>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-Clark2003c" class="csl-entry">
+Clark, J.S. &amp; McLachnan, J.S. (2003) <span class="nocase">Stability of forest biodiversity</span>. <em>Nature</em>, <strong>423</strong>, 635–628.
+</div>
+<div id="ref-Hurtt1995" class="csl-entry">
+Hurtt, G.C. &amp; Pacala, S.W. (1995) The consequences of recruitment limitation: Reconciling chance, history and competitive differences between plants. <em>Journal of Theoretical Biology</em>, <strong>176</strong>, 1–12.
+</div>
+<div id="ref-Tilman1982" class="csl-entry">
+Tilman, D. (1982) <em>Resource Competition and Community Structure</em>. Princeton University.
+</div>
+<div id="ref-Tilman1994" class="csl-entry">
+Tilman, D. (1994) <span class="nocase">Competition and biodiversity in spatially structured habitats</span>. <em>Ecology</em>, <strong>75</strong>, 2–16.
+</div>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
