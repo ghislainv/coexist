@@ -52,7 +52,7 @@ We consider $n_s=w \times h$ sites on a regular grid. Each site $i$ is character
 
 ![](outputs/m0/environment.png){width="100%"}
 
-![](outputs/m0/hab_freq.png){width="50%"}
+![](outputs/m0/hab_freq_1.png){width="50%"}
 
 ## Species
 

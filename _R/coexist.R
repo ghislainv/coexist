@@ -17,6 +17,7 @@ library(geoR) # variog()
 library(plot3D) # scatter3D()
 library(Rcpp)
 library(RcppArmadillo)
+library(viridisLite)
 
 # Create output directories
 dir.create(here("outputs/m0"), recursive=TRUE)
@@ -166,7 +167,7 @@ png(file=here("outputs", "m0", "species_niche.png"),
 par(mar=c(1,1,2,2))
 scatter3D(niche_optimum$sp_x, niche_optimum$sp_y, niche_optimum$sp_z,
           pch=16, 
-          colvar=1:64, col=rainbow(nsp),
+          colvar=1:64, col=viridis(nsp),
           bty = "f", main ="Three-dimensional niche", phi=0,
           xlim=c(0,1), ylim=c(0,1), zlim=c(0,1))
 dev.off()
@@ -248,7 +249,7 @@ for (r in 1:nrep) {
     png(file=here("outputs", "m0", "community_start.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
     plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
-         col=c("black", rainbow(nsp)))
+         col=c("black",  viridis(nsp)))
     dev.off()
   }
   community <- community_start
@@ -293,7 +294,7 @@ for (r in 1:nrep) {
       png(file=here("outputs", "m0", "mortality_events.png"),
           width=fig_width, height=fig_width, units="cm", res=300)
       plot(raster(community), main="Species - with vacant sites", zlim=c(0, nsp),
-           col=c("black", rainbow(nsp)))
+           col=c("black", viridis(nsp)))
       dev.off()
     }
 
@@ -342,7 +343,7 @@ for (r in 1:nrep) {
     png(file=here("outputs", "m0", "community_end.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
     plot(raster(community), main=glue("Species - End (ngen={ngen})"),
-         zlim=c(0, nsp), col=c("black", rainbow(nsp)))
+         zlim=c(0, nsp), col=c("black", viridis(nsp)))
     dev.off()
   }
   
@@ -368,23 +369,11 @@ sp_rich_long <- sp_rich %>%
   pivot_longer(cols=X1:X10, names_to="rep",
                names_prefix="X", values_to="sp_rich")
 p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
-  geom_line() + 
+  geom_line() +
+  scale_colour_viridis_d()+
   xlab("Generations") + 
   ylab("Species richness")
 ggsave(p, filename=here("outputs", "m0", "species_richness_with_time.png"),
-       width=fig_width, height=fig_width/2, units="cm", dpi=300)
-
-#CGT 15/06/2021
-# To compare with the other model
-rank_sp <- data.frame(rank_sp)%>%
-  mutate(rep = 1:nrep)%>%
-  pivot_longer(cols=X1:X64, values_to="rank_sp")
-p <- ggplot(data=rank_sp, aes(x=rep, y=rank_sp)) +
-  geom_line(aes(colour=name)) + 
-  xlab("Repetition") + 
-  ylab("Species rank")+
-  theme(legend.position = "none")
-ggsave(p, filename=here("outputs", "m0", "species_rank_with_repetitions.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
 # ---------------------------------------------
@@ -404,6 +393,21 @@ p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
 ggsave(p, filename=here("outputs", "m0", "mean_rank-habitat_freq.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
+#CGT 15/06/2021
+# To compare with the other model
+rank_sp <- data.frame(rank_sp)%>%
+  mutate(rep = 1:nrep)%>%
+  pivot_longer(cols=X1:X64, values_to="rank_sp")
+p <- ggplot(data=rank_sp, aes(x=rep, y=rank_sp)) +
+  geom_line(aes(colour=name)) +
+  scale_colour_viridis_d()+
+  xlab("Repetition") + 
+  ylab("Species rank")+
+  theme(legend.position = "none")
+ggsave(p, filename=here("outputs", "m0", "species_rank_with_repetitions.png"),
+       width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+
 # ---------------------------------------------
 # Environmental filtering
 # ---------------------------------------------
@@ -415,6 +419,7 @@ env_filt_long <- env_filt %>%
                names_prefix="X", values_to="env_filt")
 p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
   geom_line() +
+  scale_colour_viridis_d()+
   labs(title="Environmental filtering") +
   xlab("Generations") + 
   ylab("Mean env-species perf difference")
@@ -426,12 +431,12 @@ png(file=here("outputs", "m0", "spatial_comp_env_sp.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 par(mfrow=c(2,2))
 plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
-     col=c("black", rainbow(nsp)))
+     col=c("black", viridis(nsp)))
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
-     col=c("black", rainbow(nsp)))
+     col=c("black", viridis(nsp)))
 plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
-     col=c("black", rainbow(nsp)))
+     col=c("black", viridis(nsp)))
 dev.off()
 
 # ---------------------------------------------
@@ -445,6 +450,7 @@ theta_comm_long <- theta_comm %>%
                names_prefix="X", values_to="theta_comm")
 p <- ggplot(data=theta_comm_long, aes(x=gen, y=theta_comm, col=rep)) +
   geom_line() +
+  scale_colour_viridis_d()+
   labs(title="Environmental filtering") +
   xlab("Generations") + 
   ylab("Mean mortality rate in the community")
@@ -518,6 +524,11 @@ ggsave(p, filename=here("outputs", "m0", "infering_species_niche.png"),
 lm_fit <- lm(Perf~Species+Species*Env+Species*Env2, data=df_perf)
 save(lm_fit, file = here::here("outputs", "m0","lm_fit.RData"))
 
+summary(lm_fit)$adj.r.squared
+hist(summary(lm_fit)$residuals)
+shapiro.test(sample(summary(lm_fit)$residuals, size = 5000))
+ks.test(x=summary(lm_fit)$residuals, y='pnorm',alternative='two.sided')
+
 V_intra <- df_perf %>%
   mutate(res=lm_fit$residuals) %>%
   group_by(Species) %>%
@@ -547,7 +558,7 @@ g <- ggplot(df_simul_ind, aes(Perf, colour = as.factor(Species))) +
   scale_colour_viridis_d()+
   theme(legend.position = "none")
 ggsave(g, filename=here("outputs", "m0", "Perf_overlap_IV.png"),
-       width=fig_width, height=fig_width, units="cm", dpi=300)
+       width=fig_width, height=fig_width/2, units="cm", dpi=300)
 # =========================
 # End of file
 # =========================
