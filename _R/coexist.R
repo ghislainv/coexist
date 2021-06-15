@@ -117,10 +117,21 @@ plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
 dev.off()
 
 # Habitat frequency
-png(file=here("outputs", "m0", "hab_freq.png"),
+png(file=here("outputs", "m0", "hab_freq_1.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 hist(env[[1]], main="", xlab="Environment var1")    
 dev.off()
+
+png(file=here("outputs", "m0", "hab_freq_2.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
+hist(env[[2]], main="", xlab="Environment var2")    
+dev.off()
+
+png(file=here("outputs", "m0", "hab_freq_3.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
+hist(env[[3]], main="", xlab="Environment var3")    
+dev.off()
+
 
 # =========================================
 # Species niche
@@ -146,6 +157,8 @@ if (randomOptSp) {
   niche_optimum <- data.frame(sp_x=runif(nsp), sp_y=runif(nsp), sp_z=runif(nsp))
   niche_optimum <- niche_optimum[order(niche_optimum$sp_z, niche_optimum$sp_y, niche_optimum$sp_x), ]
 }
+#CGT 10/06/2021
+rownames(niche_optimum)<-1:nrow(niche_optimum)
 
 # Plot the species niche
 png(file=here("outputs", "m0", "species_niche.png"),
@@ -209,7 +222,7 @@ nsp_no_habitat <- length(sp_no_habitat)
 # Number of repetitions
 nrep <- 10
 # Number of generations
-ngen <- 100
+ngen <- 500
 
 # Species richness
 sp_rich <- matrix(NA, nrow=ngen+1, ncol=nrep)
@@ -253,7 +266,7 @@ for (r in 1:nrep) {
   
   # Mean mortality rate
   theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
-  theta_comm[1, r] <- mean(theta_site) 
+  theta_comm[1, r] <- mean(theta_site)
 
   # -----------------------------------------
   # Dynamics
@@ -359,6 +372,19 @@ p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
   xlab("Generations") + 
   ylab("Species richness")
 ggsave(p, filename=here("outputs", "m0", "species_richness_with_time.png"),
+       width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+#CGT 15/06/2021
+# To compare with the other model
+rank_sp <- data.frame(rank_sp)%>%
+  mutate(rep = 1:nrep)%>%
+  pivot_longer(cols=X1:X64, values_to="rank_sp")
+p <- ggplot(data=rank_sp, aes(x=rep, y=rank_sp)) +
+  geom_line(aes(colour=name)) + 
+  xlab("Repetition") + 
+  ylab("Species rank")+
+  theme(legend.position = "none")
+ggsave(p, filename=here("outputs", "m0", "species_rank_with_repetitions.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
 # ---------------------------------------------
@@ -490,10 +516,14 @@ ggsave(p, filename=here("outputs", "m0", "infering_species_niche.png"),
   
 # Observed intraspecific variability
 lm_fit <- lm(Perf~Species+Species*Env+Species*Env2, data=df_perf)
+save(lm_fit, file = here::here("outputs", "m0","lm_fit.RData"))
+
 V_intra <- df_perf %>%
   mutate(res=lm_fit$residuals) %>%
   group_by(Species) %>%
   summarise(V=var(res))
+save(V_intra, file = here::here("outputs", "m0", "V_intra.RData"))
+
 p <- ggplot(data=V_intra, aes(x=Species, y=V)) +
   geom_col() +
   theme(axis.text.x=element_text(angle=90, size=6)) +
@@ -501,6 +531,23 @@ p <- ggplot(data=V_intra, aes(x=Species, y=V)) +
 ggsave(p, filename=here("outputs", "m0", "intraspecific_variance.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
+# CGT 11/06/2021
+#At mean environment, x1 = 0 (see generation of the environment)
+beta_0 <- as.vector(lm_fit$coefficients[1:64])
+#Simultate 10000 individuals per species
+n_ind_simul <- 10000
+df_simul_ind <- data.frame(Species = rep(1:nsp, each=n_ind_simul), Perf=rep(beta_0, each=n_ind_simul))
+df_simul_ind <- df_simul_ind%>%
+  group_by(Species)%>%
+  mutate(Perf = Perf + rnorm(n(), mean=0, sd=sqrt(V_intra$V[Species])))%>%
+  ungroup()
+
+g <- ggplot(df_simul_ind, aes(Perf, colour = as.factor(Species))) +
+  geom_density()+
+  scale_colour_viridis_d()+
+  theme(legend.position = "none")
+ggsave(g, filename=here("outputs", "m0", "Perf_overlap_IV.png"),
+       width=fig_width, height=fig_width, units="cm", dpi=300)
 # =========================
 # End of file
 # =========================
