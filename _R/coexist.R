@@ -233,6 +233,8 @@ rank_sp <- matrix(NA, nrow=nrep, ncol=nsp)
 env_filt <- matrix(NA, nrow=ngen+1, ncol=nrep)
 # Mean mortality rate in the community
 theta_comm <- matrix(NA, nrow=ngen+1, ncol=nrep)
+#CGT 16/06/2021
+Shannon <- c(nrep)
 
 # Loop on repetitions
 for (r in 1:nrep) {
@@ -348,7 +350,17 @@ for (r in 1:nrep) {
   }
   
   # Species rank
-  rank_sp[r, ] <- rank(-abund[ngen, ], ties.method="min")
+  #CGT 16/06/2021 : ngen --> ngen +1
+  rank_sp[r, ] <- rank(-abund[ngen+1, ], ties.method="min")
+  
+  #CGT 16/06/2021
+  df_shannon <- data.frame(Species = 1:64,
+                           Abundance = abund[ngen+1, ])%>%
+    mutate(Proportion = Abundance / sum(Abundance))%>%
+    filter(Abundance > 0)%>%
+    mutate(ln_prop = log(Proportion), prop_times_ln_prop = ln_prop*Proportion)
+  
+  Shannon[r] <- -sum(df_shannon$prop_times_ln_prop)
   
 } # End nrep
 
@@ -375,6 +387,26 @@ p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
   ylab("Species richness")
 ggsave(p, filename=here("outputs", "m0", "species_richness_with_time.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+#CGT 16/06/2021
+sp_rich_final <- sp_rich[ngen+1,]
+save(sp_rich_final, file=here::here("outputs", "m0", "Species_richness_m0.RData"))
+
+#CGT 16/06/2021
+# ---------------------------------------------
+# Shannon index and Shannon equitability index
+# ---------------------------------------------
+save(Shannon, file = here::here("outputs", "m0", "Shannon_m0.RData"))
+Equitability <- Shannon/log(as.numeric(sp_rich[ngen+1,]))
+save(Equitability, file = here::here("outputs", "m0", "Equitability_m0.RData"))
+
+#CGT 16/06/2021
+# ---------------------------------------------------------------------------------
+# pairwise Spearman correlation on the species ranks at the end of each simulation
+# ---------------------------------------------------------------------------------
+
+Spearman <- as.dist(round(cor(t(rank_sp), method="spearman"),2))
+save(Spearman, file = here::here("outputs", "m0", "Spearman_m0.RData"))
 
 # ---------------------------------------------
 # Link between final rank and habitat frequency
