@@ -235,6 +235,9 @@ env_filt <- matrix(NA, nrow=ngen+1, ncol=nrep)
 theta_comm <- matrix(NA, nrow=ngen+1, ncol=nrep)
 #CGT 16/06/2021
 Shannon <- c(nrep)
+#CGT 17/06/2021
+#To keep the abundance matrixes in order to infer alpha matrix
+Abundances_m0<-list()
 
 # Loop on repetitions
 for (r in 1:nrep) {
@@ -362,7 +365,13 @@ for (r in 1:nrep) {
   
   Shannon[r] <- -sum(df_shannon$prop_times_ln_prop)
   
+  #CGT 17/06/2021
+  #To keep the abundance matrixes in order to infer alpha matrix
+  Abundances_m0[[r]] <- abund
+  
 } # End nrep
+
+save(Abundances_m0, file = here::here("outputs", "m0", "Abundances_m0.RData"))
 
 # =========================
 # Diversity analysis
@@ -575,22 +584,31 @@ ggsave(p, filename=here("outputs", "m0", "intraspecific_variance.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
 # CGT 11/06/2021
-#At mean environment, x1 = 0 (see generation of the environment)
-beta_0 <- as.vector(lm_fit$coefficients[1:64])
+#At mean environment, x1 = ~ 0.5 (see generation of the environment)
+mean_x1 <- mean(sites[,1])
+
+#Species coefficients
+beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
+beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
+beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
+
 #Simultate 10000 individuals per species
 n_ind_simul <- 10000
-df_simul_ind <- data.frame(Species = rep(1:nsp, each=n_ind_simul), Perf=rep(beta_0, each=n_ind_simul))
+df_simul_ind <- data.frame(Species = rep(1:nsp, each=n_ind_simul), Perf=rep(beta_0+beta_1*mean_x1+beta_2*(mean_x1^2), each=n_ind_simul))
 df_simul_ind <- df_simul_ind%>%
   group_by(Species)%>%
   mutate(Perf = Perf + rnorm(n(), mean=0, sd=sqrt(V_intra$V[Species])))%>%
   ungroup()
 
-g <- ggplot(df_simul_ind, aes(Perf, colour = as.factor(Species))) +
+p <- ggplot(df_simul_ind, aes(Perf, colour = as.factor(Species))) +
   geom_density()+
   scale_colour_viridis_d()+
-  theme(legend.position = "none")
-ggsave(g, filename=here("outputs", "m0", "Perf_overlap_IV.png"),
+  theme(legend.position = "none")+
+  labs(x = "Performance at mean environment variable X1",
+       y = "Density")
+ggsave(p, filename=here("outputs", "m0", "Perf_overlap_IV.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
 # =========================
 # End of file
 # =========================

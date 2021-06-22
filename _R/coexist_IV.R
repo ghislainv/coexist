@@ -212,6 +212,8 @@ theta_comm <- matrix(NA, nrow=ngen+1, ncol=nrep)
 
 Shannon <- c(nrep)
 
+Abundances_m1<-list()
+
 # Loop on repetitions
 for (r in 1:nrep) {
   
@@ -348,7 +350,12 @@ for (r in 1:nrep) {
   
   Shannon[r] <- -sum(df_shannon$prop_times_ln_prop)
   
+  #To keep the abundance matrixes in order to infer alpha matrix
+  Abundances_m1[[r]] <- abund
+  
 } # End nrep
+
+save(Abundances_m1, file = here::here("outputs", "m1", "Abundances_m1.RData"))
 
 #######################################################################################
 #Plots#
@@ -507,12 +514,12 @@ sp_rich_final_m1 <- sp_rich_final
 
 sp_rich_final <- data.frame(Sp_rich = c(as.numeric(sp_rich_final_m0), as.numeric(sp_rich_final_m1)),
                             Model = as.factor(rep(1:2, each=length(sp_rich_final_m0))))
-g <- ggplot(sp_rich_final, aes(x= Model, y=Sp_rich, colour = Model))+
+p <- ggplot(sp_rich_final, aes(x= Model, y=Sp_rich, colour = Model))+
   geom_boxplot()+
   scale_colour_viridis_d(option="plasma")+
   labs(title = "Boxplot of the species richness \n at the end of each repetition with both models", y="Species richness")
 
-ggsave(g, filename=here("outputs", "Comparison", "Species_richness.png"),
+ggsave(p, filename=here("outputs", "Comparison", "Species_richness.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
 # Shannon diversity and equitability index
@@ -525,12 +532,12 @@ Shannon_m1 <- Shannon
 
 Shannon <- data.frame(Shannon = c(Shannon_m0, Shannon_m1),
                             Model = as.factor(rep(1:2, each=length(Shannon_m0))))
-g <- ggplot(Shannon, aes(x= Model, y=Shannon, colour = Model))+
+p <- ggplot(Shannon, aes(x= Model, y=Shannon, colour = Model))+
   geom_boxplot()+
   scale_colour_viridis_d(option="plasma")+
   labs(title = "Boxplot of the Shannon diversity index \n at the end of each repetition with both models", y="Shannon diversity index")
 
-ggsave(g, filename=here("outputs", "Comparison", "Shannon.png"),
+ggsave(p, filename=here("outputs", "Comparison", "Shannon.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
 load(here::here("outputs", "m0", "Equitability_m0.RData"))
@@ -542,12 +549,12 @@ Equitability_m1 <- Equitability
 Equitability <- data.frame(Equitability = c(Equitability_m0, Equitability_m1),
                       Model = as.factor(rep(1:2, each=length(Equitability_m0))))
 
-g <- ggplot(Equitability, aes(x= Model, y=Equitability, colour = Model))+
+p <- ggplot(Equitability, aes(x= Model, y=Equitability, colour = Model))+
   geom_boxplot()+
   scale_colour_viridis_d(option="plasma")+
   labs(title = "Boxplot of the Shannon equitability index \n at the end of each repetition with both models", y="Shannon equitability index")
 
-ggsave(g, filename=here("outputs", "Comparison", "Equitability.png"),
+ggsave(p, filename=here("outputs", "Comparison", "Equitability.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
 # Spearman pairwise correlation of species ranks
@@ -561,10 +568,10 @@ Spearman_m1 <- Spearman
 Spearman <- data.frame(Spearman = c(as.vector(Spearman_m0), as.vector(Spearman_m1)),
                            Model = as.factor(rep(1:2, each=length(Spearman_m0))))
 
-g <- ggplot(Spearman, aes(x= Model, y=Spearman, colour = Model))+
+p <- ggplot(Spearman, aes(x= Model, y=Spearman, colour = Model))+
   geom_boxplot()+
   scale_colour_viridis_d(option="plasma")+
   labs(title = "Boxplot of the pairwise Spearman correlation of species ranks \n at the end of each repetition with both models", y="Shannon equitability index")
-ggsave(g, filename=here("outputs", "Comparison", "Spearman_ranks.png"),
+ggsave(p, filename=here("outputs", "Comparison", "Spearman_ranks.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
