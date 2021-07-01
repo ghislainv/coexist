@@ -99,7 +99,7 @@ S     <- 6        # no. species
 nsite <- 1       # no. time series
 ntime <- 100      # mean no. of time steps in a series
 obsEffort <- 1    # full census
-termB <- FALSE
+termB <- FALSE #No environmental effect
 termR <- TRUE
 termA <- TRUE
 predPrey = NULL
@@ -157,11 +157,10 @@ modelList <- list(typeNames = 'DA', ng = 4000, burnin = 1000,
 
 outputAR <- gjam(formula, xdata=xdata, ydata=ydata, modelList=modelList)
 
-outFolder <- 'gjamOutputAR'
 plotPars  <- list(PLOTALLY=T, trueValues = trueValues, 
                   SAVEPLOTS = T, outFolder = outFolder)
 gjamPlot(outputAR, plotPars)
-save(outputAR, file = paste( outFolder, '/output.rdata', sep=''))
+
 
 # Using my Data #
 load(here::here("outputs", "m0", "Abundances_m0.RData"))
@@ -214,4 +213,45 @@ plotPars  <- list(PLOTALLY=T, trueValues = trueValues,
                   SAVEPLOTS = T, outFolder = outFolder)
 gjamPlot(outputAR, plotPars)
 save(outputAR, file = paste( outFolder, '/output.rdata', sep=''))
+
+#########################################################################"
+
+S <- ncol(ydata)
+
+effMat <- tmp$edata
+
+alpha <- matrix(NA,S,S)
+
+wstar <- apply(ydata/effMat,2,max,na.rm=T)  # carrying capacity based on observed
+wstar <- wstar*10                           # assume it is higher
+
+astar <- (1 - 1.2)/wstar                             # reasonable lambda
+
+z <- sqrt( crossprod( as.matrix(ydata) ) )
+alpha[z > 1000] <- 2*matrix(astar,S,S,byrow=T)[z > 1000]
+diag(alpha) <- astar
+
+loAlpha <- alpha
+hiAlpha <- loAlpha*0
+hiAlpha[3,2] <- 1          # a predator and prey
+loAlpha[2,3] <- -1
+
+alphaPrior <- list(lo = loAlpha, hi = hiAlpha)
+
+timeList <- list(times = 'times', rowInserts = rowInserts,
+                 alphaPrior = alphaPrior, betaPrior = betaPrior, 
+                 lambdaPrior = lambdaPrior )
+effort <- list(columns = 1:S, values = effMat)
+
+rl <- list(N = 8, r = 5)
+modelList <- list(typeNames = 'DA',ng=2000, burnin=500, reductList = rl, 
+                  timeList=timeList, effort = effort)
+
+output <- gjam(formula, xdata=xdata, ydata=ydata, modelList=modelList)
+
+#####################################################################
+
+formula <- as.formula (~1) #Lotka-Volterra model
+
+
 

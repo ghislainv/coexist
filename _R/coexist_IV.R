@@ -39,158 +39,43 @@ Rcpp::sourceCpp(here("_src", "dist_Site_Sp.cpp"))
 # Charge files from the other model
 load(file=here::here("outputs", "m0", "lm_fit.RData"))
 load(file=here::here("outputs", "m0", "V_intra.RData"))
-
+load(here::here("outputs", "m0", "sites.RData"))
+load(here::here("outputs", "m0", "env.RData"))
 
 # =========================
 # Landscape and environment
 # =========================
 
 # Landscape
-nsite_side <- 25
-mat <- matrix(0, nrow=nsite_side, ncol=nsite_side)
-r <- raster(mat, crs="+proj=utm +zone=1")
-nsite <- ncell(r)
-coords <- coordinates(r)
+nsite_side <- sqrt(nrow(sites))
+nsite <- nrow(sites)
 
-# Environment on each site
-Sites <- data.frame(site=1:nsite, V1_env=NA)
-
-# Neighbourhood matrix
-neighbors.mat <- adjacent(r, cells=c(1:nsite), directions=8,
-                          pairs=TRUE, sorted=TRUE)
-# Number of neighbours by site
-n.neighbors <- as.data.frame(table(as.factor(neighbors.mat[,1])))[,2]
-# Adjacent sites
-adj <- neighbors.mat[,2]
-# Generate symmetric adjacency matrix, A
-A <- matrix(0,nsite,nsite)
-index.start <- 1
-for (i in 1:nsite) {
-  index.end <- index.start+n.neighbors[i]-1
-  A[i,adj[c(index.start:index.end)]] <- 1
-  index.start <- index.end+1
-}
-
-# Function to draw in a multivariate normal
-rmvn <- function(n, mu=0, V=matrix(1), seed=1234) {
-  p <- length(mu)
-  if (any(is.na(match(dim(V), p)))) {
-    stop("Dimension problem!")
-  }
-  D <- chol(V)
-  set.seed(seed)
-  t(matrix(rnorm(n*p),ncol=p)%*%D+rep(mu,rep(n,p)))
-}
-
-# Generate spatial random effects
-Vrho.target <- 1 # Variance of spatial random effects
-d <- 1 # Spatial dependence parameter = 1 for intrinsic CAR
-Q <- diag(n.neighbors)-d*A + diag(.0001,nsite) # Add small constant to make Q non-singular
-covrho <- Vrho.target*solve(Q) # Covariance of rhos
-
-# Environment on each site
-sites <- data.frame(V1_env=rep(NA, nsite))
-env <- data.frame()
-rho <- c(rmvn(1, mu=rep(0, nsite), V=covrho, seed=seed)) # Spatial Random Effects
-rho <- rho-mean(rho) # Centering rhos on zero
-rho <- scales::rescale(rho, to=c(0, 1))
-sites <- rho
-env <- matrix(rho, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
-env_RGB <- raster(env*255)
-crs(env_RGB) <- "+proj=utm +zone=1"
+#Environment (axis 1)
+X1 <- as.vector(sites[,1])
 
 # Plot
 png(file=here("outputs", "m1", "environment.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 par(mfrow=c(1,1))
-plot(raster(env), main="Environment var1", col=topo.colors(255))
+plot(raster(env[[1]]), main="Environment var1", col=topo.colors(255))
 dev.off()
 
 # Habitat frequency
 png(file=here("outputs", "m1", "hab_freq.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
-hist(env, main="", xlab="Environment var1")    
+hist(env[[1]], main="", xlab="Environment var1")    
 dev.off()
 
 # =========================================
-# Species niche
+# Species parameters
 # =========================================
 
-# # Niche width
-# niche_width <- 0.25
-# # Niches per axis
-# n_niche <- 1/niche_width
-
 # Number of species
- nsp <- nrow(V_intra)
+nsp <- nrow(V_intra)
 
-# # Species coordinates on the three niche axis (x, y, z)
-# base_coord <- seq(0, 1, length.out=n_niche+1)[-(n_niche+1)]+niche_width/2
-# sp_x <- rep(rep(base_coord, n_niche), n_niche)
-# niche_optimum <- as.data.frame(sp_x)
-# 
-# # Random optimum for species
-# randomOptSp <- TRUE
-# if (randomOptSp) {
-#   set.seed(seed)
-#   niche_optimum <- data.frame(sp_x=runif(nsp))
-#   niche_optimum <- niche_optimum[order(niche_optimum$sp_x)]
-# }
-# rownames(niche_optimum)<-1:nrow(niche_optimum)
-# 
-# # Plot the species niche
-# png(file=here("outputs", "m1", "species_niche.png"),
-#     width=fig_width, height=fig_width, units="cm", res=300)
-# par(mar=c(1,1,2,2))
-# ggplot(niche_optimum,
-#       aes(x=sp_x, colour=),
-#       pch=16, 
-#       col=viridis(nsp),
-#           bty = "f", main ="Species niche", phi=0,
-#           xlim=c(0,1))
-# dev.off()
-
-# Matrix of species performance on each site
-# Sites in rows, Species in columns
 beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
 beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
 beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
-
-perf_ind_init <- as.data.frame(matrix(ncol=nsp, nrow=nsite))
-
-for(col in 1:nsp){
-  sp <- col
-  for (row in 1:nsite) {
-    perf_ind_init[row,col] <- beta_0[sp]+beta_1[sp]*sites[row]+beta_2[sp]*(sites[row])^2+rnorm(1, mean=0, sd=sqrt(V_intra$V[sp]))
-  }
-}
-
-# Identify the species with the highest performance (in each line find the max)
-sp_high_perf <- apply(perf_ind_init, 1, which.max)
-
-# Probability of dying of each species on each site
-# Strength of unsuitability
-b <- -0.5
-mortality_E_Sp <- inv_logit(logit(0.1) + b * t(perf_ind_init))
-# Mortality rate distribution
-png(file=here("outputs", "m1", "hist_mortality.png"),
-    width=fig_width, height=fig_width, units="cm", res=300)
-hist(mortality_E_Sp)
-dev.off()
-
-# Habitat frequency for each species
-# rank_dist_E <- t(apply(dist_E_Sp, 1, rank, ties.method="min"))
-# sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
-# sp_hab_freq <- as.table(sp_hab_freq)
-# names(sp_hab_freq) <- 1:nsp
-# png(file=here("outputs", "m1", "species_habitat_freq.png"),
-#     width=fig_width, height=fig_width, units="cm", res=300)
-# plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
-# dev.off()
-# 
-# # Species with no habitat
-# sp_no_habitat <- as.vector(which(sp_hab_freq==0))
-# nsp_no_habitat <- length(sp_no_habitat)
 
 # =========================================
 # Repetitions
@@ -206,13 +91,32 @@ sp_rich <- matrix(NA, nrow=ngen+1, ncol=nrep)
 # Species rank at the end of the generations
 rank_sp <- matrix(NA, nrow=nrep, ncol=nsp)
 # Environmental filtering
-#env_filt <- matrix(NA, nrow=ngen+1, ncol=nrep)
+env_filt <- matrix(NA, nrow=ngen+1, ncol=nrep)
 # Mean mortality rate in the community
 theta_comm <- matrix(NA, nrow=ngen+1, ncol=nrep)
-
+#Shannon index of the community at the end of each repetition
 Shannon <- c(nrep)
-
+#list of the matrices of the species abundance through the generations for each repetition
 Abundances_m1<-list()
+
+# Matrix of mean species performance on each site
+# Sites in rows, Species in columns
+perf_mean <- matrix(nrow = nsite, ncol = nsp)
+for (k in 1:nsp) {
+  perf_mean[,k] <- beta_0[k]+beta_1[k]*X1+beta_2[k]*(X1^2)
+}
+rank_dist_E <- t(apply(-perf_mean, 1, rank, ties.method="min"))
+sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
+sp_hab_freq <- as.table(sp_hab_freq)
+names(sp_hab_freq) <- 1:nsp
+png(file=here("outputs", "m1", "species_habitat_freq.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
+plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
+dev.off()
+
+# Species with no habitat
+sp_no_habitat <- as.vector(which(sp_hab_freq==0))
+nsp_no_habitat <- length(sp_no_habitat)
 
 # Loop on repetitions
 for (r in 1:nrep) {
@@ -221,18 +125,40 @@ for (r in 1:nrep) {
   # Initial conditions
   # -----------------------------------------
   
+  # Matrix of species performance on each site
+  # Sites in rows, Species in columns
+  perf_ind_init <- as.data.frame(matrix(ncol=nsp, nrow=nsite))
+  
+  for(sp in 1:nsp){
+    perf_ind_init[,sp] <- beta_0[sp]+beta_1[sp]*X1+beta_2[sp]*(X1^2)+rnorm(1, mean=0, sd=sqrt(V_intra$V[sp]))
+  }
+  
+  # Identify the species with the highest performance (in each line find the max)
+  sp_high_perf <- apply(perf_ind_init, 1, which.max)
+  
+  # Probability of dying of each species on each site
+  # b = strength of unsuitability
+  b <- -0.5
+  mortality_E_Sp <- inv_logit(logit(0.1) + b * as.matrix(perf_ind_init))
+  
+  # Mortality rate distribution
+  png(file=here("outputs", "m1", "hist_mortality_init.png"),
+      width=fig_width, height=fig_width, units="cm", res=300)
+  hist(mortality_E_Sp)
+  dev.off()
+  
   # Draw species at random in the landscape (one individual per site)
   sp <- sample(1:nsp, size=nsite, replace=TRUE)
   #hist(sp)
-  community_start <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
+  community_start_m1 <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
   if (r==1) {
     png(file=here("outputs", "m1", "community_start.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
-    plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
+    plot(raster(community_start_m1), main="Species - Start", zlim=c(0, nsp),
          col=c("black", viridis(nsp)))
     dev.off()
   }
-  community <- community_start
+  community <- community_start_m1
   
   # Species richness
   sp_rich[1, r] <- length(unique(c(community)))
@@ -242,12 +168,13 @@ for (r in 1:nrep) {
   abund[1,] <- table(factor(c(community), levels=1:nsp))
   
   # Environmental filtering
-  # dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
-  # env_filt[1, r] <- mean(dist_site)
+  # distance between site environment and performance
+  dist_site <- sqrt((diag(as.matrix(perf_ind_init)[, as.vector(t(community))])-X1)^2)
+  env_filt[1, r] <- mean(dist_site, na.rm = TRUE)
   
   # Mean mortality rate
   theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
-  theta_comm[1, r] <- mean(theta_site)
+  theta_comm[1, r] <- mean(theta_site, na.rm = TRUE)
   
   # -----------------------------------------
   # Dynamics
@@ -290,27 +217,29 @@ for (r in 1:nrep) {
     community_rast <- raster(community)
     sites_vacant <- which(values(community_rast)==0)
     
-    #Environmental conditions on vacant sites
-    env_sites_vacant <- sites[sites_vacant]
+    # Performance of individuals of species present in the community
+    perf_ind_pres_vacant <- as.data.frame(matrix(ncol=nsp_present, nrow=length(sites_vacant)))
+    perf_ind <- as.data.frame(matrix(ncol=nsp, nrow=nsite))
     
-    # Performance of individuals on vacant sites
-    #dist_E_Sp_vacant <- dist_E_Sp[sites_vacant, ]
-    perf_ind_pres <- as.data.frame(matrix(ncol=nsp_present, nrow=length(sites_vacant)))
-    
-    for(col in 1:nsp_present){
-      sp <- sp_present[col]
-      for (row in 1:length(sites_vacant)) {
-        perf_ind_pres[row,col] <- beta_0[sp]+beta_1[sp]*env_sites_vacant[row]+beta_2[sp]*(env_sites_vacant[row])^2+rnorm(1, mean=0, sd=sqrt(V_intra$V[sp]))
-      } 
+    for(sp in sp_present){
+      perf_ind[,sp] <- beta_0[sp]+beta_1[sp]*X1+beta_2[sp]*(X1^2)+rnorm(1, mean=0, sd=sqrt(V_intra$V[sp]))
     }
+    
+    #Species that are absent have no measured performance
+    perf_ind[, which(!((1:nsp) %in% sp_present))] <- NA
+    
+    perf_ind_pres_vacant <- perf_ind[sites_vacant, sp_present]
+    rownames(perf_ind_pres_vacant) <- 1:nrow(perf_ind_pres_vacant)
 
     # Identify the species with the highest performance
-    
-    new_ind <- sp_present[apply(perf_ind_pres, 1, which.max)]
+    new_ind <- sp_present[apply(perf_ind_pres_vacant, 1, which.max)]
     
     # Recruitment
     community_rast[sites_vacant] <- new_ind
     community <- as.matrix(community_rast)
+    
+    # Update of mortality each iteration
+    mortality_E_Sp <- inv_logit(logit(0.1) + b * as.matrix(perf_ind))
     
     # *********************
     # Diversity
@@ -321,14 +250,17 @@ for (r in 1:nrep) {
     abund[g+1, ] <- table(factor(as.vector(community), levels=1:nsp))
     
     # Environmental filtering
-    # dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
-    # env_filt[g+1, r] <- mean(dist_site)
+    dist_site <- sqrt((diag(as.matrix(perf_ind)[, as.vector(t(community))])-X1)^2)
+    env_filt[g+1, r] <- mean(dist_site, na.rm = TRUE)
     
     # Mean mortality rate in the community
     theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
-    theta_comm[g+1, r] <- mean(theta_site)
+    theta_comm[g+1, r] <- mean(theta_site, na.rm = TRUE)
     
   } # End ngen
+  
+  #CGT 28/06/2021 to compare the two models
+  community_end_m1 <- community
   
   # Plot final community once
   if (r==1) {
@@ -342,7 +274,7 @@ for (r in 1:nrep) {
   # Species rank
   rank_sp[r, ] <- rank(-abund[ngen+1, ], ties.method="min")
   
-  df_shannon <- data.frame(Species = 1:64,
+  df_shannon <- data.frame(Species = 1:nsp,
                            Abundance = abund[ngen+1, ])%>%
     mutate(Proportion = Abundance / sum(Abundance))%>%
     filter(Abundance > 0)%>%
@@ -350,7 +282,7 @@ for (r in 1:nrep) {
   
   Shannon[r] <- -sum(df_shannon$prop_times_ln_prop)
   
-  #To keep the abundance matrixes in order to infer alpha matrix
+  #To keep the abundance matrices in order to infer alpha matrix
   Abundances_m1[[r]] <- abund
   
 } # End nrep
@@ -380,6 +312,30 @@ p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
 ggsave(p, filename=here("outputs", "m1", "species_richness_with_time.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
+# ---------------------------------------------
+# Link between final rank and habitat frequency
+# ---------------------------------------------
+
+# Mean final rank
+sp_mean_rank <- apply(rank_sp, 2, mean)
+
+# minus because the max must have rank 1
+rank_dist_E <- t(apply(-perf_mean, 1, rank, ties.method="min"))
+# find the number of cells on which each species wins.
+sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
+sp_hab_freq <- as.table(sp_hab_freq)
+names(sp_hab_freq) <- 1:nsp
+# Plot
+df <- data.frame(cbind(sp_mean_rank, sp_hab_freq))
+ p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
+   geom_point() +
+   geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
+   xlab("Species suitable habitat frequency") +
+   ylab("Species mean rank (higher rank = lower abundance)") +
+   theme(axis.title=element_text(size=16))
+ggsave(p, filename=here("outputs", "m1", "mean_rank-habitat_freq.png"),
+        width=fig_width, height=fig_width, units="cm", dpi=300)
+
 # ---------------------------------------------------------------------------------
 # pairwise Spearman correlation on the species ranks at the end of each simulation
 # ---------------------------------------------------------------------------------
@@ -387,10 +343,10 @@ ggsave(p, filename=here("outputs", "m1", "species_richness_with_time.png"),
 Spearman <- as.dist(round(cor(t(rank_sp), method="spearman"),2))
 save(Spearman, file = here::here("outputs", "m1", "Spearman_m1.RData"))
 
-rank_sp <- data.frame(rank_sp)%>%
+Df_rank_sp <- data.frame(rank_sp)%>%
   mutate(rep = 1:nrep)%>%
   pivot_longer(cols=X1:X64, values_to="rank_sp")
-p <- ggplot(data=rank_sp, aes(x=rep, y=rank_sp)) +
+p <- ggplot(data=Df_rank_sp, aes(x=rep, y=rank_sp)) +
   geom_line(aes(colour=name)) + 
   scale_colour_viridis_d()+
   xlab("Repetition") + 
@@ -399,10 +355,8 @@ p <- ggplot(data=rank_sp, aes(x=rep, y=rank_sp)) +
 ggsave(p, filename=here("outputs", "m1", "species_rank_with_repetitions.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
-
 sp_rich_final <- sp_rich[ngen+1,]
 save(sp_rich_final, file=here::here("outputs", "m1", "Species_richness_m1.RData"))
-
 
 # ---------------------------------------------
 # Shannon index and Shannon equitability index
@@ -412,44 +366,28 @@ Equitability <- Shannon/log(as.numeric(sp_rich[ngen+1,]))
 save(Equitability, file = here::here("outputs", "m1", "Equitability_m1.RData"))
 
 # ---------------------------------------------
-# Link between final rank and habitat frequency
-# ---------------------------------------------
-
-# # Mean final rank
-# sp_mean_rank <- apply(rank_sp, 2, mean)
-# # Plot
-# df <- data.frame(cbind(sp_mean_rank, sp_hab_freq))
-# p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
-#   geom_point() +
-#   geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
-#   xlab("Species habitat frequency") +
-#   ylab("Species mean rank (higher rank = lower abundance)") +
-#   theme(axis.title=element_text(size=16))
-# ggsave(p, filename=here("outputs", "m1", "mean_rank-habitat_freq.png"),
-#        width=fig_width, height=fig_width, units="cm", dpi=300)
-
-# ---------------------------------------------
 # Environmental filtering
 # ---------------------------------------------
 
-# env_filt <- data.frame(env_filt)
-# env_filt_long <- env_filt %>%
-#   mutate(gen=1:(ngen+1)) %>%
-#   pivot_longer(cols=X1:X10, names_to="rep",
-#                names_prefix="X", values_to="env_filt")
-# p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
-#   geom_line() +
-#   labs(title="Environmental filtering") +
-#   xlab("Generations") + 
-#   ylab("Mean env-species perf difference")
-# ggsave(p, filename=here("outputs", "m1", "environmental_filtering.png"),
-#        width=fig_width, height=fig_width/2, units="cm", dpi=300)
+ env_filt <- data.frame(env_filt)
+ env_filt_long <- env_filt %>%
+   mutate(gen=1:(ngen+1)) %>%
+   pivot_longer(cols=X1:X10, names_to="rep",
+                names_prefix="X", values_to="env_filt")
+ p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
+   geom_line() +
+   scale_colour_viridis_d() +
+   labs(title="Environmental filtering") +
+   xlab("Generations") + 
+   ylab("Distance between the performance \n and the environment on each site")
+ ggsave(p, filename=here("outputs", "m1", "environmental_filtering.png"),
+        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
 # Plot
 png(file=here("outputs", "m1", "spatial_comp_env_sp.png"), 
     width=fig_width, height=fig_width, units="cm", res=300)
 par(mfrow=c(2,2))
-plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
+plot(raster(community_start_m1), main="Species - Start", zlim=c(0, nsp),
      col=c("black", viridis(nsp)))
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
      col=c("black", viridis(nsp)))
@@ -484,15 +422,25 @@ ggsave(p, filename=here("outputs", "m1", "mortality_rate_community.png"),
 sp_XY <- data.frame(rasterToPoints(raster(community)))
 names(sp_XY) <- c("x", "y", "sp")
 vario_sp <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
-# Environment autocorrelation
-vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=sites)
+# Environment autocorrelation X1
+vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=X1)
+
+# 3D voxel for each site
+niche_width <- 0.25
+n_niche <- 1/niche_width
+x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
+y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
+z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
+class_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
+vario_env_all <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
 
 # Plot with correlation
 png(file=here("outputs", "m1", "sp_autocorrelation.png"),
     width=fig_width, height=fig_width*0.8, units="cm", res=300)
 par(mfrow=c(2,2))
 plot(vario_sp, main="Species - End")
-plot(vario_env, main="Environment")
+plot(vario_env, main="Environment (one axis)")
+plot(vario_env_all, main="Environment (three axes)")
 plot(vario_env$v, vario_sp$v,
      xlab="Semivariance for environment",
      ylab="Semivariance for species")
@@ -574,4 +522,72 @@ p <- ggplot(Spearman, aes(x= Model, y=Spearman, colour = Model))+
   labs(title = "Boxplot of the pairwise Spearman correlation of species ranks \n at the end of each repetition with both models", y="Shannon equitability index")
 ggsave(p, filename=here("outputs", "Comparison", "Spearman_ranks.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
+
+
+png(file=here("outputs", "Comparison", "Community.png"),
+    width=fig_width, height=fig_width, units="cm", res=300)
+par(mfrow=c(2,2))
+plot(raster(community_start_m0), main="m0 - Species at start", zlim=c(0, nsp),
+     col=c("black",  viridis(nsp)))
+plot(raster(community_start_m1), main="m1 - Species at start", zlim=c(0, nsp),
+     col=c("black",  viridis(nsp)))
+plot(raster(community_end_m0), main="m0 - Species at end", zlim=c(0, nsp),
+     col=c("black",  viridis(nsp)))
+plot(raster(community_end_m1), main="m1 - Species at end", zlim=c(0, nsp),
+     col=c("black",  viridis(nsp)))
+dev.off()
+
+
+perf_ind <- as.data.frame(matrix(ncol=nsp, nrow=nsite))
+rank_sp <- matrix(NA, nrow=nrep, ncol=nsp)
+load(here::here("outputs", "m0", "sp_hab_freq.RData"))
+sp_hab_freq <- as.data.frame(sp_hab_freq)
+
+#Step 1 : no repetitions
+Df_rank_hab <- data.frame(Rank = rank_sp[1,], Freq = sp_hab_freq$Freq)
+ggplot(data = Df_rank_hab, aes(x = Freq, y = Rank))+
+  geom_point()+
+  labs(title="Relationship between the suitable habitat frequency in m0  \n and the species rank at the end of one simulation in m1",
+       x = "Suitable habitat frequency in m0",
+       y = "Species rank at the end of one m1 simulation")
+
+#Step 2 : repetitions for rank
+Df_rank_hab$Mean_rank <- sp_mean_rank
+Df_rank_hab$sd_rank <- apply(rank_sp, 2, sd)
+ggplot(data = Df_rank_hab, aes(x = Freq, y = Mean_rank))+
+  geom_point()+
+  geom_point()+
+  geom_errorbar(aes(ymin=Mean_rank-sd_rank, ymax=Mean_rank+sd_rank), width=.2,
+                position=position_dodge(0.05))+
+  labs(title="Relationship between the suitable habitat frequency in m0  \n and the mean and standard deviation of the species rank at the end of ten simulations in m1",
+       x = "Suitable habitat frequency in m0",
+       y = "Mean rank and standard deviations from 10 m1 simulations")
+
+#Step 3 : repetitions for habitat frequency
+Hab_freq <- matrix(ncol=nsp, nrow=10)
+
+for (r in 1:10) {
+  for(sp in 1:nsp){
+    perf_ind[,sp] <- beta_0[sp]+beta_1[sp]*X1+beta_2[sp]*(X1^2)+rnorm(1, mean=0, sd=sqrt(V_intra$V[sp]))
+  }
+  rank_dist_E_m1 <- t(apply(-perf_ind, 1, rank, ties.method="min"))
+  # find the number of cells on which each species wins in model m0
+  sp_hab_freq_m1 <- apply(rank_dist_E_m1, 2, function(x){sum(x==1)})
+  sp_hab_freq_m1 <- as.table(sp_hab_freq_m1)      
+  names(sp_hab_freq_m1) <- 1:nsp
+  sp_hab_freq_m1 <- as.data.frame(sp_hab_freq_m1)
+  Hab_freq[r,] <- sp_hab_freq_m1$Freq
+}
+
+Df_rank_hab$Mean_freq <- apply(Hab_freq, 2, mean)
+Df_rank_hab$sd_freq <- apply(Hab_freq, 2, sd)
+ggplot(data = Df_rank_hab, aes(x = Freq, y = Mean_rank))+
+  geom_point()+
+  geom_point()+
+  geom_errorbar(aes(ymin=Mean_rank-sd_rank, ymax=Mean_rank+sd_rank), width=.2,
+                position=position_dodge(0.05))+
+  geom_errorbarh(aes(xmin=Freq-sd_freq, xmax=Freq+sd_freq))+
+  labs(title="Relationship between the suitable habitat frequency in m0 \n with the standard deviation from m1 over 10 repetitions,  \n and the mean and standard deviation of the species rank at the end of ten simulations in m1",
+       x = "Suitable habitat frequency in m0 and standard deviation from 10 m1 simulations",
+       y = "Mean rank and standard deviations from 10 m1 simulations")
 

@@ -100,12 +100,16 @@ for (i in 1:n_axis) {
   seed <- 1234 + i - 1
   rho <- c(rmvn(1, mu=rep(0, nsite), V=covrho, seed=seed)) # Spatial Random Effects
   rho <- rho-mean(rho) # Centering rhos on zero
-  rho <- scales::rescale(rho, to=c(0, 1))
+  #rho <- scales::rescale(rho, to=c(0, 1))
+  rho <- (rho - min(rho)) / (max(rho) - min(rho))
   sites[,i] <- rho
   env[[i]] <- matrix(rho, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
 }
 env_stack <- stack(raster(env[[1]]*255), raster(env[[2]]*255), raster(env[[3]]*255))
 crs(env_stack) <- "+proj=utm +zone=1"
+#CGT 25/06/2021: save the environmental data to avoid simulating them again in the next model
+save(sites, file = here::here("outputs", "m0", "sites.RData"))
+save(env, file = here::here("outputs", "m0", "env.RData"))
 
 # Plot
 png(file=here("outputs", "m0", "environment.png"),
@@ -207,6 +211,7 @@ rank_dist_E <- t(apply(dist_E_Sp, 1, rank, ties.method="min"))
 sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
 sp_hab_freq <- as.table(sp_hab_freq)
 names(sp_hab_freq) <- 1:nsp
+save(sp_hab_freq, file = here::here("outputs", "m0", "sp_hab_freq.RData"))
 png(file=here("outputs", "m0", "species_habitat_freq.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
@@ -249,15 +254,15 @@ for (r in 1:nrep) {
   # Draw species at random in the landscape (one individual per site)
   sp <- sample(1:nsp, size=nsite, replace=TRUE)
   #hist(sp)
-  community_start <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
+  community_start_m0 <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
   if (r==1) {
     png(file=here("outputs", "m0", "community_start.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
-    plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
+    plot(raster(community_start_m0), main="Species - Start", zlim=c(0, nsp),
          col=c("black",  viridis(nsp)))
     dev.off()
   }
-  community <- community_start
+  community <- community_start_m0
   
   # Species richness
   sp_rich[1, r] <- length(unique(c(community)))
@@ -342,6 +347,9 @@ for (r in 1:nrep) {
     theta_comm[g+1, r] <- mean(theta_site)
     
   } # End ngen
+  
+  #CGT 28/06/2021 to compare the two models
+  community_end_m0 <- community
   
   # Plot final community once
   if (r==1) {
@@ -428,7 +436,7 @@ df <- data.frame(cbind(sp_mean_rank, sp_hab_freq))
 p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
   geom_point() +
   geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
-  xlab("Species habitat frequency") +
+  xlab("Species suitable habitat frequency") +
   ylab("Species mean rank (higher rank = lower abundance)") +
   theme(axis.title=element_text(size=16))
 ggsave(p, filename=here("outputs", "m0", "mean_rank-habitat_freq.png"),
@@ -436,10 +444,10 @@ ggsave(p, filename=here("outputs", "m0", "mean_rank-habitat_freq.png"),
 
 #CGT 15/06/2021
 # To compare with the other model
-rank_sp <- data.frame(rank_sp)%>%
+Df_rank_sp <- data.frame(rank_sp)%>%
   mutate(rep = 1:nrep)%>%
   pivot_longer(cols=X1:X64, values_to="rank_sp")
-p <- ggplot(data=rank_sp, aes(x=rep, y=rank_sp)) +
+p <- ggplot(data=Df_rank_sp, aes(x=rep, y=rank_sp)) +
   geom_line(aes(colour=name)) +
   scale_colour_viridis_d()+
   xlab("Repetition") + 
@@ -471,7 +479,7 @@ ggsave(p, filename=here("outputs", "m0", "environmental_filtering.png"),
 png(file=here("outputs", "m0", "spatial_comp_env_sp.png"), 
     width=fig_width, height=fig_width, units="cm", res=300)
 par(mfrow=c(2,2))
-plot(raster(community_start), main="Species - Start", zlim=c(0, nsp),
+plot(raster(community_start_m0), main="Species - Start", zlim=c(0, nsp),
      col=c("black", viridis(nsp)))
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
      col=c("black", viridis(nsp)))
@@ -592,22 +600,98 @@ beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
 beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
 beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
 
-#Simultate 10000 individuals per species
-n_ind_simul <- 10000
-df_simul_ind <- data.frame(Species = rep(1:nsp, each=n_ind_simul), Perf=rep(beta_0+beta_1*mean_x1+beta_2*(mean_x1^2), each=n_ind_simul))
-df_simul_ind <- df_simul_ind%>%
+x <- seq(-3, 3, 0.01)
+n_ind_simul <- length(x)
+df_perf_IV <- data.frame(Species = rep(1:nsp, each=n_ind_simul), X = rep(x, nsp), Mean=rep(beta_0+beta_1*mean_x1+beta_2*(mean_x1^2), each=n_ind_simul))
+df_perf_IV <- df_perf_IV%>%
   group_by(Species)%>%
-  mutate(Perf = Perf + rnorm(n(), mean=0, sd=sqrt(V_intra$V[Species])))%>%
+  mutate(Perf = dnorm(x, mean=Mean, sd=sqrt(V_intra$V[Species])))%>%
   ungroup()
 
-p <- ggplot(df_simul_ind, aes(Perf, colour = as.factor(Species))) +
-  geom_density()+
+p <- ggplot(df_perf_IV, aes(x = X, y = Perf, colour = as.factor(Species))) +
+  geom_line()+
   scale_colour_viridis_d()+
   theme(legend.position = "none")+
   labs(x = "Performance at mean environment variable X1",
        y = "Density")
 ggsave(p, filename=here("outputs", "m0", "Perf_overlap_IV.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+# Compare species habitat frequency and IV #
+
+Niche_width <- data.frame(Species = c(1:nsp),
+                       Optimum = niche_optimum$sp_x,
+                       Width = numeric(nsp))
+Niche_width <- Niche_width[order(Niche_width$Optimum), ]
+rownames(Niche_width) <- c(1:nrow(Niche_width))
+# Width of the first niche
+Niche_width$Width[1] <- Niche_width$Optimum[1] + 0.5 * (Niche_width$Optimum[2] - Niche_width$Optimum[1])
+# Width of the last niche
+Niche_width$Width[nsp] <- (1-Niche_width$Optimum[nsp]) + 0.5 * (Niche_width$Optimum[nsp] - Niche_width$Optimum[nsp-1])
+#Width of all other niches
+for (k in 2:(nsp-1)){
+  Niche_width$Width[k] <- (Niche_width$Optimum[k]-Niche_width$Optimum[k-1])/2 + (Niche_width$Optimum[k+1]-Niche_width$Optimum[k])/2
+}
+Niche_width <- Niche_width[order(Niche_width$Species), ]
+rownames(Niche_width) <- c(1:nrow(Niche_width))
+
+#
+V_intra_hab_freq <- data.frame(Species = c(1:nsp),
+                               IV = V_intra$V,
+                               Hab_freq = as.data.frame(sp_hab_freq)$Freq,
+                               Pres_m0 = numeric(nsp),
+                               Pres_m1 = numeric(nsp),
+                               Code_presence = numeric(nsp),
+                               Niche_width = Niche_width$Width)
+
+load(here::here("outputs", "m0", "Abundances_m0.RData"))
+for (sp in 1:nsp) {
+  if (Abundances_m0[[1]][nrow(Abundances_m0[[1]]), sp] == 0) {
+    V_intra_hab_freq$Pres_m0[sp] <- 0
+  }
+  else V_intra_hab_freq$Pres_m0[sp] <- 1
+}
+
+load(here::here("outputs", "m1", "Abundances_m1.RData"))
+for (sp in 1:nsp) {
+  if (Abundances_m1[[1]][nrow(Abundances_m1[[1]]), sp] == 0) {
+    V_intra_hab_freq$Pres_m1[sp] <- 0
+  }
+  else V_intra_hab_freq$Pres_m1[sp] <- 1
+}
+
+for (k in 1:nrow(V_intra_hab_freq)){
+  if (V_intra_hab_freq$Pres_m0[k]==1 && V_intra_hab_freq$Pres_m1[k]==1){
+    V_intra_hab_freq$Code_presence[k] <- 3
+  }
+  if (V_intra_hab_freq$Pres_m0[k]==0 && V_intra_hab_freq$Pres_m1[k]==0){
+    V_intra_hab_freq$Code_presence[k] <- 0
+  }
+  if (V_intra_hab_freq$Pres_m0[k]==1 && V_intra_hab_freq$Pres_m1[k]==0){
+    V_intra_hab_freq$Code_presence[k] <- 1
+  }
+  if (V_intra_hab_freq$Pres_m0[k]==0 && V_intra_hab_freq$Pres_m1[k]==1){
+    V_intra_hab_freq$Code_presence[k] <- 2
+  }
+}
+
+V_intra_hab_freq$Code_presence <- as.factor(V_intra_hab_freq$Code_presence)
+
+ggplot(data = V_intra_hab_freq, aes(x = Hab_freq, y = IV, colour = Code_presence))+
+  geom_point()+
+  scale_color_viridis_d("Presence of the species", labels = c("Disappeared in both models", "Disappeared in second model", "Maintained in both models"))+
+  labs(title = "Relationship between the species suitable habitat frequency in m0, \n the IV on axis X1 and the species presence at the end of a simulation",
+       x = "Suitable habitat frequency in m0",
+       y = "Inferred IV on axis X1")
+
+ggplot(data = V_intra_hab_freq, aes(x = Niche_width, y = IV, colour = Code_presence))+
+  geom_point()+
+  scale_color_viridis_d("Presence of the species", labels = c("Disappeared in both models", "Disappeared in second model", "Maintained in both models"))+
+  labs(title = "Relationship between the species suitable habitat frequency in m0, \n the IV on axis X1 and the species presence at the end of a simulation",
+       x = "Niche width in m0",
+       y = "Inferred IV on axis X1")
+  
+  
 
 # =========================
 # End of file
