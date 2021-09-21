@@ -52,7 +52,7 @@ We consider $n_s=w \times h$ sites on a regular grid. Each site $i$ is character
 
 ![](outputs/m0/environment.png){width="100%"}
 
-![](outputs/m0/hab_freq.png){width="50%"}
+![](outputs/m0/hab_freq_1.png){width="50%"}
 
 ## Species
 
@@ -60,7 +60,7 @@ We consider $n_{Sp}$ species indexed on $j$ ($n_{Sp}=64$ in our example). Specie
 
 ![](outputs/m0/species_niche.png){width="50%"}
 
-The number of sites where each species has a higher performance is variable between species. For some species, there is no sites where they would be the most competitive.
+The number of sites where each species has a higher performance is variable between species. For some species, there are no sites where they would be the most competitive.
 
 ![](outputs/m0/species_habitat_freq.png){width="50%"}
 
