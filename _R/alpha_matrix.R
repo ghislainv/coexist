@@ -4,6 +4,9 @@
 #Here we want to estimate the alpha matrix i.e. to solve the Ordinary Differential Equation system.
 
 #Build abundance matrix and compute abundance delta
+load(here::here("outputs", "m0", "Abundances_m0.RData"))
+nsp <- ncol(Abundances_m0[[1]])
+r = 1
 for (r in 1:nrep){
   Abund_matrix_m0_t0 <- as.data.frame(Abundances_m0[[r]])
   colnames(Abund_matrix_m0_t0) <- sprintf("Sp_%03d", 1:nsp)
@@ -250,8 +253,55 @@ modelList <- list(typeNames = 'DA',ng=2000, burnin=500, reductList = rl,
 output <- gjam(formula, xdata=xdata, ydata=ydata, modelList=modelList)
 
 #####################################################################
+############################### Stan ################################
+#####################################################################
 
-formula <- as.formula (~1) #Lotka-Volterra model
+library(rstan)
 
+load(here::here("outputs", "m0", "Abundances_m0.RData"))
+abundances_increments <- c(as.matrix(na.omit(Abund_diff_matrix_m0)))
+#abundances_increments <- as.matrix(na.omit(Abund_diff_matrix_m0))
+#One must remove last abundances measures which are not associated to an abundance increment
+abundance_matrix <- as.matrix(Abundances_m0[[1]])[1:(nrow(Abund_diff_matrix_m0)-1),]
+abundance_vector <- c(abundance_matrix)
+abundance_matrix_rep <- do.call(rbind, replicate(nsp, abundance_matrix, simplify=FALSE))
+nsp <- ncol(abundance_matrix)
+#species <- (1:nsp)
+species <- rep(1:nsp, each = nrow(Abund_diff_matrix_m0)-1)
+nobs <- length(abundance_vector)
+
+data <- list(N = nobs,
+             K = nsp,
+             J = nsp,
+             L = 1,
+             jj = species,
+             x = abundance_matrix_rep,
+             u = as.matrix(rep(1, nsp)),
+             y = abundances_increments)
+
+fit <- stan(file = here::here('Model.stan'), data = data)
+
+data_chol <- list(N = nobs,
+             K = nsp,
+             J = nsp,
+             L = 1,
+             jj = species,
+             x = abundance_matrix,
+             u = t(as.matrix(rep(1, nsp))),
+             y = abundances_increments)
+
+fit <- stan(file = here::here('Model_chol.stan'), data = data_chol)
+
+data_Jeanne <- list(N = nobs,
+             K = nsp,
+             J = nsp,
+             jj = species,
+             x = abundance_matrix_rep,
+             y = abundances_increments)
+
+options(mc.cores = 2)
+fit <- stan(file = here::here('Stan_Jeanne.stan'), data = data_Jeanne, chains=2)
+
+save(fit, file=here::here("MCMC_Stan_Jeanne.RData"))
 
 

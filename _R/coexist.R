@@ -18,6 +18,7 @@ library(plot3D) # scatter3D()
 library(Rcpp)
 library(RcppArmadillo)
 library(viridisLite)
+library(purrr)
 
 # Create output directories
 dir.create(here("outputs/m0"), recursive=TRUE)
@@ -114,10 +115,10 @@ save(env, file = here::here("outputs", "m0", "env.RData"))
 # Plot
 png(file=here("outputs", "m0", "environment.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
-par(mfrow=c(2,2))
-plot(raster(env[[1]]), main="Environment var1", col=topo.colors(255))
-plot(raster(env[[2]]), main="Environment var2", col=topo.colors(255))
-plot(raster(env[[3]]), main="Environment var3", col=topo.colors(255))
+par(mfrow=c(2,2), bty = "n")
+plot(raster(env[[1]]), main="Environment var1", col=topo.colors(255), cex.main=1.2)
+plot(raster(env[[2]]), main="Environment var2", col=topo.colors(255), cex.main=1.2, legend=FALSE)
+plot(raster(env[[3]]), main="Environment var3", col=topo.colors(255), cex.main=1.2, legend=FALSE)
 plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
 dev.off()
 
@@ -147,8 +148,9 @@ niche_width <- 0.25
 # Niches per axis
 n_niche <- 1/niche_width
 # Number of species
-nsp <- n_niche^n_axis 
+nsp <- n_niche^n_axis
 # Species coordinates on the three niche axis (x, y, z)
+nsp <- 100
 base_coord <- seq(0, 1, length.out=n_niche+1)[-(n_niche+1)]+niche_width/2
 sp_x <- rep(rep(base_coord, n_niche), n_niche)
 sp_y <- rep(rep(base_coord, each=n_niche), n_niche)
@@ -159,7 +161,9 @@ niche_optimum <- as.data.frame(cbind(sp_x, sp_y, sp_z))
 randomOptSp <- TRUE
 if (randomOptSp) {
   set.seed(seed)
-  niche_optimum <- data.frame(sp_x=runif(nsp), sp_y=runif(nsp), sp_z=runif(nsp))
+  niche_optimum <- data.frame(sp_x=runif(n=nsp, min = min(env[[1]]), max = max(env[[1]])),
+                              sp_y=runif(n=nsp, min = min(env[[2]]), max = max(env[[2]])),
+                              sp_z=runif(n=nsp, min = min(env[[3]]), max = max(env[[3]])))
   niche_optimum <- niche_optimum[order(niche_optimum$sp_z, niche_optimum$sp_y, niche_optimum$sp_x), ]
 }
 #CGT 10/06/2021
@@ -171,8 +175,8 @@ png(file=here("outputs", "m0", "species_niche.png"),
 par(mar=c(1,1,2,2))
 scatter3D(niche_optimum$sp_x, niche_optimum$sp_y, niche_optimum$sp_z,
           pch=16, 
-          colvar=1:64, col=viridis(nsp),
-          bty = "f", main ="Three-dimensional niche", phi=0,
+          colvar=1:nsp, col=viridis(nsp),
+          bty = "f", main ="Three-dimensional species optima", phi=0,
           xlim=c(0,1), ylim=c(0,1), zlim=c(0,1))
 dev.off()
 
@@ -205,6 +209,17 @@ png(file=here("outputs", "m0", "hist_mortality.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 hist(mortality_E_Sp)
 dev.off()
+# Mortality probability function
+png(file=here::here("outputs", "m0", "function_mort_proba.png"),
+    width=fig_width, height = fig_width/1.5, units="cm", res=300)
+plot(x=c(perf_E_Sp),
+     y=c(mortality_E_Sp),
+     xlab="Performance",
+     ylab="Mortality probability",
+     main="Mortality probability as a function of performance",
+     cex.lab=1.5,
+     cex.main=1.5)
+dev.off()
 
 # Habitat frequency for each species
 rank_dist_E <- t(apply(dist_E_Sp, 1, rank, ties.method="min"))
@@ -214,6 +229,7 @@ names(sp_hab_freq) <- 1:nsp
 save(sp_hab_freq, file = here::here("outputs", "m0", "sp_hab_freq.RData"))
 png(file=here("outputs", "m0", "species_habitat_freq.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
+par(cex.lab=1.5)
 plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
 dev.off()
 
@@ -226,9 +242,9 @@ nsp_no_habitat <- length(sp_no_habitat)
 # =========================================
 
 # Number of repetitions
-nrep <- 10
+nrep <- 50
 # Number of generations
-ngen <- 500
+ngen <- 1000
 
 # Species richness
 sp_rich <- matrix(NA, nrow=ngen+1, ncol=nrep)
@@ -258,8 +274,9 @@ for (r in 1:nrep) {
   if (r==1) {
     png(file=here("outputs", "m0", "community_start.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
+    par(bty = "n")
     plot(raster(community_start_m0), main="Species - Start", zlim=c(0, nsp),
-         col=c("black",  viridis(nsp)))
+         col=c("black",  viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
     dev.off()
   }
   community <- community_start_m0
@@ -303,8 +320,9 @@ for (r in 1:nrep) {
     if (r==1 & g==1) {
       png(file=here("outputs", "m0", "mortality_events.png"),
           width=fig_width, height=fig_width, units="cm", res=300)
+      par(bty = "n")
       plot(raster(community), main="Species - with vacant sites", zlim=c(0, nsp),
-           col=c("black", viridis(nsp)))
+           col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
       dev.off()
     }
 
@@ -355,8 +373,9 @@ for (r in 1:nrep) {
   if (r==1) {
     png(file=here("outputs", "m0", "community_end.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
+    par(bty = "n")
     plot(raster(community), main=glue("Species - End (ngen={ngen})"),
-         zlim=c(0, nsp), col=c("black", viridis(nsp)))
+         zlim=c(0, nsp), col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
     dev.off()
   }
   
@@ -365,7 +384,7 @@ for (r in 1:nrep) {
   rank_sp[r, ] <- rank(-abund[ngen+1, ], ties.method="min")
   
   #CGT 16/06/2021
-  df_shannon <- data.frame(Species = 1:64,
+  df_shannon <- data.frame(Species = 1:nsp,
                            Abundance = abund[ngen+1, ])%>%
     mutate(Proportion = Abundance / sum(Abundance))%>%
     filter(Abundance > 0)%>%
@@ -380,6 +399,8 @@ for (r in 1:nrep) {
 } # End nrep
 
 save(Abundances_m0, file = here::here("outputs", "m0", "Abundances_m0.RData"))
+save(sp_rich, file=here::here("outputs", "m0", "sp_rich_m0.RData"))
+save(rank_sp, file=here::here("outputs", "m0", "rank_sp_m0.RData"))
 
 # =========================
 # Diversity analysis
@@ -395,13 +416,15 @@ rank_sp
 sp_rich <- data.frame(sp_rich)
 sp_rich_long <- sp_rich %>%
   mutate(gen=1:(ngen+1)) %>%
-  pivot_longer(cols=X1:X10, names_to="rep",
+  pivot_longer(cols=X1:X50, names_to="rep",
                names_prefix="X", values_to="sp_rich")
 p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
   geom_line() +
   scale_colour_viridis_d()+
   xlab("Generations") + 
-  ylab("Species richness")
+  ylab("Species richness")+
+  theme(legend.position = "none",
+        text = element_text(size = 20))
 ggsave(p, filename=here("outputs", "m0", "species_richness_with_time.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
@@ -446,13 +469,14 @@ ggsave(p, filename=here("outputs", "m0", "mean_rank-habitat_freq.png"),
 # To compare with the other model
 Df_rank_sp <- data.frame(rank_sp)%>%
   mutate(rep = 1:nrep)%>%
-  pivot_longer(cols=X1:X64, values_to="rank_sp")
+  pivot_longer(cols=X1:X100, values_to="rank_sp")
 p <- ggplot(data=Df_rank_sp, aes(x=rep, y=rank_sp)) +
   geom_line(aes(colour=name)) +
   scale_colour_viridis_d()+
   xlab("Repetition") + 
   ylab("Species rank")+
-  theme(legend.position = "none")
+  theme(legend.position = "none",
+        text = element_text(size = 20))
 ggsave(p, filename=here("outputs", "m0", "species_rank_with_repetitions.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
@@ -464,7 +488,7 @@ ggsave(p, filename=here("outputs", "m0", "species_rank_with_repetitions.png"),
 env_filt <- data.frame(env_filt)
 env_filt_long <- env_filt %>%
   mutate(gen=1:(ngen+1)) %>%
-  pivot_longer(cols=X1:X10, names_to="rep",
+  pivot_longer(cols=X1:X50, names_to="rep",
                names_prefix="X", values_to="env_filt")
 p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
   geom_line() +
@@ -478,14 +502,14 @@ ggsave(p, filename=here("outputs", "m0", "environmental_filtering.png"),
 # Plot
 png(file=here("outputs", "m0", "spatial_comp_env_sp.png"), 
     width=fig_width, height=fig_width, units="cm", res=300)
-par(mfrow=c(2,2))
+par(mfrow=c(2,2), bty = "n")
 plot(raster(community_start_m0), main="Species - Start", zlim=c(0, nsp),
-     col=c("black", viridis(nsp)))
+     col=c("black", viridis(nsp)), legend=FALSE)
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
-     col=c("black", viridis(nsp)))
+     col=c("black", viridis(nsp)), legend=FALSE)
 plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
-     col=c("black", viridis(nsp)))
+     col=c("black", viridis(nsp)), legend=FALSE)
 dev.off()
 
 # ---------------------------------------------
@@ -495,7 +519,7 @@ dev.off()
 theta_comm <- data.frame(theta_comm)
 theta_comm_long <- theta_comm %>%
   mutate(gen=1:(ngen+1)) %>%
-  pivot_longer(cols=X1:X10, names_to="rep",
+  pivot_longer(cols=X1:X50, names_to="rep",
                names_prefix="X", values_to="theta_comm")
 p <- ggplot(data=theta_comm_long, aes(x=gen, y=theta_comm, col=rep)) +
   geom_line() +
@@ -524,10 +548,11 @@ vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
 # Plot with correlation
 png(file=here("outputs", "m0", "sp_autocorrelation.png"),
     width=fig_width, height=fig_width*0.8, units="cm", res=300)
-par(mfrow=c(2,2))
+par(mfrow=c(2,2), bty = "n")
 plot(vario_sp, main="Species - End")
 plot(vario_env, main="Environment")
 plot(vario_env$v, vario_sp$v,
+     main = "Regression",
      xlab="Semivariance for environment",
      ylab="Semivariance for species")
 m <- lm(vario_sp$v ~ vario_env$v-1)
@@ -549,11 +574,11 @@ dev.off()
 
 # Data-set
 df <- data.frame(perf_E_Sp)
-names(df) <- sprintf("Sp_%03d", 1:nsp)
+names(df) <- c(sprintf("Sp_%03d", 1:(nsp-1)), sprintf("Sp_%d", nsp))
 df_perf <- tibble(df) %>%
   mutate(Env=values(raster(env[[1]]))) %>%
   mutate(Env2=Env^2) %>%
-  pivot_longer(cols=Sp_001:glue("Sp_0{nsp}"), names_to="Species", values_to="Perf")
+  pivot_longer(cols=c(Sp_001:glue("Sp_0{nsp-1}"), glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
 
 # Observed niche
 # Select 8 species at random
@@ -586,7 +611,8 @@ save(V_intra, file = here::here("outputs", "m0", "V_intra.RData"))
 
 p <- ggplot(data=V_intra, aes(x=Species, y=V)) +
   geom_col() +
-  theme(axis.text.x=element_text(angle=90, size=6)) +
+  theme(axis.text.x=element_text(angle=90, size=6),
+        text = element_text(size = 20)) +
   ylab("Intraspecific variance")
 ggsave(p, filename=here("outputs", "m0", "intraspecific_variance.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
@@ -636,6 +662,9 @@ Niche_width <- Niche_width[order(Niche_width$Species), ]
 rownames(Niche_width) <- c(1:nrow(Niche_width))
 
 #
+load(here::here("outputs", "m0", "V_intra.RData"))
+load(here::here("outputs", "m0", "sp_hab_freq.RData"))
+
 V_intra_hab_freq <- data.frame(Species = c(1:nsp),
                                IV = V_intra$V,
                                Hab_freq = as.data.frame(sp_hab_freq)$Freq,
@@ -677,21 +706,66 @@ for (k in 1:nrow(V_intra_hab_freq)){
 
 V_intra_hab_freq$Code_presence <- as.factor(V_intra_hab_freq$Code_presence)
 
-ggplot(data = V_intra_hab_freq, aes(x = Hab_freq, y = IV, colour = Code_presence))+
+ggplot2::ggplot(data = V_intra_hab_freq, aes(x = Hab_freq, y = IV, colour = Code_presence))+
   geom_point()+
-  scale_color_viridis_d("Presence of the species", labels = c("Disappeared in both models", "Disappeared in second model", "Maintained in both models"))+
+  scale_color_viridis_d("Presence of the species", labels = c("Disappeared in both models", "Disappeared in second model", "Disappeared in first model", "Maintained in both models"))+
   labs(title = "Relationship between the species suitable habitat frequency in m0, \n the IV on axis X1 and the species presence at the end of a simulation",
        x = "Suitable habitat frequency in m0",
-       y = "Inferred IV on axis X1")
+       y = "Inferred IV on axis X1")+
+  theme(text = element_text(size = 15))
 
-ggplot(data = V_intra_hab_freq, aes(x = Niche_width, y = IV, colour = Code_presence))+
+ggplot2::ggplot(data = V_intra_hab_freq, aes(x = Niche_width, y = IV, colour = Code_presence))+
   geom_point()+
   scale_color_viridis_d("Presence of the species", labels = c("Disappeared in both models", "Disappeared in second model", "Maintained in both models"))+
   labs(title = "Relationship between the species suitable habitat frequency in m0, \n the IV on axis X1 and the species presence at the end of a simulation",
        x = "Niche width in m0",
        y = "Inferred IV on axis X1")
   
-  
+
+#Find the time of disppearing of each species
+abund_m0 <- Abundances_m0[[1]]
+Time_disap_m0 <- c()
+for (k in 1:ncol(abund_m0)){
+t <- abund_m0[,k]%>%purrr::detect_index(function(x) x == 0)
+Time_disap_m0 <- c(Time_disap_m0, t)
+}
+
+abund_m1 <- Abundances_m1[[1]]
+Time_disap_m1 <- c()
+for (k in 1:ncol(abund_m1)){
+  t <- abund_m1[,k]%>%purrr::detect_index(function(x) x == 0)
+  Time_disap_m1 <- c(Time_disap_m1, t)
+}
+
+V_intra_hab_freq$Time_disap_m0 <- Time_disap_m0
+V_intra_hab_freq$Time_disap_m1 <- Time_disap_m1
+
+V_intra_hab_freq[which(V_intra_hab_freq$Time_disap_m0==0),]$Time_disap_m0 <- ngen
+V_intra_hab_freq[which(V_intra_hab_freq$Time_disap_m1==0),]$Time_disap_m1 <- ngen
+
+ggplot2::ggplot(data=V_intra_hab_freq, ggplot2::aes(x=IV, y=Time_disap_m0))+
+  ggplot2::geom_point()+
+  ggplot2::labs(x="IV", y="Time of species disappearing", title = "m0, 1 repetition, 1000 generations")
+
+ggplot2::ggplot(data=V_intra_hab_freq, ggplot2::aes(x=Hab_freq, y=Time_disap_m0))+
+  ggplot2::geom_point()+
+  ggplot2::labs(x="Species habitat frequency", y="Time of species disappearing", title = "m0, 1 repetition, 1000 generations")
+
+ggplot2::ggplot(data=V_intra_hab_freq, ggplot2::aes(x=IV, y=Time_disap_m1))+
+  ggplot2::geom_point()+
+  ggplot2::labs(x="IV", y="Time of species disappearing", title = "m1, 1 repetition, 1000 generations")
+
+ggplot2::ggplot(data=V_intra_hab_freq, ggplot2::aes(x=Hab_freq, y=Time_disap_m1))+
+  ggplot2::geom_point()+
+  ggplot2::labs(x="Species habitat frequency", y="Time of species disappearing", title = "m1, 1 repetition, 1000 generations")
+
+#Linear model of time of disppearance as a function of IV, habitat frequency and the interaction of both
+
+lm_fit_m0 <- lm(Time_disap_m0~IV+Hab_freq+IV*Hab_freq, data=V_intra_hab_freq[Time_disap_m0!=0,])
+lm_fit_m1 <- lm(Time_disap_m1~IV+Hab_freq+IV*Hab_freq, data=V_intra_hab_freq[Time_disap_m1!=0,])
+summary(lm_fit_m0)
+summary(lm_fit_m1)
+
 
 # =========================
 # End of file
