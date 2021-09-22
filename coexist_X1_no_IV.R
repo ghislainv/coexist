@@ -14,7 +14,7 @@ library(RcppArmadillo)
 library(viridisLite)
 
 # Create output directories
-dir.create(here("outputs/m1"), recursive=TRUE)
+dir.create(here("outputs/m2"), recursive=TRUE)
 
 # Seed for reproducibility
 seed <- 1234
@@ -55,14 +55,14 @@ nsite <- nrow(sites)
 X1 <- as.vector(sites[,1])
 
 # Plot
-png(file=here("outputs", "m1", "environment.png"),
+png(file=here("outputs", "m2", "environment.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 par(mfrow=c(1,1), bty = "n")
 plot(raster(env[[1]]), main="Environment var1", col=topo.colors(255), cex.main=2)
 dev.off()
 
 # Habitat frequency
-png(file=here("outputs", "m1", "hab_freq.png"),
+png(file=here("outputs", "m2", "hab_freq.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 hist(env[[1]], main="", xlab="Environment var1")    
 dev.off()
@@ -88,9 +88,9 @@ nrep <- 50
 ngen <- 1000
 
 # Species richness
-sp_rich_m1 <- matrix(NA, nrow=ngen, ncol=nrep)
+sp_rich_m2 <- matrix(NA, nrow=ngen, ncol=nrep)
 # Species rank at the end of the generations
-rank_sp_m1 <- matrix(NA, nrow=nrep, ncol=nsp)
+rank_sp_m2 <- matrix(NA, nrow=nrep, ncol=nsp)
 # Environmental filtering
 env_filt <- matrix(NA, nrow=ngen, ncol=nrep)
 # Mean mortality rate in the community
@@ -98,7 +98,7 @@ theta_comm <- matrix(NA, nrow=ngen, ncol=nrep)
 #Shannon index of the community at the end of each repetition
 Shannon <- c(nrep)
 #list of the matrices of the species abundance through the generations for each repetition
-Abundances_m1<-list()
+Abundances_m2<-list()
 
 # Matrix of mean species performance on each site
 # Sites in rows, Species in columns
@@ -106,7 +106,7 @@ rank_dist_E <- t(apply(-perf_Sp_mean, 1, rank, ties.method="min"))
 sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
 sp_hab_freq <- as.table(sp_hab_freq)
 names(sp_hab_freq) <- 1:nsp
-png(file=here("outputs", "m1", "species_habitat_freq.png"),
+png(file=here("outputs", "m2", "species_habitat_freq.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
 dev.off()
@@ -140,35 +140,33 @@ for (r in 1:nrep) {
   X1_mat <- matrix(rep(X1, nsp), ncol=nsp)
   perf_Sp_mean <- beta_0_mat+beta_1_mat*X1_mat+beta_2_mat*X1_mat^2
   
-  # Adding endogenous IV
-  epsilon <- rnorm(nsite*nsp, 0, sd=sqrt(rep(V_intra$V, each=nsite)))
-  perf_ind <- perf_Sp_mean + epsilon
-
+  perf_ind <- perf_Sp_mean
+  
   # Draw species at random in the landscape (one individual per site)
   sp <- sample(1:nsp, size=nsite, replace=TRUE)
   #hist(sp)
-  community_start_m1 <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
+  community_start_m2 <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
   if (r==1) {
-    png(file=here("outputs", "m1", "community_start.png"),
+    png(file=here("outputs", "m2", "community_start.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
     par(bty = "n")
-    plot(raster(community_start_m1), main="Species - Start", zlim=c(0, nsp),
+    plot(raster(community_start_m2), main="Species - Start", zlim=c(0, nsp),
          col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
     dev.off()
   }
-  community <- community_start_m1
+  community <- community_start_m2
   
   # Environmental filtering
   # distance between site environment and performance
   dist_site <- sqrt((diag(as.matrix(perf_ind)[, as.vector(t(community))])-X1)^2)
-#  env_filt[1, r] <- mean(dist_site, na.rm = TRUE)
+  #  env_filt[1, r] <- mean(dist_site, na.rm = TRUE)
   
   # Species richness
-#  sp_rich_m1[1, r] <- length(unique(c(community)))
+  #  sp_rich_m2[1, r] <- length(unique(c(community)))
   
   # Abundances
   abund <- matrix(NA, ncol=nsp, nrow=ngen)
-#  abund[1,] <- table(factor(c(community), levels=1:nsp))
+  #  abund[1,] <- table(factor(c(community), levels=1:nsp))
   
   # -----------------------------------------
   # Dynamics
@@ -183,17 +181,11 @@ for (r in 1:nrep) {
     
     # Probability of dying of each species on each site
     mortality_ind <- inv_logit(logit(theta) + b * as.matrix(perf_ind))
-    
-    # INTRACO 21/09/2021: mean mortality correction
-    epsilon_mat <- matrix(epsilon, ncol=nsp)
-    theta_var <- inv_logit(logit(theta) + b * epsilon_mat)
-    diff <- mean(theta_var)-theta
-    mortality_ind <- mortality_ind - diff
-    
+
     # Mortality rate distribution
     # Plot once
     if (r==1 & g==1) {
-      png(file=here("outputs", "m1", "hist_mortality.png"),
+      png(file=here("outputs", "m2", "hist_mortality.png"),
           width=fig_width, height=fig_width, units="cm", res=300)
       hist(mortality_ind)
       dev.off()
@@ -210,12 +202,12 @@ for (r in 1:nrep) {
     n_mort <- sum(mort_ev)
     
     if(n_mort!=0){
-    
+      
       # Update community
       community[mortality==1] <- 0
       # Plot once
       if (r==1 & g==1) {
-        png(file=here("outputs", "m1", "mortality_events.png"),
+        png(file=here("outputs", "m2", "mortality_events.png"),
             width=fig_width, height=fig_width, units="cm", res=300)
         par(bty = "n")
         plot(raster(community), main="Species - with vacant sites", zlim=c(0, nsp),
@@ -236,15 +228,8 @@ for (r in 1:nrep) {
       sites_vacant <- which(values(community_rast)==0)
       nsite_vacant <- length(sites_vacant)
       
-      # New individual effects
-      epsilon <- rnorm(nsite*nsp, 0, sd=sqrt(rep(V_intra$V, each=nsite)))
-      perf_ind_pot <- perf_Sp_mean + epsilon
-      
-      # Update performance matrix
-      perf_ind[sites_vacant, sp_present] <- perf_ind_pot[sites_vacant, sp_present]
-      
       # Identify the present species with the highest performance on vacant sites (maximum in each line)
-      sp_high_perf <- sp_present[apply(matrix(perf_ind_pot[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
+      sp_high_perf <- sp_present[apply(matrix(perf_ind[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
       
       # Recruitment
       community_rast[sites_vacant] <- sp_high_perf
@@ -258,7 +243,7 @@ for (r in 1:nrep) {
     # *********************
     
     # Species richness
-    sp_rich_m1[g, r] <- length(unique(as.vector(community)))
+    sp_rich_m2[g, r] <- length(unique(as.vector(community)))
     abund[g, ] <- table(factor(as.vector(community), levels=1:nsp))
     
     # Environmental filtering
@@ -272,11 +257,11 @@ for (r in 1:nrep) {
   } # End ngen
   
   #CGT 28/06/2021 to compare the two models
-  community_end_m1 <- community
+  community_end_m2 <- community
   
   # Plot final community once
   if (r==1) {
-    png(file=here("outputs", "m1", "community_end.png"),
+    png(file=here("outputs", "m2", "community_end.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
     par(bty = "n")
     plot(raster(community), main=glue("Species - End (ngen={ngen})"),
@@ -285,7 +270,7 @@ for (r in 1:nrep) {
   }
   
   # Species rank
-  rank_sp_m1[r, ] <- rank(-abund[ngen, ], ties.method="min")
+  rank_sp_m2[r, ] <- rank(-abund[ngen, ], ties.method="min")
   
   df_shannon <- data.frame(Species = 1:nsp,
                            Abundance = abund[ngen, ])%>%
@@ -296,36 +281,37 @@ for (r in 1:nrep) {
   Shannon[r] <- -sum(df_shannon$prop_times_ln_prop)
   
   #To keep the abundance matrices in order to infer alpha matrix
-  Abundances_m1[[r]] <- abund
+  Abundances_m2[[r]] <- abund
   
 } # End nrep
 
-save(Abundances_m1, file = here::here("outputs", "m1", "Abundances_m1.RData"))
-save(sp_rich_m1, file = here::here("outputs", "m1", "sp_rich_m1.RData"))
-save(rank_sp_m1, file = here::here("outputs", "m1", "rank_sp_m1.RData"))
+save(Abundances_m2, file = here::here("outputs", "m2", "Abundances_m2.RData"))
+save(sp_rich_m2, file = here::here("outputs", "m2", "sp_rich_m2.RData"))
+save(rank_sp_m2, file = here::here("outputs", "m2", "rank_sp_m2.RData"))
 
 #######################################################################################
 #Plots#
 
-sp_rich_m1
-rank_sp_m1
+sp_rich_m2
+rank_sp_m2
 
 # ---------------------------------------------
 # Plot species richness
 # ---------------------------------------------
 
-sp_rich_m1 <- data.frame(sp_rich_m1)
-sp_rich_long <- sp_rich_m1 %>%
+sp_rich_m2 <- data.frame(sp_rich_m2)
+sp_rich_long <- sp_rich_m2 %>%
   mutate(gen=1:(ngen)) %>%
   pivot_longer(cols=colnames_long, names_to="rep",
-               names_prefix="X", values_to="sp_rich_m1")
-p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich_m1, col=rep)) +
+               names_prefix="X", values_to="sp_rich_m2")
+p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich_m2, col=rep)) +
   geom_line() +
   scale_colour_viridis_d()+
   xlab("Generations") + 
   ylab("Species richness")+
-  theme(legend.position = "none", text = element_text(size = 20))
-ggsave(p, filename=here("outputs", "m1", "species_richness_with_time.png"),
+  theme(legend.position = "none", text = element_text(size = 20))+
+  ylim(0, 100)
+ggsave(p, filename=here("outputs", "m2", "species_richness_with_time.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
 # ---------------------------------------------
@@ -333,7 +319,7 @@ ggsave(p, filename=here("outputs", "m1", "species_richness_with_time.png"),
 # ---------------------------------------------
 
 # Mean final rank
-sp_mean_rank <- apply(rank_sp_m1, 2, mean)
+sp_mean_rank <- apply(rank_sp_m2, 2, mean)
 
 # minus because the max must have rank 1
 rank_dist_E <- t(apply(-perf_mean, 1, rank, ties.method="min"))
@@ -343,43 +329,43 @@ sp_hab_freq <- as.table(sp_hab_freq)
 names(sp_hab_freq) <- 1:nsp
 # Plot
 df <- data.frame(cbind(sp_mean_rank, sp_hab_freq))
- p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
-   geom_point() +
-   geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
-   xlab("Species suitable habitat frequency") +
-   ylab("Species mean rank (higher rank = lower abundance)") +
-   theme(axis.title=element_text(size=16))
-ggsave(p, filename=here("outputs", "m1", "mean_rank-habitat_freq.png"),
-        width=fig_width, height=fig_width, units="cm", dpi=300)
+p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
+  geom_point() +
+  geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
+  xlab("Species suitable habitat frequency") +
+  ylab("Species mean rank (higher rank = lower abundance)") +
+  theme(axis.title=element_text(size=16))
+ggsave(p, filename=here("outputs", "m2", "mean_rank-habitat_freq.png"),
+       width=fig_width, height=fig_width, units="cm", dpi=300)
 
 # ---------------------------------------------------------------------------------
 # pairwise Spearman correlation on the species ranks at the end of each simulation
 # ---------------------------------------------------------------------------------
 
-Spearman <- as.dist(round(cor(t(rank_sp_m1), method="spearman"),2))
-save(Spearman, file = here::here("outputs", "m1", "Spearman_m1.RData"))
+Spearman <- as.dist(round(cor(t(rank_sp_m2), method="spearman"),2))
+save(Spearman, file = here::here("outputs", "m2", "Spearman_m2.RData"))
 
-Df_rank_sp <- data.frame(rank_sp_m1)%>%
+Df_rank_sp <- data.frame(rank_sp_m2)%>%
   mutate(rep = 1:nrep)%>%
-  pivot_longer(cols=X1:X100, values_to="rank_sp_m1")
-p <- ggplot(data=Df_rank_sp, aes(x=rep, y=rank_sp_m1)) +
+  pivot_longer(cols=X1:X100, values_to="rank_sp_m2")
+p <- ggplot(data=Df_rank_sp, aes(x=rep, y=rank_sp_m2)) +
   geom_line(aes(colour=name)) + 
   scale_colour_viridis_d()+
   xlab("Repetition") + 
   ylab("Species rank")+
   theme(legend.position = "none")
-ggsave(p, filename=here("outputs", "m1", "species_rank_with_repetitions.png"),
+ggsave(p, filename=here("outputs", "m2", "species_rank_with_repetitions.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
-sp_rich_final <- sp_rich_m1[ngen,]
-save(sp_rich_final, file=here::here("outputs", "m1", "Species_richness_m1.RData"))
+sp_rich_final <- sp_rich_m2[ngen,]
+save(sp_rich_final, file=here::here("outputs", "m2", "Species_richness_m2.RData"))
 
 # ---------------------------------------------
 # Shannon index and Shannon equitability index
 # ---------------------------------------------
-save(Shannon, file = here::here("outputs", "m1", "Shannon_m1.RData"))
-Equitability <- Shannon/log(as.numeric(sp_rich_m1[ngen,]))
-save(Equitability, file = here::here("outputs", "m1", "Equitability_m1.RData"))
+save(Shannon, file = here::here("outputs", "m2", "Shannon_m2.RData"))
+Equitability <- Shannon/log(as.numeric(sp_rich_m2[ngen,]))
+save(Equitability, file = here::here("outputs", "m2", "Equitability_m2.RData"))
 
 # ---------------------------------------------
 # Environmental filtering
@@ -387,25 +373,25 @@ save(Equitability, file = here::here("outputs", "m1", "Equitability_m1.RData"))
 
 colnames_long <- paste0("X", 1:nrep)
 
- env_filt <- data.frame(env_filt)
- env_filt_long <- env_filt %>%
-   mutate(gen=1:(ngen)) %>%
-   pivot_longer(cols=colnames_long, names_to="rep",
-                names_prefix="X", values_to="env_filt")
- p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
-   geom_line() +
-   scale_colour_viridis_d() +
-   labs(title="Environmental filtering") +
-   xlab("Generations") + 
-   ylab("Distance between the performance \n and the environment on each site")
- ggsave(p, filename=here("outputs", "m1", "environmental_filtering.png"),
-        width=fig_width, height=fig_width/2, units="cm", dpi=300)
+env_filt <- data.frame(env_filt)
+env_filt_long <- env_filt %>%
+  mutate(gen=1:(ngen)) %>%
+  pivot_longer(cols=colnames_long, names_to="rep",
+               names_prefix="X", values_to="env_filt")
+p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
+  geom_line() +
+  scale_colour_viridis_d() +
+  labs(title="Environmental filtering") +
+  xlab("Generations") + 
+  ylab("Distance between the performance \n and the environment on each site")
+ggsave(p, filename=here("outputs", "m2", "environmental_filtering.png"),
+       width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
 # Plot
-png(file=here("outputs", "m1", "spatial_comp_env_sp.png"), 
+png(file=here("outputs", "m2", "spatial_comp_env_sp.png"), 
     width=fig_width, height=fig_width, units="cm", res=300)
 par(mfrow=c(2,2), bty = "n")
-plot(raster(community_start_m1), main="Species - Start", zlim=c(0, nsp),
+plot(raster(community_start_m2), main="Species - Start", zlim=c(0, nsp),
      col=c("black", viridis(nsp)), legend=FALSE)
 plot(raster(community), main="Species - End", zlim=c(0, nsp),
      col=c("black", viridis(nsp)), legend=FALSE)
@@ -429,7 +415,7 @@ p <- ggplot(data=theta_comm_long, aes(x=gen, y=theta_comm, col=rep)) +
   labs(title="Environmental filtering") +
   xlab("Generations") + 
   ylab("Mean mortality rate in the community")
-ggsave(p, filename=here("outputs", "m1", "mortality_rate_community.png"),
+ggsave(p, filename=here("outputs", "m2", "mortality_rate_community.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
 # ----------------------------------
@@ -453,7 +439,7 @@ class_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
 vario_env_all <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
 
 # Plot with correlation
-png(file=here("outputs", "m1", "sp_autocorrelation.png"),
+png(file=here("outputs", "m2", "sp_autocorrelation.png"),
     width=fig_width, height=fig_width*0.8, units="cm", res=300)
 par(mfrow=c(2,2), bty = "n")
 plot(vario_sp, main="Species - End")
@@ -476,24 +462,16 @@ dev.off()
 load(here::here("outputs", "m0", "Species_richness_m0.RData"))
 sp_rich_final_m0 <- sp_rich_final
 
-load(here::here("outputs", "m1", "Species_richness_m1.RData"))
-sp_rich_final_m1 <- sp_rich_final
-
-load(here::here("outputs", "m2", "Species_richness_m1.RData"))
+load(here::here("outputs", "m2", "Species_richness_m2.RData"))
 sp_rich_final_m2 <- sp_rich_final
 
-sp_rich_final <- data.frame(sp_rich = c(as.numeric(sp_rich_final_m0), as.numeric(sp_rich_final_m2), as.numeric(sp_rich_final_m1)),
-                            Model = as.factor(rep(c("M0: Perfect knowledge model","M1: Partial knowledge model, no IV", "M2: Partial knowledge model, with IV"), each=length(sp_rich_final_m0))))
-
-sp_rich_final$Model <- factor(sp_rich_final$Model, levels=c("M0: Perfect knowledge model","M1: Partial knowledge model, no IV", "M2: Partial knowledge model, with IV"))
-
-p <- ggplot(sp_rich_final, aes(x= Model, y=sp_rich, colour = Model))+
+sp_rich_final <- data.frame(sp_rich_m2 = c(as.numeric(sp_rich_final_m0), as.numeric(sp_rich_final_m2)),
+                            Model = as.factor(rep(0:1, each=length(sp_rich_final_m0))))
+p <- ggplot(sp_rich_final, aes(x= Model, y=sp_rich_m2, colour = Model))+
   geom_boxplot()+
   scale_colour_viridis_d(option="plasma")+
-  labs(title = "Boxplot of the species richness \n at the end of each repetition", y="Species richness")+
-  theme(text = element_text(size = 20), legend.position = "bottom")+
-  scale_x_discrete(labels=c("M0", "M1", "M2"))+
-  guides(color = guide_legend(nrow = 3, byrow = TRUE))
+  labs(title = "Boxplot of the species richness \n at the end of each repetition \n with both models", y="Species richness")+
+  theme(text = element_text(size = 20))
 
 ggsave(p, filename=here("outputs", "Comparison", "Species_richness.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
@@ -503,11 +481,11 @@ ggsave(p, filename=here("outputs", "Comparison", "Species_richness.png"),
 load(here::here("outputs", "m0", "Shannon_m0.RData"))
 Shannon_m0 <- Shannon
 
-load(here::here("outputs", "m1", "Shannon_m1.RData"))
-Shannon_m1 <- Shannon
+load(here::here("outputs", "m2", "Shannon_m2.RData"))
+Shannon_m2 <- Shannon
 
-Shannon <- data.frame(Shannon = c(Shannon_m0, Shannon_m1),
-                            Model = as.factor(rep(0:1, each=length(Shannon_m0))))
+Shannon <- data.frame(Shannon = c(Shannon_m0, Shannon_m2),
+                      Model = as.factor(rep(0:1, each=length(Shannon_m0))))
 p <- ggplot(Shannon, aes(x= Model, y=Shannon, colour = Model))+
   geom_boxplot()+
   scale_colour_viridis_d(option="plasma")+
@@ -520,11 +498,11 @@ ggsave(p, filename=here("outputs", "Comparison", "Shannon.png"),
 load(here::here("outputs", "m0", "Equitability_m0.RData"))
 Equitability_m0 <- Equitability
 
-load(here::here("outputs", "m1", "Equitability_m1.RData"))
-Equitability_m1 <- Equitability
+load(here::here("outputs", "m2", "Equitability_m2.RData"))
+Equitability_m2 <- Equitability
 
-Equitability <- data.frame(Equitability = c(Equitability_m0, Equitability_m1),
-                      Model = as.factor(rep(0:1, each=length(Equitability_m0))))
+Equitability <- data.frame(Equitability = c(Equitability_m0, Equitability_m2),
+                           Model = as.factor(rep(0:1, each=length(Equitability_m0))))
 
 p <- ggplot(Equitability, aes(x= Model, y=Equitability, colour = Model))+
   geom_boxplot()+
@@ -540,26 +518,17 @@ ggsave(p, filename=here("outputs", "Comparison", "Equitability.png"),
 load(here::here("outputs", "m0", "Spearman_m0.RData"))
 Spearman_m0 <- Spearman
 
-load(here::here("outputs", "m1", "Spearman_m1.RData"))
-Spearman_m1 <- Spearman
-
 load(here::here("outputs", "m2", "Spearman_m2.RData"))
 Spearman_m2 <- Spearman
 
-Spearman <- data.frame(Spearman = c(as.vector(Spearman_m0), as.vector(Spearman_m2), as.vector(Spearman_m1)),
-                           Model = as.factor(rep(c("M0: Perfect knowledge model","M1: Partial knowledge model, no IV", "M2: Partial knowledge model, with IV"), each=length(Spearman_m0))))
-
-Spearman$Model <- factor(Spearman$Model, levels=c("M0: Perfect knowledge model","M1: Partial knowledge model, no IV", "M2: Partial knowledge model, with IV"))
-
+Spearman <- data.frame(Spearman = c(as.vector(Spearman_m0), as.vector(Spearman_m2)),
+                       Model = as.factor(rep(0:1, each=length(Spearman_m0))))
 
 p <- ggplot(Spearman, aes(x= Model, y=Spearman, colour = Model))+
   geom_boxplot()+
   scale_colour_viridis_d(option="plasma")+
-  labs(title = "Boxplot of the pairwise Spearman \n correlation of species ranks \n at the end of each repetition", y="pairwise Spearman correlation")+
-  theme(text = element_text(size = 20), legend.position = "bottom")+
-  scale_x_discrete(labels=c("M0", "M1", "M2"))+
-  guides(color = guide_legend(nrow = 3, byrow = TRUE))
-
+  labs(title = "Boxplot of the pairwise Spearman \n correlation of species ranks \n at the end of each repetition \n with both models", y="pairwise Spearman correlation")+
+  theme(text = element_text(size = 20))
 ggsave(p, filename=here("outputs", "Comparison", "Spearman_ranks.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
 
@@ -569,64 +538,12 @@ png(file=here("outputs", "Comparison", "Community.png"),
 par(mfrow=c(2,2), bty = "n")
 plot(raster(community_start_m0), main="m0 - Species at start", zlim=c(0, nsp),
      col=c("black",  viridis(nsp)), legend=FALSE, cex.main=1.5)
-plot(raster(community_start_m1), main="m1 - Species at start", zlim=c(0, nsp),
+plot(raster(community_start_m2), main="m2 - Species at start", zlim=c(0, nsp),
      col=c("black",  viridis(nsp)), legend=FALSE, cex.main=1.5)
 plot(raster(community_end_m0), main="m0 - Species at end", zlim=c(0, nsp),
      col=c("black",  viridis(nsp)), legend=FALSE, cex.main=1.5)
-plot(raster(community_end_m1), main="m1 - Species at end", zlim=c(0, nsp),
+plot(raster(community_end_m2), main="m2 - Species at end", zlim=c(0, nsp),
      col=c("black",  viridis(nsp)), legend=FALSE, cex.main=1.5)
 dev.off()
 
-
-
-load(here::here("outputs", "m0", "sp_hab_freq.RData"))
-sp_hab_freq <- as.data.frame(sp_hab_freq)
-
-#Step 1 : no repetitions
-Df_rank_hab <- data.frame(Rank = rank_sp_m1[1,], Freq = sp_hab_freq$Freq)
-ggplot(data = Df_rank_hab, aes(x = Freq, y = Rank))+
-  geom_point()+
-  labs(title="Relationship between the suitable habitat frequency in m0  \n and the species rank at the end of one simulation in m1",
-       x = "Suitable habitat frequency in m0",
-       y = "Species rank at the end of one m1 simulation")
-
-#Step 2 : repetitions for rank
-Df_rank_hab$Mean_rank <- sp_mean_rank
-Df_rank_hab$sd_rank <- apply(rank_sp_m1, 2, sd)
-ggplot(data = Df_rank_hab, aes(x = Freq, y = Mean_rank))+
-  geom_point()+
-  geom_point()+
-  geom_errorbar(aes(ymin=Mean_rank-sd_rank, ymax=Mean_rank+sd_rank), width=.2,
-                position=position_dodge(0.05))+
-  labs(title="Relationship between the suitable habitat frequency in m0  \n and the mean and standard deviation of the species rank at the end of ten simulations in m1",
-       x = "Suitable habitat frequency in m0",
-       y = "Mean rank and standard deviations from 10 m1 simulations")
-
-#Step 3 : repetitions for habitat frequency
-Hab_freq <- matrix(ncol=nsp, nrow=10)
-
-for (r in 1:nrep) {
-  for(sp in 1:nsp){
-    perf_ind[,sp] <- beta_0[sp]+beta_1[sp]*X1+beta_2[sp]*(X1^2)+rnorm(nsite, mean=0, sd=sqrt(V_intra$V[sp]))
-  }
-  rank_dist_E_m1 <- t(apply(-perf_ind, 1, rank, ties.method="min"))
-  # find the number of cells on which each species wins in model m0
-  sp_hab_freq_m1 <- apply(rank_dist_E_m1, 2, function(x){sum(x==1)})
-  sp_hab_freq_m1 <- as.table(sp_hab_freq_m1)      
-  names(sp_hab_freq_m1) <- 1:nsp
-  sp_hab_freq_m1 <- as.data.frame(sp_hab_freq_m1)
-  Hab_freq[r,] <- sp_hab_freq_m1$Freq
-}
-
-Df_rank_hab$Mean_freq <- apply(Hab_freq, 2, mean)
-Df_rank_hab$sd_freq <- apply(Hab_freq, 2, sd)
-ggplot(data = Df_rank_hab, aes(x = Freq, y = Mean_rank))+
-  geom_point()+
-  geom_point()+
-  geom_errorbar(aes(ymin=Mean_rank-sd_rank, ymax=Mean_rank+sd_rank), width=.2,
-                position=position_dodge(0.05))+
-  geom_errorbarh(aes(xmin=Freq-sd_freq, xmax=Freq+sd_freq))+
-  labs(title="Relationship between the suitable habitat frequency in m0 \n with the standard deviation from m1 over 10 repetitions,  \n and the mean and standard deviation of the species rank at the end of ten simulations in m1",
-       x = "Suitable habitat frequency in m0 and standard deviation from 10 m1 simulations",
-       y = "Mean rank and standard deviations from 10 m1 simulations")
 

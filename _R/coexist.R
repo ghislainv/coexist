@@ -247,13 +247,16 @@ nrep <- 50
 ngen <- 1000
 
 # Species richness
-sp_rich <- matrix(NA, nrow=ngen+1, ncol=nrep)
+sp_rich <- matrix(NA, nrow=ngen, ncol=nrep)
 # Species rank at the end of the generations
 rank_sp <- matrix(NA, nrow=nrep, ncol=nsp)
 # Environmental filtering
-env_filt <- matrix(NA, nrow=ngen+1, ncol=nrep)
+env_filt <- matrix(NA, nrow=ngen, ncol=nrep)
 # Mean mortality rate in the community
-theta_comm <- matrix(NA, nrow=ngen+1, ncol=nrep)
+theta_comm <- matrix(NA, nrow=ngen, ncol=nrep)
+#Distance between site and species optimum
+dist_site <- matrix(NA, nrow=ngen, ncol=nrep)
+
 #CGT 16/06/2021
 Shannon <- c(nrep)
 #CGT 17/06/2021
@@ -262,7 +265,8 @@ Abundances_m0<-list()
 
 # Loop on repetitions
 for (r in 1:nrep) {
-
+  
+  abund <- matrix(NA, ncol=nsp, nrow=ngen)
   # -----------------------------------------
   # Initial conditions
   # -----------------------------------------
@@ -280,21 +284,6 @@ for (r in 1:nrep) {
     dev.off()
   }
   community <- community_start_m0
-  
-  # Species richness
-  sp_rich[1, r] <- length(unique(c(community)))
-  
-  # Abundances
-  abund <- matrix(NA, ncol=nsp, nrow=ngen+1)
-  abund[1,] <- table(factor(c(community), levels=1:nsp))
-  
-  # Environmental filtering
-  dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
-  env_filt[1, r] <- mean(dist_site)
-  
-  # Mean mortality rate
-  theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
-  theta_comm[1, r] <- mean(theta_site)
 
   # -----------------------------------------
   # Dynamics
@@ -353,16 +342,16 @@ for (r in 1:nrep) {
     # *********************
     
     # Species richness
-    sp_rich[g+1, r] <- length(unique(as.vector(community)))
-    abund[g+1, ] <- table(factor(as.vector(community), levels=1:nsp))
+    sp_rich[g, r] <- length(unique(as.vector(community)))
+    abund[g, ] <- table(factor(as.vector(community), levels=1:nsp))
     
     # Environmental filtering
     dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
-    env_filt[g+1, r] <- mean(dist_site)
+    env_filt[g, r] <- mean(dist_site)
 
     # Mean mortality rate in the community
     theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
-    theta_comm[g+1, r] <- mean(theta_site)
+    theta_comm[g, r] <- mean(theta_site)
     
   } # End ngen
   
@@ -381,11 +370,11 @@ for (r in 1:nrep) {
   
   # Species rank
   #CGT 16/06/2021 : ngen --> ngen +1
-  rank_sp[r, ] <- rank(-abund[ngen+1, ], ties.method="min")
+  rank_sp[r, ] <- rank(-abund[ngen, ], ties.method="min")
   
   #CGT 16/06/2021
   df_shannon <- data.frame(Species = 1:nsp,
-                           Abundance = abund[ngen+1, ])%>%
+                           Abundance = abund[ngen, ])%>%
     mutate(Proportion = Abundance / sum(Abundance))%>%
     filter(Abundance > 0)%>%
     mutate(ln_prop = log(Proportion), prop_times_ln_prop = ln_prop*Proportion)
@@ -415,7 +404,7 @@ rank_sp
 
 sp_rich <- data.frame(sp_rich)
 sp_rich_long <- sp_rich %>%
-  mutate(gen=1:(ngen+1)) %>%
+  mutate(gen=1:(ngen)) %>%
   pivot_longer(cols=X1:X50, names_to="rep",
                names_prefix="X", values_to="sp_rich")
 p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
@@ -429,7 +418,7 @@ ggsave(p, filename=here("outputs", "m0", "species_richness_with_time.png"),
        width=fig_width, height=fig_width/2, units="cm", dpi=300)
 
 #CGT 16/06/2021
-sp_rich_final <- sp_rich[ngen+1,]
+sp_rich_final <- sp_rich[ngen,]
 save(sp_rich_final, file=here::here("outputs", "m0", "Species_richness_m0.RData"))
 
 #CGT 16/06/2021
@@ -437,7 +426,7 @@ save(sp_rich_final, file=here::here("outputs", "m0", "Species_richness_m0.RData"
 # Shannon index and Shannon equitability index
 # ---------------------------------------------
 save(Shannon, file = here::here("outputs", "m0", "Shannon_m0.RData"))
-Equitability <- Shannon/log(as.numeric(sp_rich[ngen+1,]))
+Equitability <- Shannon/log(as.numeric(sp_rich[ngen,]))
 save(Equitability, file = here::here("outputs", "m0", "Equitability_m0.RData"))
 
 #CGT 16/06/2021
@@ -487,7 +476,7 @@ ggsave(p, filename=here("outputs", "m0", "species_rank_with_repetitions.png"),
 
 env_filt <- data.frame(env_filt)
 env_filt_long <- env_filt %>%
-  mutate(gen=1:(ngen+1)) %>%
+  mutate(gen=1:(ngen)) %>%
   pivot_longer(cols=X1:X50, names_to="rep",
                names_prefix="X", values_to="env_filt")
 p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
@@ -518,7 +507,7 @@ dev.off()
 
 theta_comm <- data.frame(theta_comm)
 theta_comm_long <- theta_comm %>%
-  mutate(gen=1:(ngen+1)) %>%
+  mutate(gen=1:(ngen)) %>%
   pivot_longer(cols=X1:X50, names_to="rep",
                names_prefix="X", values_to="theta_comm")
 p <- ggplot(data=theta_comm_long, aes(x=gen, y=theta_comm, col=rep)) +
@@ -626,6 +615,33 @@ beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
 beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
 beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
 
+E_seq <- seq(min(X1), max(X1), length.out=100)
+Mat_perf_inferred <- as.data.frame(matrix(ncol=nsp+1, nrow=length(E_seq)))
+Mat_perf_inferred[,1] <- E_seq
+for (k in 1:nsp){
+  Mat_perf_inferred[,k+1] <- beta_0[k] + beta_1[k]*E_seq + beta_2[k] * E_seq^2
+}
+colnames(Mat_perf_inferred) <- c("E", paste0("Sp",1:nsp))
+
+Mat_perf_inferred_long <- Mat_perf_inferred %>%
+  pivot_longer(cols=2:(nsp+1), names_to="Sp",
+               names_prefix="Sp", values_to="Perf")
+p <- ggplot(data=Mat_perf_inferred_long, aes(x=E, y=Perf, col=Sp)) +
+  geom_line() +
+  scale_colour_viridis_d()+
+  xlab("Environment") + 
+  ylab("Species performance")+
+  theme(legend.position = "none", text = element_text(size = 20))
+ggsave(p, filename=here("outputs", "m1", "species_perf_environment.png"),
+       width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+# /!\ new environmental filtering for the aprtial knowledge to be finished
+Optimum_Sp_m1 <- c()
+for (k in 1:nsp) {
+Optimum_Sp_m1[k] <- which(Mat_perf_inferred[,k+1] == max(Mat_perf_inferred[,2:ncol(Mat_perf_inferred)][k]))
+}
+
+
 x <- seq(-3, 3, 0.01)
 n_ind_simul <- length(x)
 df_perf_IV <- data.frame(Species = rep(1:nsp, each=n_ind_simul), X = rep(x, nsp), Mean=rep(beta_0+beta_1*mean_x1+beta_2*(mean_x1^2), each=n_ind_simul))
@@ -708,7 +724,7 @@ V_intra_hab_freq$Code_presence <- as.factor(V_intra_hab_freq$Code_presence)
 
 ggplot2::ggplot(data = V_intra_hab_freq, aes(x = Hab_freq, y = IV, colour = Code_presence))+
   geom_point()+
-  scale_color_viridis_d("Presence of the species", labels = c("Disappeared in both models", "Disappeared in second model", "Disappeared in first model", "Maintained in both models"))+
+  scale_color_manual(values=c("red", "blue", "green", "orange"), "Presence of the species", labels = c("Disappeared in both models", "Disappeared in second model", "Maintained in both models"))+
   labs(title = "Relationship between the species suitable habitat frequency in m0, \n the IV on axis X1 and the species presence at the end of a simulation",
        x = "Suitable habitat frequency in m0",
        y = "Inferred IV on axis X1")+
