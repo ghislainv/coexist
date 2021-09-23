@@ -112,6 +112,11 @@ crs(env_stack) <- "+proj=utm +zone=1"
 save(sites, file = here::here("outputs", "m0", "sites.RData"))
 save(env, file = here::here("outputs", "m0", "env.RData"))
 
+#Look at the correlations between environmental variables
+cor(c(env[[1]]), c(env[[2]]))
+cor(c(env[[1]]), c(env[[3]]))
+cor(c(env[[2]]), c(env[[3]]))
+
 # Plot
 png(file=here("outputs", "m0", "environment.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
@@ -203,7 +208,8 @@ high_perf_sp <- function(dist, sp_pres) {
 # Probability of dying of each species on each site
 # Strength of unsuitability
 b <- -0.5
-mortality_E_Sp <- inv_logit(logit(0.1) + b * perf_E_Sp)
+theta <- 0.1
+mortality_E_Sp <- inv_logit(logit(theta) + b * perf_E_Sp)
 # Mortality rate distribution
 png(file=here("outputs", "m0", "hist_mortality.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
@@ -220,6 +226,9 @@ plot(x=c(perf_E_Sp),
      cex.lab=1.5,
      cex.main=1.5)
 dev.off()
+
+#Fecundity
+fecundity <- 2
 
 # Habitat frequency for each species
 rank_dist_E <- t(apply(dist_E_Sp, 1, rank, ties.method="min"))
@@ -242,9 +251,9 @@ nsp_no_habitat <- length(sp_no_habitat)
 # =========================================
 
 # Number of repetitions
-nrep <- 50
+nrep <- 5
 # Number of generations
-ngen <- 1000
+ngen <- 500
 
 # Species richness
 sp_rich <- matrix(NA, nrow=ngen, ncol=nrep)
@@ -267,6 +276,8 @@ Abundances_m0<-list()
 for (r in 1:nrep) {
   
   abund <- matrix(NA, ncol=nsp, nrow=ngen)
+  abund_after_mortality <- NULL
+  
   # -----------------------------------------
   # Initial conditions
   # -----------------------------------------
@@ -297,7 +308,11 @@ for (r in 1:nrep) {
     # ******************
     
     # Mortality rate on each site
-    theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
+    # Vacant sites
+    theta_site <- rep(NA, nsite)
+    w0 <- (as.vector(t(community))==0)
+    theta_site[w0] <- 0
+    theta_site[!w0] <- diag(mortality_E_Sp[!w0, as.vector(t(community))[!w0]])
     
     # Mortality events
     mort_ev <- rbinom(nsite, size=1, prob=theta_site)
@@ -327,14 +342,35 @@ for (r in 1:nrep) {
     community_rast <- raster(community)
     sites_vacant <- which(values(community_rast)==0)
     
+    # INTRACO 23/09/2021 Dispersion process (function of species abundance)
+    abund_after_mortality <- as.data.frame(table(factor(as.vector(community), levels=1:nsp)))$Freq
+    nb_seeds_sp <- round(abund_after_mortality*fecundity)
+    nb_seeds_tot <- sum(nb_seeds_sp)
+    
+    # repeat{
+    seeds_on_vacant <- sample(sites_vacant, nb_seeds_tot, replace=TRUE)
+    #   if(length(unique(seeds_on_vacant))>=length(sites_vacant)){break}
+    # }
+    
     # Performance of species on vacant sites
-    dist_E_Sp_vacant <- dist_E_Sp[sites_vacant, ]
+    #dist_E_Sp_vacant <- dist_E_Sp[sites_vacant, ]
+    seeds <- data.frame(Species=rep(1:nsp, times=nb_seeds_sp), Sites=seeds_on_vacant)
+    if (nrow(seeds)>1) {
+      seeds$Perf <- diag(dist_E_Sp[seeds$Sites, seeds$Species])
+    } else {
+      seeds$Perf <- dist_E_Sp[seeds$Sites, seeds$Species]
+    }
     
     # Identify the species with the highest performance
-    new_ind <- apply(dist_E_Sp_vacant, 1, high_perf_sp, sp_pres=sp_present)
+    #new_ind <- apply(dist_E_Sp_vacant, 1, high_perf_sp, sp_pres=sp_present)
+    f_sp <- function(x) {
+      w <- which(x[,3]==max(x[,3]))
+      return(x[sample(w, 1),1])
+    }
+    new_ind <- plyr::ddply(seeds, c("Sites"), f_sp)
     
     # Recruitment
-    community_rast[sites_vacant] <- new_ind
+    community_rast[new_ind$Sites] <- new_ind$V1
     community <- as.matrix(community_rast)
     
     # *********************
@@ -565,8 +601,8 @@ dev.off()
 df <- data.frame(perf_E_Sp)
 names(df) <- c(sprintf("Sp_%03d", 1:(nsp-1)), sprintf("Sp_%d", nsp))
 df_perf <- tibble(df) %>%
-  mutate(Env=values(raster(env[[1]]))) %>%
-  mutate(Env2=Env^2) %>%
+  mutate(Env_1=values(raster(env[[1]])), Env_2=values(raster(env[[2]])), Env_3=values(raster(env[[3]]))) %>%
+  mutate(Env_1_sq=Env_1^2, Env_2_sq=Env_2^2, Env_3_sq=Env_3^2) %>%
   pivot_longer(cols=c(Sp_001:glue("Sp_0{nsp-1}"), glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
 
 # Observed niche
@@ -584,8 +620,12 @@ ggsave(p, filename=here("outputs", "m0", "infering_species_niche.png"),
        width=fig_width, height=fig_width, units="cm", dpi=300)
   
 # Observed intraspecific variability
-lm_fit <- lm(Perf~Species+Species*Env+Species*Env2, data=df_perf)
+lm_fit <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq, data=df_perf)
 save(lm_fit, file = here::here("outputs", "m0","lm_fit.RData"))
+
+#Check that the model well fits the data if all environmental variables are included
+lm_all_env <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq+Species*Env_2+Species*Env_2_sq+Species*Env_3+Species*Env_3_sq, data=df_perf)
+summary(lm_all_env)$adj.r.squared
 
 summary(lm_fit)$adj.r.squared
 hist(summary(lm_fit)$residuals)
