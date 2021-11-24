@@ -4,700 +4,617 @@
 ## web             :https://ecology.ghislainv.fr
 ## license         :GPLv3
 ## ==============================================================================
+launch_model <- function(){
 
-# Libraries
-library(raster)
-library(here)
-library(scales)
-library(ggplot2)
-library(tidyr)
-library(dplyr)
-library(glue)
-library(geoR) # variog()
-library(plot3D) # scatter3D()
-library(Rcpp)
-library(RcppArmadillo)
-library(viridisLite)
-library(purrr)
-
-# Create output directories
-dir.create(here("outputs/m0"), recursive=TRUE)
-
-# Seed for reproducibility
-seed <- 1234
-
-# Figure width
-fig_width <- 16.6 # in cm
-
-# logit/inv_logit functions
-logit <- function(x, min=0, max=1) {
-  p <- (x-min)/(max-min)
-  return(log(p/(1-p)))
-}
-
-inv_logit <- function(x, min=0, max=1) {
-  p <- exp(x)/(1+exp(x))
-  p <- ifelse( is.na(p) & !is.na(x), 1, p ) # fix problems with +Inf
-  return(p * (max-min) + min)
-}
-
-# Cpp function to compute distance between Sites and Species
-Rcpp::sourceCpp(here("_src", "dist_Site_Sp.cpp"))
-
-# =========================
-# Landscape and environment
-# =========================
-
-# Landscape
-nsite_side <- 25
-mat <- matrix(0, nrow=nsite_side, ncol=nsite_side)
-r <- raster(mat, crs="+proj=utm +zone=1")
-nsite <- ncell(r)
-coords <- coordinates(r)
-
-# Environment on each site
-Sites <- data.frame(site=1:nsite, V1_env=NA, V2_env=NA, V3_env=NA)
-
-# Neighbourhood matrix
-neighbors.mat <- adjacent(r, cells=c(1:nsite), directions=8,
-                          pairs=TRUE, sorted=TRUE)
-# Number of neighbours by site
-n.neighbors <- as.data.frame(table(as.factor(neighbors.mat[,1])))[,2]
-# Adjacent sites
-adj <- neighbors.mat[,2]
-# Generate symmetric adjacency matrix, A
-A <- matrix(0,nsite,nsite)
-index.start <- 1
-for (i in 1:nsite) {
-  index.end <- index.start+n.neighbors[i]-1
-  A[i,adj[c(index.start:index.end)]] <- 1
-  index.start <- index.end+1
-}
-
-# Function to draw in a multivariate normal
-rmvn <- function(n, mu=0, V=matrix(1), seed=1234) {
-  p <- length(mu)
-  if (any(is.na(match(dim(V), p)))) {
-    stop("Dimension problem!")
+  source(file = "./call_libraries.R")
+  
+  source(file = here::here("Basic_parameters.R"))
+  
+  # Create output directories
+  dir.create(here::here("outputs", model), recursive=TRUE)
+  
+  source(file=here::here("Math_functions.R"))
+  
+  source(file=here::here("Plot_functions.R"))
+  
+  source(file=here::here("Generate_environment.R"))
+  
+  source(file=here::here("Species_parameters.R"))
+  
+  # Function to identify the species with the highest performance
+  source(file=here::here("Functions_perf_mort.R"))
+  
+  # =========================
+  # Landscape and environment
+  # =========================
+  
+  if(perf_know==TRUE){
+    generate_environment(nsite_side=nsite_side, model=model)
+    load(here::here("outputs", model, "sites.RData"))
+    load(here::here("outputs", model, "env.RData"))
+  } else {
+    X1 <- as.vector(sites[,1])
   }
-  D <- chol(V)
-  set.seed(seed)
-  t(matrix(rnorm(n*p),ncol=p)%*%D+rep(mu,rep(n,p)))
-}
-
-# Generate spatial random effects
-Vrho.target <- 1 # Variance of spatial random effects
-d <- 1 # Spatial dependence parameter = 1 for intrinsic CAR
-Q <- diag(n.neighbors)-d*A + diag(.0001,nsite) # Add small constant to make Q non-singular
-covrho <- Vrho.target*solve(Q) # Covariance of rhos
-
-# Number of axis for the niche
-n_axis <- 3
-
-# Environment on each site
-sites <- data.frame(V1_env=rep(NA, nsite), V2_env=NA, V3_env=NA)
-env <- list()
-for (i in 1:n_axis) {
-  seed <- 1234 + i - 1
-  rho <- c(rmvn(1, mu=rep(0, nsite), V=covrho, seed=seed)) # Spatial Random Effects
-  rho <- rho-mean(rho) # Centering rhos on zero
-  #rho <- scales::rescale(rho, to=c(0, 1))
-  rho <- (rho - min(rho)) / (max(rho) - min(rho))
-  sites[,i] <- rho
-  env[[i]] <- matrix(rho, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
-}
-env_stack <- stack(raster(env[[1]]*255), raster(env[[2]]*255), raster(env[[3]]*255))
-crs(env_stack) <- "+proj=utm +zone=1"
-#CGT 25/06/2021: save the environmental data to avoid simulating them again in the next model
-save(sites, file = here::here("outputs", "m0", "sites.RData"))
-save(env, file = here::here("outputs", "m0", "env.RData"))
-
-#Look at the correlations between environmental variables
-cor(c(env[[1]]), c(env[[2]]))
-cor(c(env[[1]]), c(env[[3]]))
-cor(c(env[[2]]), c(env[[3]]))
-
-# Plot
-png(file=here("outputs", "m0", "environment.png"),
-    width=fig_width, height=fig_width, units="cm", res=300)
-par(mfrow=c(2,2), bty = "n")
-plot(raster(env[[1]]), main="Environment var1", col=topo.colors(255), cex.main=1.2)
-plot(raster(env[[2]]), main="Environment var2", col=topo.colors(255), cex.main=1.2, legend=FALSE)
-plot(raster(env[[3]]), main="Environment var3", col=topo.colors(255), cex.main=1.2, legend=FALSE)
-plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
-dev.off()
-
-# Habitat frequency
-png(file=here("outputs", "m0", "hab_freq_1.png"),
-    width=fig_width, height=fig_width, units="cm", res=300)
-hist(env[[1]], main="", xlab="Environment var1")    
-dev.off()
-
-png(file=here("outputs", "m0", "hab_freq_2.png"),
-    width=fig_width, height=fig_width, units="cm", res=300)
-hist(env[[2]], main="", xlab="Environment var2")    
-dev.off()
-
-png(file=here("outputs", "m0", "hab_freq_3.png"),
-    width=fig_width, height=fig_width, units="cm", res=300)
-hist(env[[3]], main="", xlab="Environment var3")    
-dev.off()
-
-
-# =========================================
-# Species niche
-# =========================================
-
-# Niche width
-niche_width <- 0.25
-# Niches per axis
-n_niche <- 1/niche_width
-# Number of species
-nsp <- n_niche^n_axis
-# Species coordinates on the three niche axis (x, y, z)
-nsp <- 100
-base_coord <- seq(0, 1, length.out=n_niche+1)[-(n_niche+1)]+niche_width/2
-sp_x <- rep(rep(base_coord, n_niche), n_niche)
-sp_y <- rep(rep(base_coord, each=n_niche), n_niche)
-sp_z <- rep(base_coord, each=n_niche^2)
-niche_optimum <- as.data.frame(cbind(sp_x, sp_y, sp_z))
-
-# Random optimum for species
-randomOptSp <- TRUE
-if (randomOptSp) {
-  set.seed(seed)
-  niche_optimum <- data.frame(sp_x=runif(n=nsp, min = min(env[[1]]), max = max(env[[1]])),
-                              sp_y=runif(n=nsp, min = min(env[[2]]), max = max(env[[2]])),
-                              sp_z=runif(n=nsp, min = min(env[[3]]), max = max(env[[3]])))
-  niche_optimum <- niche_optimum[order(niche_optimum$sp_z, niche_optimum$sp_y, niche_optimum$sp_x), ]
-}
-#CGT 10/06/2021
-rownames(niche_optimum)<-1:nrow(niche_optimum)
-
-# Plot the species niche
-png(file=here("outputs", "m0", "species_niche.png"),
-    width=fig_width, height=fig_width, units="cm", res=300)
-par(mar=c(1,1,2,2))
-scatter3D(niche_optimum$sp_x, niche_optimum$sp_y, niche_optimum$sp_z,
-          pch=16, 
-          colvar=1:nsp, col=viridis(nsp),
-          bty = "f", main ="Three-dimensional species optima", phi=0,
-          xlim=c(0,1), ylim=c(0,1), zlim=c(0,1))
-dev.off()
-
-# Matrix of species performance on each site (distances)
-# Sites in rows, Species in columns
-dist_E_Sp <- dist_Site_Sp(as.matrix(sites), as.matrix(niche_optimum))
-dprim_E_Sp <- (dist_E_Sp-mean(dist_E_Sp))/sd(dist_E_Sp)
-perf_E_Sp <- -dprim_E_Sp
-
-# Function to identify the species with the highest performance
-high_perf_sp <- function(dist, sp_pres) {
-  dist_pres <- dist[sp_pres]
-  min_dist <- min(dist_pres)
-  sp_high_perf <- sp_pres[which(dist_pres==min_dist)]
-  # If more than one species, selection at random
-  if (length(sp_high_perf)>1) {
-    # Random permutation
-    sp_high_perf <- sample(sp_high_perf)
-    sp_high_perf <- sp_high_perf[1]
+  # Plot the environment
+  plot_environment(model=model, fig_width=fig_width, n_axis=n_axis, env=env)
+  # Plot the habitat frequency
+  plot_hab_freq(n_axis=n_axis, model=model, fig_width=fig_width, env=env)
+  
+  # =========================================
+  # Species optima
+  # =========================================
+  
+  if(perf_know==TRUE){
+    niche_optimum <- NULL
+    niche_optimum <- generate_species_optima(model=model, randomOptSp=randomOptSp, niche_width=niche_width, nsp=nsp, env=env)
+  } else {
+    beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
+    beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
+    beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
+    beta_0_mat <- matrix(rep(beta_0,each=nsite), ncol=nsp)
+    beta_1_mat <- matrix(rep(beta_1,each=nsite), ncol=nsp)
+    beta_2_mat <- matrix(rep(beta_2,each=nsite), ncol=nsp)
+    X1_mat <- matrix(rep(X1, nsp), ncol=nsp)
   }
-  return(sp_high_perf)
-}
-
-# Probability of dying of each species on each site
-# Strength of unsuitability
-b <- -0.5
-theta <- 0.1
-mortality_E_Sp <- inv_logit(logit(theta) + b * perf_E_Sp)
-# Mortality rate distribution
-png(file=here("outputs", "m0", "hist_mortality.png"),
-    width=fig_width, height=fig_width, units="cm", res=300)
-hist(mortality_E_Sp)
-dev.off()
-# Mortality probability function
-png(file=here::here("outputs", "m0", "function_mort_proba.png"),
-    width=fig_width, height = fig_width/1.5, units="cm", res=300)
-plot(x=c(perf_E_Sp),
-     y=c(mortality_E_Sp),
-     xlab="Performance",
-     ylab="Mortality probability",
-     main="Mortality probability as a function of performance",
-     cex.lab=1.5,
-     cex.main=1.5)
-dev.off()
-
-#Fecundity
-fecundity <- 2
-
-# Habitat frequency for each species
-rank_dist_E <- t(apply(dist_E_Sp, 1, rank, ties.method="min"))
-sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
-sp_hab_freq <- as.table(sp_hab_freq)
-names(sp_hab_freq) <- 1:nsp
-save(sp_hab_freq, file = here::here("outputs", "m0", "sp_hab_freq.RData"))
-png(file=here("outputs", "m0", "species_habitat_freq.png"),
-    width=fig_width, height=fig_width, units="cm", res=300)
-par(cex.lab=1.5)
-plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
-dev.off()
-
-# Species with no habitat
-sp_no_habitat <- as.vector(which(sp_hab_freq==0))
-nsp_no_habitat <- length(sp_no_habitat)
-
-# =========================================
-# Repetitions
-# =========================================
-
-# Number of repetitions
-nrep <- 5
-# Number of generations
-ngen <- 500
-
-# Species richness
-sp_rich <- matrix(NA, nrow=ngen, ncol=nrep)
-# Species rank at the end of the generations
-rank_sp <- matrix(NA, nrow=nrep, ncol=nsp)
-# Environmental filtering
-env_filt <- matrix(NA, nrow=ngen, ncol=nrep)
-# Mean mortality rate in the community
-theta_comm <- matrix(NA, nrow=ngen, ncol=nrep)
-#Distance between site and species optimum
-dist_site <- matrix(NA, nrow=ngen, ncol=nrep)
-
-#CGT 16/06/2021
-Shannon <- c(nrep)
-#CGT 17/06/2021
-#To keep the abundance matrixes in order to infer alpha matrix
-Abundances_m0<-list()
-
-# Loop on repetitions
-for (r in 1:nrep) {
   
-  abund <- matrix(NA, ncol=nsp, nrow=ngen)
-  abund_after_mortality <- NULL
+  # =========================================
+  # Species performance
+  # =========================================
   
-  # -----------------------------------------
-  # Initial conditions
-  # -----------------------------------------
-  
-  # Draw species at random in the landscape (one individual per site)
-  sp <- sample(1:nsp, size=nsite, replace=TRUE)
-  #hist(sp)
-  community_start_m0 <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
-  if (r==1) {
-    png(file=here("outputs", "m0", "community_start.png"),
-        width=fig_width, height=fig_width, units="cm", res=300)
-    par(bty = "n")
-    plot(raster(community_start_m0), main="Species - Start", zlim=c(0, nsp),
-         col=c("black",  viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
-    dev.off()
+  # Matrix of species performance on each site (distances)
+  # Sites in rows, Species in columns
+  if(perf_know==TRUE){
+    dist_E_Sp <- dist_Site_Sp(as.matrix(sites), as.matrix(niche_optimum))
+    dprim_E_Sp <- (dist_E_Sp-mean(dist_E_Sp))/sd(dist_E_Sp)
+    perf_E_Sp <- -dprim_E_Sp
+    save(perf_E_Sp, file=here::here("outputs", model, "perf_E_Sp.RData"))
+  } else {
+    perf_Sp_mean <- beta_0_mat+beta_1_mat*X1_mat+beta_2_mat*X1_mat^2
   }
-  community <- community_start_m0
-
-  # -----------------------------------------
-  # Dynamics
-  # -----------------------------------------
   
-  # Simulating generation
-  for (g in 1:ngen) {
-    
-    # ******************
-    # Mortality
-    # ******************
-    
-    # Mortality rate on each site
-    # Vacant sites
-    theta_site <- rep(NA, nsite)
-    w0 <- (as.vector(t(community))==0)
-    theta_site[w0] <- 0
-    theta_site[!w0] <- diag(mortality_E_Sp[!w0, as.vector(t(community))[!w0]])
-    
-    # Mortality events
-    mort_ev <- rbinom(nsite, size=1, prob=theta_site)
-    mortality <- matrix(mort_ev, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
-    
-    # Update community
-    community[mortality==1] <- 0
-    # Plot once
-    if (r==1 & g==1) {
-      png(file=here("outputs", "m0", "mortality_events.png"),
-          width=fig_width, height=fig_width, units="cm", res=300)
-      par(bty = "n")
-      plot(raster(community), main="Species - with vacant sites", zlim=c(0, nsp),
-           col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
-      dev.off()
-    }
-
-    # *********************
-    # Fecundity/Recruitment
-    # *********************
-    
-    # Species present in the community
-    sp_present <- sort(unique(community[community!=0]))
-    nsp_present <- length(sp_present)
-    
-    # Vacant sites
-    community_rast <- raster(community)
-    sites_vacant <- which(values(community_rast)==0)
-    
-    # INTRACO 23/09/2021 Dispersion process (function of species abundance)
-    abund_after_mortality <- as.data.frame(table(factor(as.vector(community), levels=1:nsp)))$Freq
-    nb_seeds_sp <- round(abund_after_mortality*fecundity)
-    nb_seeds_tot <- sum(nb_seeds_sp)
-    
-    # repeat{
-    seeds_on_vacant <- sample(sites_vacant, nb_seeds_tot, replace=TRUE)
-    #   if(length(unique(seeds_on_vacant))>=length(sites_vacant)){break}
-    # }
-    
-    # Performance of species on vacant sites
-    #dist_E_Sp_vacant <- dist_E_Sp[sites_vacant, ]
-    seeds <- data.frame(Species=rep(1:nsp, times=nb_seeds_sp), Sites=seeds_on_vacant)
-    if (nrow(seeds)>1) {
-      seeds$Perf <- diag(dist_E_Sp[seeds$Sites, seeds$Species])
-    } else {
-      seeds$Perf <- dist_E_Sp[seeds$Sites, seeds$Species]
+  # =========================================
+  # Species mortality probability
+  # =========================================
+  
+  if(perf_know==TRUE){
+    if(mortality_fixed==FALSE){
+      # Probability of dying of each species on each site
+      mortality_E_Sp <- inv_logit(logit(theta) + b * perf_E_Sp)
+      # Mortality rate distribution
+      plot_histogram_mortality(model=model, fig_width=fig_width, mortality_E_Sp=mortality_E_Sp)
+      # Mortality probability function
+      plot_function_mort_proba(model=model, fig_width=fig_width, perf_E_Sp=perf_E_Sp, mortality_E_Sp=mortality_E_Sp)
     }
     
-    # Identify the species with the highest performance
-    #new_ind <- apply(dist_E_Sp_vacant, 1, high_perf_sp, sp_pres=sp_present)
-    f_sp <- function(x) {
-      w <- which(x[,3]==max(x[,3]))
-      return(x[sample(w, 1),1])
-    }
-    new_ind <- plyr::ddply(seeds, c("Sites"), f_sp)
-    
-    # Recruitment
-    community_rast[new_ind$Sites] <- new_ind$V1
-    community <- as.matrix(community_rast)
-    
-    # *********************
-    # Diversity
-    # *********************
-    
-    # Species richness
-    sp_rich[g, r] <- length(unique(as.vector(community)))
-    abund[g, ] <- table(factor(as.vector(community), levels=1:nsp))
-    
-    # Environmental filtering
-    dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
-    env_filt[g, r] <- mean(dist_site)
-
-    # Mean mortality rate in the community
-    theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
-    theta_comm[g, r] <- mean(theta_site)
-    
-  } # End ngen
-  
-  #CGT 28/06/2021 to compare the two models
-  community_end_m0 <- community
-  
-  # Plot final community once
-  if (r==1) {
-    png(file=here("outputs", "m0", "community_end.png"),
-        width=fig_width, height=fig_width, units="cm", res=300)
-    par(bty = "n")
-    plot(raster(community), main=glue("Species - End (ngen={ngen})"),
-         zlim=c(0, nsp), col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
-    dev.off()
+    # Habitat frequency for each species
+    # Identify the rank of the performance of species
+    rank_dist_E <- t(apply(dist_E_Sp, 1, rank, ties.method="min"))
+    # Identify the best performing species
+    sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
+    sp_hab_freq <- as.table(sp_hab_freq)
+    names(sp_hab_freq) <- 1:nsp
+    save(sp_hab_freq, file = here::here("outputs", model, "sp_hab_freq.RData"))
   }
   
-  # Species rank
-  #CGT 16/06/2021 : ngen --> ngen +1
-  rank_sp[r, ] <- rank(-abund[ngen, ], ties.method="min")
+  if(perf_know==FALSE){
+    rank_dist_E <- t(apply(-perf_Sp_mean, 1, rank, ties.method="min"))
+    sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
+    sp_hab_freq <- as.table(sp_hab_freq)
+    names(sp_hab_freq) <- 1:nsp
+    save(sp_hab_freq, file = here::here("outputs", model=model, "sp_hab_freq.RData"))
+    mortality_Sp_mean <- inv_logit(logit(theta) + b * (perf_Sp_mean))
+  }
   
-  #CGT 16/06/2021
-  df_shannon <- data.frame(Species = 1:nsp,
-                           Abundance = abund[ngen, ])%>%
-    mutate(Proportion = Abundance / sum(Abundance))%>%
-    filter(Abundance > 0)%>%
-    mutate(ln_prop = log(Proportion), prop_times_ln_prop = ln_prop*Proportion)
+  plot_species_habitat_freq(model=model, fig_width=fig_width, sp_hab_freq=sp_hab_freq)
   
-  Shannon[r] <- -sum(df_shannon$prop_times_ln_prop)
+  # Species with no habitat
+  sp_no_habitat <- as.vector(which(sp_hab_freq==0))
+  nsp_no_habitat <- length(sp_no_habitat)
   
-  #CGT 17/06/2021
-  #To keep the abundance matrixes in order to infer alpha matrix
-  Abundances_m0[[r]] <- abund
+  print(glue::glue("There are {nsp_no_habitat} species with no suitable habitat"))
   
-} # End nrep
-
-save(Abundances_m0, file = here::here("outputs", "m0", "Abundances_m0.RData"))
-save(sp_rich, file=here::here("outputs", "m0", "sp_rich_m0.RData"))
-save(rank_sp, file=here::here("outputs", "m0", "rank_sp_m0.RData"))
-
-# =========================
-# Diversity analysis
-# =========================
-
-sp_rich
-rank_sp
-
-# ---------------------------------------------
-# Plot species richness
-# ---------------------------------------------
-
-sp_rich <- data.frame(sp_rich)
-sp_rich_long <- sp_rich %>%
-  mutate(gen=1:(ngen)) %>%
-  pivot_longer(cols=X1:X50, names_to="rep",
-               names_prefix="X", values_to="sp_rich")
-p <- ggplot(data=sp_rich_long, aes(x=gen, y=sp_rich, col=rep)) +
-  geom_line() +
-  scale_colour_viridis_d()+
-  xlab("Generations") + 
-  ylab("Species richness")+
-  theme(legend.position = "none",
-        text = element_text(size = 20))
-ggsave(p, filename=here("outputs", "m0", "species_richness_with_time.png"),
-       width=fig_width, height=fig_width/2, units="cm", dpi=300)
-
-#CGT 16/06/2021
-sp_rich_final <- sp_rich[ngen,]
-save(sp_rich_final, file=here::here("outputs", "m0", "Species_richness_m0.RData"))
-
-#CGT 16/06/2021
-# ---------------------------------------------
-# Shannon index and Shannon equitability index
-# ---------------------------------------------
-save(Shannon, file = here::here("outputs", "m0", "Shannon_m0.RData"))
-Equitability <- Shannon/log(as.numeric(sp_rich[ngen,]))
-save(Equitability, file = here::here("outputs", "m0", "Equitability_m0.RData"))
-
-#CGT 16/06/2021
-# ---------------------------------------------------------------------------------
-# pairwise Spearman correlation on the species ranks at the end of each simulation
-# ---------------------------------------------------------------------------------
-
-Spearman <- as.dist(round(cor(t(rank_sp), method="spearman"),2))
-save(Spearman, file = here::here("outputs", "m0", "Spearman_m0.RData"))
-
-# ---------------------------------------------
-# Link between final rank and habitat frequency
-# ---------------------------------------------
-
-# Mean final rank
-sp_mean_rank <- apply(rank_sp, 2, mean)
-# Plot
-df <- data.frame(cbind(sp_mean_rank, sp_hab_freq))
-p <- ggplot(data=df, aes(x=sp_hab_freq, y=sp_mean_rank)) +
-  geom_point() +
-  geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
-  xlab("Species suitable habitat frequency") +
-  ylab("Species mean rank (higher rank = lower abundance)") +
-  theme(axis.title=element_text(size=16))
-ggsave(p, filename=here("outputs", "m0", "mean_rank-habitat_freq.png"),
-       width=fig_width, height=fig_width, units="cm", dpi=300)
-
-#CGT 15/06/2021
-# To compare with the other model
-Df_rank_sp <- data.frame(rank_sp)%>%
-  mutate(rep = 1:nrep)%>%
-  pivot_longer(cols=X1:X100, values_to="rank_sp")
-p <- ggplot(data=Df_rank_sp, aes(x=rep, y=rank_sp)) +
-  geom_line(aes(colour=name)) +
-  scale_colour_viridis_d()+
-  xlab("Repetition") + 
-  ylab("Species rank")+
-  theme(legend.position = "none",
-        text = element_text(size = 20))
-ggsave(p, filename=here("outputs", "m0", "species_rank_with_repetitions.png"),
-       width=fig_width, height=fig_width/2, units="cm", dpi=300)
-
-
-# ---------------------------------------------
-# Environmental filtering
-# ---------------------------------------------
-
-env_filt <- data.frame(env_filt)
-env_filt_long <- env_filt %>%
-  mutate(gen=1:(ngen)) %>%
-  pivot_longer(cols=X1:X50, names_to="rep",
-               names_prefix="X", values_to="env_filt")
-p <- ggplot(data=env_filt_long, aes(x=gen, y=env_filt, col=rep)) +
-  geom_line() +
-  scale_colour_viridis_d()+
-  labs(title="Environmental filtering") +
-  xlab("Generations") + 
-  ylab("Mean env-species perf difference")
-ggsave(p, filename=here("outputs", "m0", "environmental_filtering.png"),
-       width=fig_width, height=fig_width/2, units="cm", dpi=300)
-
-# Plot
-png(file=here("outputs", "m0", "spatial_comp_env_sp.png"), 
-    width=fig_width, height=fig_width, units="cm", res=300)
-par(mfrow=c(2,2), bty = "n")
-plot(raster(community_start_m0), main="Species - Start", zlim=c(0, nsp),
-     col=c("black", viridis(nsp)), legend=FALSE)
-plot(raster(community), main="Species - End", zlim=c(0, nsp),
-     col=c("black", viridis(nsp)), legend=FALSE)
-plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
-plot(raster(community), main="Species - End", zlim=c(0, nsp),
-     col=c("black", viridis(nsp)), legend=FALSE)
-dev.off()
-
-# ---------------------------------------------
-# Theta community
-# ---------------------------------------------
-
-theta_comm <- data.frame(theta_comm)
-theta_comm_long <- theta_comm %>%
-  mutate(gen=1:(ngen)) %>%
-  pivot_longer(cols=X1:X50, names_to="rep",
-               names_prefix="X", values_to="theta_comm")
-p <- ggplot(data=theta_comm_long, aes(x=gen, y=theta_comm, col=rep)) +
-  geom_line() +
-  scale_colour_viridis_d()+
-  labs(title="Environmental filtering") +
-  xlab("Generations") + 
-  ylab("Mean mortality rate in the community")
-ggsave(p, filename=here("outputs", "m0", "mortality_rate_community.png"),
-       width=fig_width, height=fig_width/2, units="cm", dpi=300)
-
-# ----------------------------------
-# Spatial autocorrelation of species
-# ----------------------------------
-
-# Species autocorrelation
-sp_XY <- data.frame(rasterToPoints(raster(community)))
-names(sp_XY) <- c("x", "y", "sp")
-vario_sp <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
-# Environment autocorrelation
-# 3D voxel for each site
-x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
-y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
-z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
-class_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
-vario_env <- variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
-# Plot with correlation
-png(file=here("outputs", "m0", "sp_autocorrelation.png"),
-    width=fig_width, height=fig_width*0.8, units="cm", res=300)
-par(mfrow=c(2,2), bty = "n")
-plot(vario_sp, main="Species - End")
-plot(vario_env, main="Environment")
-plot(vario_env$v, vario_sp$v,
-     main = "Regression",
-     xlab="Semivariance for environment",
-     ylab="Semivariance for species")
-m <- lm(vario_sp$v ~ vario_env$v-1)
-abline(a=0, b=coef(m), col="red")
-dev.off()
-
-## Conclusions
-
-# 1. Because mortality rate is equal for all species, species with the lowest habitat frequency have a higher probability to disappear
-# 2. Stable coexistence (cf. species rank from one repetition to the other)
-# 3. Species abundance at the end correlated with species habitat frequency
-# 4. Species autocorrelation with correspondence between species and environment
-# 5. For a given habitat distribution, the number of species at the equilibrium depends on the mortality rate
-#    If the mortality rate is higher, a higher number of low abundance species disappear.   
-
-# ===========================
-# "Intraspecific variability"
-# ===========================
-
-# Data-set
-df <- data.frame(perf_E_Sp)
-names(df) <- c(sprintf("Sp_%03d", 1:(nsp-1)), sprintf("Sp_%d", nsp))
-df_perf <- tibble(df) %>%
-  mutate(Env_1=values(raster(env[[1]])), Env_2=values(raster(env[[2]])), Env_3=values(raster(env[[3]]))) %>%
-  mutate(Env_1_sq=Env_1^2, Env_2_sq=Env_2^2, Env_3_sq=Env_3^2) %>%
-  pivot_longer(cols=c(Sp_001:glue("Sp_0{nsp-1}"), glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
-
-# Observed niche
-# Select 8 species at random
-set.seed(seed)
-sp_sel <- sample(unique(df_perf$Species), 9, replace=FALSE)
-df_sp_sel <- df_perf %>% filter(Species %in% sp_sel)
-p <- ggplot(data=df_sp_sel, aes(x=Env, y=Perf)) +
-  geom_point() +
-  geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE) +
-  facet_wrap(vars(Species), nrow=3) +
-  xlab("Environment (first axis)") +
-  ylab("Performance")
-ggsave(p, filename=here("outputs", "m0", "infering_species_niche.png"),
-       width=fig_width, height=fig_width, units="cm", dpi=300)
+  # =========================================
+  # Repetitions
+  # =========================================
   
-# Observed intraspecific variability
-lm_fit <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq, data=df_perf)
-save(lm_fit, file = here::here("outputs", "m0","lm_fit.RData"))
+  # Species richness
+  sp_rich <- matrix(NA, nrow=ngen, ncol=nrep)
+  # Species rank at the end of the generations
+  rank_sp <- matrix(NA, nrow=nrep, ncol=nsp)
+  # Environmental filtering
+  env_filt <- matrix(NA, nrow=ngen, ncol=nrep)
+  # Mean mortality rate in the community
+  theta_comm <- matrix(NA, nrow=ngen, ncol=nrep)
+  #Distance between site and species optimum
+  dist_site <- matrix(NA, nrow=ngen, ncol=nrep)
+  #Shannon diversity index
+  Shannon <- c(nrep)
+  #Abundance matrices
+  Abundances <- list()
+  
+  # Loop on repetitions
+  for (r in 1:nrep) {
+    
+    abund <- matrix(NA, ncol=nsp, nrow=ngen)
+    #used if disp_dep_abund==TRUE 
+    abund_after_mortality <- NULL
+    
+    # -----------------------------------------
+    # Initial conditions
+    # -----------------------------------------
+    
+    if(start_full_landscape==TRUE){
+      # Draw species at random in the landscape (one individual per site)
+      sp <- sample(1:nsp, size=nsite, replace=TRUE)
+      community <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
+    }
+    if(start_one_ind_per_species==TRUE){
+      # One individual per species distributed randomly over the grid
+      sites_start <- sample(1:nsite, size=nsp, replace=FALSE)
+      sp_start<- sample(1:nsp, size=nsp, replace=FALSE)
+      community <- matrix(0, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
+      community_rast <- raster(community)
+      community_rast[sites_start] <- sp_start
+      community <- as.matrix(community_rast)
+    }
+    if(start_ten_ind_per_species==TRUE){
+      # Ten individuals per species distributed randomly over the grid
+      sites_start <- sample(1:nsite, size=nsp*10, replace=FALSE)
+      sp_start<- rep(1:nsp, each=10)
+      community <- matrix(0, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
+      community_rast <- raster(community)
+      community_rast[sites_start] <- sp_start
+      community <- as.matrix(community_rast)
+    }
+    community_start <- community
+    
+    # Plot the community at the start of the first repetition
+    if (r==1) {
+      plot_community_start(model=model, fig_width=fig_width, community=community_start, nsp=nsp)
+    }
+    
+    if(perf_know==FALSE&&IV==TRUE){
+      # Adding endogenous IV to compute mortality for the first generation
+      epsilon <- rnorm(nsite*nsp, 0, sd=sqrt(rep(V_intra$V, each=nsite)))
+      perf_ind <- perf_Sp_mean + epsilon
+    }
+  
+    # -----------------------------------------
+    # Dynamics
+    # -----------------------------------------
+    
+    # Simulating generation
+    for (g in 1:ngen) {
+      
+      # Species richness
+      sp_rich[g, r] <- length(unique(as.vector(community[community!=0])))
+      abund[g, ] <- table(factor(as.vector(community), levels=1:nsp))
+      
+      # ******************
+      # Mortality
+      # ******************
+      
+      if(mortality_fixed==FALSE){
+        
+        if(perf_know==FALSE&&IV==TRUE){
+          
+          # Probability of dying of each species on each site
+          mortality_ind <- inv_logit(logit(theta) + b * (perf_ind))
+          
+          # Mean mortality correction
+          epsilon_mat <- matrix(epsilon, ncol=nsp)
+          theta_var <- inv_logit(logit(theta) + b * epsilon_mat)
+          diff <- mean(theta_var)-theta
+          mortality_ind <- mortality_ind - diff
+          # /!\ can modify mean!!
+          mortality_ind[mortality_ind<0] <- 0
+          
+        } # end condition on IV
+        
+        # Mortality rate on each site
+        # w0 for vacant sites
+        theta_site <- rep(NA, nsite)
+        w0 <- (as.vector(t(community))==0)
+        theta_site[w0] <- 0
+        
+        if(perf_know==TRUE&&IV==FALSE){
+          if(length(c(theta_site[!w0]))>1){
+            theta_site[!w0] <- diag(mortality_E_Sp[!w0, as.vector(t(community))[!w0]])
+          }
+          if(length(c(theta_site[!w0]))==1){
+            theta_site[!w0] <- mortality_E_Sp[!w0, as.vector(t(community))[!w0]]
+          }
+        }
+        
+        if(perf_know==FALSE&&IV==FALSE){
+          if(length(c(theta_site[!w0]))>1){
+            theta_site[!w0] <- diag(mortality_Sp_mean[!w0, as.vector(t(community))[!w0]])
+          }
+          if(length(c(theta_site[!w0]))==1){
+            theta_site[!w0] <- mortality_Sp_mean[!w0, as.vector(t(community))[!w0]]
+          }
+        }
+        
+        if(perf_know==FALSE&&IV==TRUE){
+          if(length(c(theta_site[!w0]))>1){
+            theta_site[!w0] <- diag(mortality_ind[!w0, as.vector(t(community))[!w0]])
+          }
+          if(length(c(theta_site[!w0]))==1){
+            theta_site[!w0] <- mortality_ind[!w0, as.vector(t(community))[!w0]]
+          }
+        }
+        
+        # Mortality events
+        mort_ev <- rbinom(nsite, size=1, prob=theta_site)
+        mortality <- matrix(mort_ev, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
+      
+      }
+      
+      #/!\ to be tested
+      
+      if(mortality_fixed==TRUE){
+        # No stocasticity: the 10 less performant individuals of the community die each generation
+        
+        perf_present <- rep(NA, nsite)
+        w0 <- (as.vector(t(community))==0)
+        perf_present[w0] <- NA
+        
+        if(perf_know==TRUE&&IV==FALSE){
+          #performance of the present individuals
+          #empty sites are not taken into account
+          perf_present[!w0] <- diag(perf_E_Sp[!w0, as.vector(t(community))[!w0]])
+        }
+        
+        if(perf_know==FALSE&&IV==FALSE){
+          #performance of the present individuals
+          perf_present[!w0] <- diag(perf_Sp_mean[!w0, as.vector(t(community))[!w0]])
+        }
+        
+        if(perf_know==FALSE&&IV==TRUE){
+          #performance of the present individuals
+          perf_present[!w0] <- diag(perf_ind[!w0, as.vector(t(community))[!w0]])
+        }
+        
+        #identify the 10 less performant present individuals and kill them
+        mort_ev <- rep(0, length(perf_present))
+        mort_ev[which(perf_present<=sort(perf_present)[10])] <- 1 #sort ignores NA
+        mortality <- matrix(mort_ev, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
+      }
+      
+      # Number of deaths
+      n_mort <- sum(mort_ev)
+        
+      if(n_mort!=0){
+        
+        # Update community
+        community[mortality==1] <- 0
+        
+        # Plot once
+        if (r==1 & g==1) {
+          plot_mortality_events(model=model, fig_width=fig_width, community=community, nsp=nsp)
+        }
+          
+        # *********************
+        # Fecundity/Recruitment
+        # *********************
+        
+        # Species present in the community
+        sp_present <- sort(unique(community[community!=0]))
+        nsp_present <- length(sp_present)
+        
+        # Vacant sites
+        community_rast <- raster(community)
+        sites_vacant <- which(values(community_rast)==0)
+        nsite_vacant <- length(sites_vacant)
+        
+        if(perf_know==FALSE&&IV==TRUE){
+          # New individual effects for potential new individuals (one per site and species)
+          epsilon <- rnorm(nsite*nsp, 0, sd=sqrt(rep(V_intra$V, each=nsite)))
+          perf_ind_pot <- perf_Sp_mean + epsilon
+          
+        }
+          
+        if(disp_dep_abund==FALSE){
+          
+          if(perf_know==TRUE&&IV==FALSE){
+            
+            # Performance of species on vacant sites
+            dist_E_Sp_vacant <- dist_E_Sp[sites_vacant, ]
+            
+            # Identify the species with the highest performance
+            new_ind <- apply(dist_E_Sp_vacant, 1, high_perf_sp, sp_pres=sp_present)
+            
+            # Recruitment
+            community_rast[sites_vacant] <- new_ind
+            
+          } # end condition on no IV
+          
+          if(perf_know==FALSE&&IV==FALSE){
+            # Identify the present species with the highest performance on vacant sites (maximum in each line)
+            sp_high_perf <- sp_present[apply(matrix(perf_Sp_mean[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
+            
+            # Recruitment
+            community_rast[sites_vacant] <- sp_high_perf
+          } # end condition on IV
+          
+          if(perf_know==FALSE&&IV==TRUE){
+            # Update performance matrix
+            perf_ind[sites_vacant, sp_present] <- perf_ind_pot[sites_vacant, sp_present]
+            
+            # Identify the present species with the highest performance on vacant sites (maximum in each line)
+            sp_high_perf <- sp_present[apply(matrix(perf_ind_pot[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
+            
+            # Recruitment
+            community_rast[sites_vacant] <- sp_high_perf
+          } # end condition on IV
+          
+        } # end condition on abundance dependence
+        
+        if (disp_dep_abund==TRUE){
+          
+          abund_after_mortality <- as.data.frame(table(factor(as.vector(community), levels=1:nsp)))$Freq
+          nb_seeds_sp <- round(abund_after_mortality*fecundity)
+          nb_seeds_tot <- sum(nb_seeds_sp)
+          
+          sites_of_seeds <- sample(sites_vacant, nb_seeds_tot, replace=TRUE)
+          
+          # Performance of species on vacant sites
+          seeds <- data.frame(Species=rep(1:nsp, times=nb_seeds_sp), Sites=sites_of_seeds)
+          
+          if (nrow(seeds)>1) {
+            if(perf_know==TRUE&&IV==FALSE){
+              seeds$Perf <- diag(perf_E_Sp[seeds$Sites, seeds$Species])
+            }
+            if(perf_know==FALSE&&IV==FALSE){
+              seeds$Perf <- diag(perf_Sp_mean[seeds$Sites, seeds$Species])
+            }
+            if(perf_know==FALSE&&IV==TRUE){
+              seeds$Perf <- diag(perf_ind_pot[seeds$Sites, seeds$Species])
+            }
+          } else {
+            if(perf_know==TRUE&&IV==FALSE){
+              seeds$Perf <- perf_E_Sp[seeds$Sites, seeds$Species]
+            }
+            if(perf_know==FALSE&&IV==FALSE){
+              seeds$Perf <- perf_Sp_mean[seeds$Sites, seeds$Species]
+            }
+            if(perf_know==FALSE&&IV==TRUE){
+              seeds$Perf <- perf_ind_pot[seeds$Sites, seeds$Species]
+            }
+          } # end else number of seeds
+          
+          new_ind <- plyr::ddply(seeds, c("Sites"), f_sp)
+          colnames(new_ind) <- c("Sites", "Species")
+          
+          # Recruitment
+          community_rast[new_ind$Sites] <- new_ind$Species
+          
+          if(perf_know==FALSE&&IV==TRUE){
+            # /!\ remove loop
+            for(k in 1:nrow(new_ind)){
+              
+            perf_ind[new_ind$Sites[k], new_ind$Species[k]] <- perf_ind_pot[new_ind$Sites[k], new_ind$Species[k]]
+            
+            }
+            
+          }
+          
+        } # end condition on option on abundance dependence of dispersion 
+        
+        
+      }  # end condition on n_mort (contains all cases)
+      
+      # update community
+      community <- as.matrix(community_rast)
+      
+      # *********************
+      # Diversity
+      # *********************
+      
+      # Environmental filtering
+      if(IV==FALSE&&perf_know==TRUE){
+        #Some sites have a 0 but then they are not taken into account since there is no distance associated with "species 0".
+        dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
+      }
+      if(perf_know==FALSE){
+        
+        # /!\ to check
+        
+        # Environmental filtering for the partial knowledge model
+        #distance between the observed optimum of the species and the environmental conditions
+        E_seq <- seq(min(X1), max(X1), length.out=100)
+        E_seq_mat <- matrix(rep(E_seq, nsp), ncol=nsp)
+        
+        beta_0_mat_E_seq <- matrix(rep(beta_0,each=length(E_seq)), ncol=nsp)
+        beta_1_mat_E_seq <- matrix(rep(beta_1,each=length(E_seq)), ncol=nsp)
+        beta_2_mat_E_seq <- matrix(rep(beta_2,each=length(E_seq)), ncol=nsp)
+        
+        Mat_perf_inferred <- beta_0_mat_E_seq+beta_1_mat_E_seq*E_seq_mat+beta_2_mat_E_seq*E_seq_mat^2
+        Mat_perf_inferred <- as.data.frame(cbind(E_seq, Mat_perf_inferred))
+        
+        colnames(Mat_perf_inferred) <- c("E", paste0("Sp",1:nsp))
+        
+        Optimum_Sp_inferred <- c()
+        for (k in 1:nsp) {
+          Optimum_Sp_inferred[k] <- Mat_perf_inferred[which.max(Mat_perf_inferred[,k+1]),]$E
+        }
+        
+        Optimum_Sp_inferred_community <- Optimum_Sp_inferred[community]
+        
+        dist_site <- sqrt((Optimum_Sp_inferred_community-X1[which(as.vector(community)!=0)])^2)
+        
+      }
+      
+      env_filt[g, r] <- mean(dist_site)
+  
+      # Mean mortality rate in the community
+      #/!\ do we want this mortality rate to take empty sites into account?
+      if(mortality_fixed==FALSE){
+        if (IV==FALSE&&perf_know==TRUE){
+          theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
+        }
+        if (IV==TRUE&&perf_know==FALSE){
+          theta_site <- diag(mortality_ind[, as.vector(t(community))])
+        }
+        theta_comm[g, r] <- mean(theta_site)
+      }
+      
+    } # End ngen
+    
+    community_end <- community
+    
+    # Plot final community once
+    if (r==1) {
+      plot_community_end(model=model, fig_width=fig_width, community=community_end, nsp=nsp)
+      save(community_end, file=here::here("outputs", model, glue::glue("community_end_{model}.RData")))
+    }
+    
+    # Species rank
+    rank_sp[r, ] <- rank(-abund[ngen, ], ties.method="min")
+    
+    df_shannon <- data.frame(Species = 1:nsp,
+                             Abundance = abund[ngen, ])%>%
+      mutate(Proportion = Abundance / sum(Abundance))%>%
+      filter(Abundance > 0)%>%
+      mutate(ln_prop = log(Proportion), prop_times_ln_prop = ln_prop*Proportion)
+    
+    Shannon[r] <- -sum(df_shannon$prop_times_ln_prop)
+    
+    #To keep the abundance matrixes in order to infer alpha matrix
+    Abundances[[r]] <- abund
+    
+    
+  } # End nrep
+  
+  sp_rich <- data.frame(sp_rich)
+  env_filt <- data.frame(env_filt)
+  theta_comm <- data.frame(theta_comm)
+  
+  save(Abundances, file = here::here("outputs", model, glue::glue("Abundances_{model}.RData")))
+  save(sp_rich, file=here::here("outputs", model, glue::glue("sp_rich_{model}.RData")))
+  save(rank_sp, file=here::here("outputs", model, glue::glue("rank_sp_{model}.RData")))
+  
+  # =========================
+  # Diversity analysis
+  # =========================
+  
+  # ---------------------------------------------
+  # Plot species abundance
+  # ---------------------------------------------
 
-#Check that the model well fits the data if all environmental variables are included
-lm_all_env <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq+Species*Env_2+Species*Env_2_sq+Species*Env_3+Species*Env_3_sq, data=df_perf)
-summary(lm_all_env)$adj.r.squared
+  plot_abundance_species(Abundances, model, fig_width)
+  
+  # ---------------------------------------------
+  # Plot species richness
+  # ---------------------------------------------
+  
+  plot_species_richness(nrep=nrep, sp_rich=sp_rich, model=model, fig_width=fig_width)
+  
+  sp_rich_final <- sp_rich[ngen,]
+  save(sp_rich_final, file=here::here("outputs", model, glue::glue("Species_richness_{model}.RData")))
+  
+  # ---------------------------------------------
+  # Shannon index and Shannon equitability index
+  # ---------------------------------------------
+  save(Shannon, file = here::here("outputs", model, glue::glue("Shannon_{model}.RData")))
+  Equitability <- Shannon/log(as.numeric(sp_rich[ngen,]))
+  save(Equitability, file = here::here("outputs", model, glue::glue("Equitability_{model}.RData")))
+  
+  # ---------------------------------------------------------------------------------
+  # pairwise Spearman correlation on the species ranks at the end of each simulation
+  # ---------------------------------------------------------------------------------
+  
+  Spearman <- as.dist(round(cor(t(rank_sp), method="spearman"),2))
+  save(Spearman, file = here::here("outputs", model, glue::glue("Spearman_{model}.RData")))
+  
+  # ---------------------------------------------
+  # Link between final rank and habitat frequency
+  # ---------------------------------------------
+  
+  # Mean final rank
+  sp_mean_rank <- apply(rank_sp, 2, mean)
+  # Plot
+  plot_mean_rank_hab_freq(sp_mean_rank=sp_mean_rank, sp_hab_freq=sp_hab_freq, model=model, fig_width=fig_width)
+  
+  # ---------------------------------------------
+  # Environmental filtering
+  # ---------------------------------------------
+  
+  plot_env_filt(nrep, env_filt, model, fig_width)
+  plot_env_species(model, fig_width, community_start, community_end, env)
+  
+  # ---------------------------------------------
+  # Theta community
+  # ---------------------------------------------
+  
+  plot_theta_community(theta_comm, ngen, model, fig_width)
+  
+  # ----------------------------------
+  # Spatial autocorrelation of species
+  # ----------------------------------
+  
+  plot_spatial_autocorr(community_end, sites, niche_width, model, fig_width)
+  
+} # End function
 
-summary(lm_fit)$adj.r.squared
-hist(summary(lm_fit)$residuals)
-shapiro.test(sample(summary(lm_fit)$residuals, size = 5000))
-ks.test(x=summary(lm_fit)$residuals, y='pnorm',alternative='two.sided')
+load(here::here("outputs", model, glue::glue("Abundances_{model}.RData")))
+load(here::here("outputs", model, glue::glue("sp_rich_{model}.RData")))
+load(here::here("outputs", model, glue::glue("rank_sp_{model}.RData")))
+load(here::here("outputs", model, glue::glue("community_end_{model}.RData")))
 
-V_intra <- df_perf %>%
-  mutate(res=lm_fit$residuals) %>%
-  group_by(Species) %>%
-  summarise(V=var(res))
-save(V_intra, file = here::here("outputs", "m0", "V_intra.RData"))
+# ========================================
+# Infer observed intraspecific variability
+# ========================================
 
-p <- ggplot(data=V_intra, aes(x=Species, y=V)) +
-  geom_col() +
-  theme(axis.text.x=element_text(angle=90, size=6),
-        text = element_text(size = 20)) +
-  ylab("Intraspecific variance")
-ggsave(p, filename=here("outputs", "m0", "intraspecific_variance.png"),
-       width=fig_width, height=fig_width, units="cm", dpi=300)
+infer_IV <- function(){
+  load(here::here("outputs", model, "perf_E_Sp.RData"))
+  load(here::here("outputs", model, "env.RData"))
+  nsp<-ncol(perf_E_Sp)
 
-# CGT 11/06/2021
-#At mean environment, x1 = ~ 0.5 (see generation of the environment)
-mean_x1 <- mean(sites[,1])
-
-#Species coefficients
-beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
-beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
-beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
-
-E_seq <- seq(min(X1), max(X1), length.out=100)
-Mat_perf_inferred <- as.data.frame(matrix(ncol=nsp+1, nrow=length(E_seq)))
-Mat_perf_inferred[,1] <- E_seq
-for (k in 1:nsp){
-  Mat_perf_inferred[,k+1] <- beta_0[k] + beta_1[k]*E_seq + beta_2[k] * E_seq^2
-}
-colnames(Mat_perf_inferred) <- c("E", paste0("Sp",1:nsp))
-
-Mat_perf_inferred_long <- Mat_perf_inferred %>%
-  pivot_longer(cols=2:(nsp+1), names_to="Sp",
-               names_prefix="Sp", values_to="Perf")
-p <- ggplot(data=Mat_perf_inferred_long, aes(x=E, y=Perf, col=Sp)) +
-  geom_line() +
-  scale_colour_viridis_d()+
-  xlab("Environment") + 
-  ylab("Species performance")+
-  theme(legend.position = "none", text = element_text(size = 20))
-ggsave(p, filename=here("outputs", "m1", "species_perf_environment.png"),
-       width=fig_width, height=fig_width/2, units="cm", dpi=300)
-
-# /!\ new environmental filtering for the aprtial knowledge to be finished
-Optimum_Sp_m1 <- c()
-for (k in 1:nsp) {
-Optimum_Sp_m1[k] <- which(Mat_perf_inferred[,k+1] == max(Mat_perf_inferred[,2:ncol(Mat_perf_inferred)][k]))
-}
+  # Data-set
+  df <- data.frame(perf_E_Sp)
+  names(df) <- c(sprintf("Sp_%03d", 1:(nsp-1)), sprintf("Sp_%d", nsp))
+  df_perf <- tibble(df) %>%
+    mutate(Env_1=values(raster(env[[1]])), Env_2=values(raster(env[[2]])), Env_3=values(raster(env[[3]]))) %>%
+    mutate(Env_1_sq=Env_1^2, Env_2_sq=Env_2^2, Env_3_sq=Env_3^2) %>%
+    pivot_longer(cols=c(Sp_001:glue("Sp_0{nsp-1}"), glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
+  
+  # Observed niche
+  plot_random_species_niche(seed, df_perf, model, fig_width)
+  
+  #Check that the model well fits the data if all environmental variables are included
+  lm_all_env <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq+Species*Env_2+Species*Env_2_sq+Species*Env_3+Species*Env_3_sq, data=df_perf)
+  
+  print(glue::glue("the r-squared with all environmental variables is {summary(lm_all_env)$adj.r.squared}"))
+    
+  # Observed intraspecific variability
+  lm_fit <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq, data=df_perf)
+  save(lm_fit, file = here::here("outputs", model,"lm_fit.RData"))
+  
+  print(glue::glue("the r-squared with the first environmental variable is {summary(lm_fit)$adj.r.squared}"))
+  
+  #Histogram of the residuals to check normality
+  hist(summary(lm_fit)$residuals)
+  
+  V_intra <- df_perf %>%
+    mutate(res=lm_fit$residuals) %>%
+    group_by(Species) %>%
+    summarise(V=var(res))
+  save(V_intra, file = here::here("outputs", model, "V_intra.RData"))
+  
+  plot_IV(V_intra, model, fig_width)
+  
+  return(V_intra)
+  
+} # End function inferring IV
 
 
-x <- seq(-3, 3, 0.01)
-n_ind_simul <- length(x)
-df_perf_IV <- data.frame(Species = rep(1:nsp, each=n_ind_simul), X = rep(x, nsp), Mean=rep(beta_0+beta_1*mean_x1+beta_2*(mean_x1^2), each=n_ind_simul))
-df_perf_IV <- df_perf_IV%>%
-  group_by(Species)%>%
-  mutate(Perf = dnorm(x, mean=Mean, sd=sqrt(V_intra$V[Species])))%>%
-  ungroup()
+plot_inferred_perf_environment(env, lm_fit, nsp, model, fig_width)
 
-p <- ggplot(df_perf_IV, aes(x = X, y = Perf, colour = as.factor(Species))) +
-  geom_line()+
-  scale_colour_viridis_d()+
-  theme(legend.position = "none")+
-  labs(x = "Performance at mean environment variable X1",
-       y = "Density")
-ggsave(p, filename=here("outputs", "m0", "Perf_overlap_IV.png"),
-       width=fig_width, height=fig_width/2, units="cm", dpi=300)
+plot_comp_IV_niche_width
+
+plot_comp_IV_hab_freq
+
 
 # Compare species habitat frequency and IV #
 
