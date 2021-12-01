@@ -8,11 +8,12 @@ fig_width <- 16.6 # in cm
 n_axis<-3
 
 # Perfect of partial knowledge
-perf_know<-FALSE
-part_know<-TRUE
+perf_know<-TRUE
+
+if(perf_know==FALSE){part_know<-TRUE} else{part_know<-FALSE}
 
 #Intraspecific variability
-IV<-TRUE
+IV<-FALSE
 
 #Random optimum of species
 randomOptSp<-TRUE
@@ -23,7 +24,7 @@ start_one_ind_per_species<-FALSE
 start_ten_ind_per_species<-TRUE
 
 #Dependence of the dispersion of seeds to the abundance of species
-disp_dep_abund<-TRUE
+disp_dep_abund<-FALSE
 
 #Probability of mortality as a function of species performance
 mortality_fixed<-TRUE
@@ -44,7 +45,7 @@ fecundity <- 0.5
 nrep <- 10
 
 # Number of generations
-ngen <- 1000
+ngen <- 10000
 
 ############
 #Model name#
