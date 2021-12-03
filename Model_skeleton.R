@@ -34,6 +34,7 @@ launch_model <- function(){
     load(here::here("outputs", model, "env.RData"))
   } else {
     X1 <- as.vector(sites[,1])
+    Obs_env <- sites[,1:n_observed_axis]
   }
   # Plot the environment
   plot_environment(model=model, fig_width=fig_width, n_axis=n_axis, env=env)
@@ -48,13 +49,39 @@ launch_model <- function(){
     niche_optimum <- NULL
     niche_optimum <- generate_species_optima(model=model, randomOptSp=randomOptSp, niche_width=niche_width, nsp=nsp, env=env)
   } else {
-    beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
-    beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
-    beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
-    beta_0_mat <- matrix(rep(beta_0,each=nsite), ncol=nsp)
-    beta_1_mat <- matrix(rep(beta_1,each=nsite), ncol=nsp)
-    beta_2_mat <- matrix(rep(beta_2,each=nsite), ncol=nsp)
-    X1_mat <- matrix(rep(X1, nsp), ncol=nsp)
+    Inferred_species_parameters <- data.frame(matrix(nrow=nsp, ncol=1+2*n_observed_axis))
+    Inferred_species_parameters[,1] <- as.vector(lm_fit$coefficients[1:nsp])
+    colnames(Inferred_species_parameters)[1]<-"beta_0"
+    for(k in 1:(2*n_observed_axis)){
+      colnames(Inferred_species_parameters)[k+1] <- glue::glue("beta_{k}")
+    }
+    
+    for(k in 1:n_observed_axis){
+      Inferred_species_parameters[,k+1] <- as.vector(c(lm_fit$coefficients[nsp+k], lm_fit$coefficients[(nsp+2*n_observed_axis+k*(nsp-1)-(nsp-2)):(nsp+2*n_observed_axis+k*(nsp-1))]))
+      Inferred_species_parameters[,k+1+n_observed_axis] <- as.vector(c(lm_fit$coefficients[nsp+n_observed_axis+k], lm_fit$coefficients[(nsp+2*n_observed_axis+k*(nsp-1)-(nsp-2)+n_observed_axis*(nsp-1)):(nsp+2*n_observed_axis+k*(nsp-1)+n_observed_axis*(nsp-1))]))
+    }
+    
+    # beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
+    # beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
+    # beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
+    
+    Inferred_species_parameters_mat <-list()
+    
+    for(k in 1:ncol(Inferred_species_parameters)){
+      Inferred_species_parameters_mat[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=nsite), ncol=nsp)
+    }
+    
+    Obs_env_mat <- list()
+    
+    for(k in 1:ncol(Obs_env)){
+      Obs_env_mat[[k]] <- matrix(rep(Obs_env[,k], nsp), ncol=nsp)
+      Obs_env_mat[[k+ncol(Obs_env)]] <- matrix(rep((Obs_env[,k])^2, nsp), ncol=nsp)
+    }
+    
+    # beta_0_mat <- matrix(rep(beta_0,each=nsite), ncol=nsp)
+    # beta_1_mat <- matrix(rep(beta_1,each=nsite), ncol=nsp)
+    # beta_2_mat <- matrix(rep(beta_2,each=nsite), ncol=nsp)
+    # X1_mat <- matrix(rep(X1, nsp), ncol=nsp)
   }
   
   # =========================================
@@ -69,7 +96,14 @@ launch_model <- function(){
     perf_E_Sp <- -dprim_E_Sp
     save(perf_E_Sp, file=here::here("outputs", model, "perf_E_Sp.RData"))
   } else {
-    perf_Sp_mean <- beta_0_mat+beta_1_mat*X1_mat+beta_2_mat*X1_mat^2
+    
+    #perf_Sp_mean <- beta_0_mat+beta_1_mat*X1_mat+beta_2_mat*X1_mat^2
+    
+    perf_Sp_mean <- Inferred_species_parameters_mat[[1]]
+    
+    for(k in 1:length(Obs_env_mat)){
+      perf_Sp_mean <- perf_Sp_mean + Inferred_species_parameters_mat[[k+1]]*Obs_env_mat[[k]]
+    }
   }
   
   # =========================================
@@ -422,26 +456,60 @@ launch_model <- function(){
         
         # Environmental filtering for the partial knowledge model
         #distance between the observed optimum of the species and the environmental conditions
-        E_seq <- seq(min(X1), max(X1), length.out=100)
-        E_seq_mat <- matrix(rep(E_seq, nsp), ncol=nsp)
+       
+        #E_seq <- seq(min(X1), max(X1), length.out=100)
+        #E_seq_mat <- matrix(rep(E_seq, nsp), ncol=nsp)
         
-        beta_0_mat_E_seq <- matrix(rep(beta_0,each=length(E_seq)), ncol=nsp)
-        beta_1_mat_E_seq <- matrix(rep(beta_1,each=length(E_seq)), ncol=nsp)
-        beta_2_mat_E_seq <- matrix(rep(beta_2,each=length(E_seq)), ncol=nsp)
+        E_seq_mat <- list()
+        E_seq <- matrix(nrow=100, ncol=n_observed_axis)
         
-        Mat_perf_inferred <- beta_0_mat_E_seq+beta_1_mat_E_seq*E_seq_mat+beta_2_mat_E_seq*E_seq_mat^2
-        Mat_perf_inferred <- as.data.frame(cbind(E_seq, Mat_perf_inferred))
+        for(k in 1:ncol(Obs_env)){
+          E_seq[,k] <- seq(min(Obs_env[,k]), max(Obs_env[,k]), length.out=nrow(E_seq))
+          E_seq_mat[[k]] <- matrix(rep(E_seq[,k], nsp), ncol=nsp)
+          E_seq_mat[[k+ncol(Obs_env)]] <- E_seq_mat[[k]]^2
+        }
         
-        colnames(Mat_perf_inferred) <- c("E", paste0("Sp",1:nsp))
+        #beta_0_mat_E_seq <- matrix(rep(beta_0,each=length(E_seq)), ncol=nsp)
+        #beta_1_mat_E_seq <- matrix(rep(beta_1,each=length(E_seq)), ncol=nsp)
+        #beta_2_mat_E_seq <- matrix(rep(beta_2,each=length(E_seq)), ncol=nsp)
+        
+        Inferred_parameters_mat_E_seq <-list()
+        
+        for(k in 1:ncol(Inferred_species_parameters)){
+          Inferred_parameters_mat_E_seq[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=nrow(E_seq)), ncol=nsp)
+        }
+        
+        #Mat_perf_inferred <- beta_0_mat_E_seq+beta_1_mat_E_seq*E_seq_mat+beta_2_mat_E_seq*E_seq_mat^2
+        
+        Mat_perf_inferred <- Inferred_parameters_mat_E_seq[[1]]
+        
+        for(k in 1:length(E_seq_mat)){
+          Mat_perf_inferred <- Mat_perf_inferred + Inferred_parameters_mat_E_seq[[k+1]]*E_seq_mat[[k]]
+        }
+        
+        #Mat_perf_inferred <- as.data.frame(cbind(E_seq, Mat_perf_inferred))
+        
+        #colnames(Mat_perf_inferred) <- c("E", paste0("Sp",1:nsp))
+        
         
         Optimum_Sp_inferred <- c()
         for (k in 1:nsp) {
           Optimum_Sp_inferred[k] <- Mat_perf_inferred[which.max(Mat_perf_inferred[,k+1]),]$E
         }
         
-        Optimum_Sp_inferred_community <- Optimum_Sp_inferred[community]
+        Optimum_Sp_inferred <- matrix(nrow=n_observed_axis, ncol=nsp)
+        for(k in 1:nsp){
+          for(l in 1:n_observed_axis){
+            Optimum_Sp_inferred[l,k] <- E_seq[which.max(Mat_perf_inferred[,k]),l]
+          }
+        }
         
-        dist_site <- sqrt((Optimum_Sp_inferred_community-X1[which(as.vector(community)!=0)])^2)
+        #Optimum_Sp_inferred_community <- Optimum_Sp_inferred[community]
+        
+        Optimum_Sp_inferred_community <- Optimum_Sp_inferred[,community]
+        
+        #dist_site <- sqrt((Optimum_Sp_inferred_community-X1[which(as.vector(community)!=0)])^2)
+        dist_site <- dist_Site_Sp(as.matrix(Obs_env[which(as.vector(community)!=0),]), as.matrix(Optimum_Sp_inferred_community))
         
       }
       
@@ -569,26 +637,53 @@ load(here::here("outputs", model, glue::glue("community_end_{model}.RData")))
 infer_IV <- function(){
   load(here::here("outputs", model, "perf_E_Sp.RData"))
   load(here::here("outputs", model, "env.RData"))
-  nsp<-ncol(perf_E_Sp)
+  nsp <- ncol(perf_E_Sp)
+  # CGT 01/12/2021
+  n_axis <- length(env)
   
   # Data-set
   df <- data.frame(perf_E_Sp)
   names(df) <- c(sprintf("Sp_%03d", 1:(nsp-1)), sprintf("Sp_%d", nsp))
-  df_perf <- tibble(df) %>%
-    mutate(Env_1=values(raster(env[[1]])), Env_2=values(raster(env[[2]])), Env_3=values(raster(env[[3]]))) %>%
-    mutate(Env_1_sq=Env_1^2, Env_2_sq=Env_2^2, Env_3_sq=Env_3^2) %>%
+  
+  #df_perf <- tibble(df) %>%
+    #mutate(Env_1=values(raster(env[[1]])), Env_2=values(raster(env[[2]])), Env_3=values(raster(env[[3]]))) %>%
+    #mutate(Env_1_sq=Env_1^2, Env_2_sq=Env_2^2, Env_3_sq=Env_3^2) %>%
+    #pivot_longer(cols=c(Sp_001:glue("Sp_0{nsp-1}"), glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
+  
+  df_perf <- data.frame(matrix(nrow=nrow(df), ncol=ncol(df)+2*n_axis))
+  df_perf[,1:ncol(df)] <- df
+  for(k in 1:n_axis){
+    df_perf[,ncol(df)+k] <- values(raster(env[[k]]))
+    df_perf[,ncol(df)+(k+n_axis)] <- (df_perf[,ncol(df)+k])^2
+  }
+  
+  colnames(df_perf) <- c(sprintf("Sp_%03d", 1:(nsp-1)), sprintf("Sp_%d", nsp), sprintf("Env_%d", 1:n_axis), sprintf("Env_%d_sq", 1:n_axis))
+  
+  df_perf <- df_perf %>%
     pivot_longer(cols=c(Sp_001:glue("Sp_0{nsp-1}"), glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
   
   # Observed niche
   plot_random_species_niche(seed, df_perf, model, fig_width)
   
   #Check that the model well fits the data if all environmental variables are included
-  lm_all_env <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq+Species*Env_2+Species*Env_2_sq+Species*Env_3+Species*Env_3_sq, data=df_perf)
+  
+  #lm_all_env <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq+Species*Env_2+Species*Env_2_sq+Species*Env_3+Species*Env_3_sq, data=df_perf)
+  
+  formula <- as.formula(paste0("Perf~Species+Species*", paste0(colnames(df_perf)[1:(2*n_axis)], collapse= "+Species*")))
+  
+  lm_all_env <- lm(formula, data=df_perf)
   
   print(glue::glue("the r-squared with all environmental variables is {summary(lm_all_env)$adj.r.squared}"))
   
   # Observed intraspecific variability
-  lm_fit <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq, data=df_perf)
+  
+  formula <- as.formula(paste0("Perf~Species+Species*",
+                               paste0(colnames(df_perf)[1:n_observed_axis], collapse= "+Species*"),
+                               "+Species*",
+                               paste0(colnames(df_perf)[(n_axis+1):(n_axis+n_observed_axis)], collapse= "+Species*")))
+  
+  #lm_fit <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq, data=df_perf)
+  lm_fit <- lm(formula, data=df_perf)
   save(lm_fit, file = here::here("outputs", model,"lm_fit.RData"))
   
   print(glue::glue("the r-squared with the first environmental variable is {summary(lm_fit)$adj.r.squared}"))
@@ -612,188 +707,8 @@ infer_IV <- function(){
 # Comparison of the models #
 ############################
 
-compare_models<-function(){
-  models_all <- c("Perf_know_full_mort_stocha",
-                  "Perf_know_full_mort_stocha_disp_abund",
-                  "Perf_know_start_1_ind_sp_mort_stocha",
-                  "Perf_know_start_1_ind_sp_mort_stocha_disp_abund",
-                  "Perf_know_start_10_ind_sp_mort_stocha",
-                  "Perf_know_start_10_ind_sp_mort_stocha_disp_abund",
-                  "Perf_know_full_mort_fixed",
-                  "Perf_know_full_mort_fixed_disp_abund",
-                  "Perf_know_start_10_ind_sp_mort_fixed",
-                  "Perf_know_start_10_ind_sp_mort_fixed_disp_abund",
-                  "Part_know_IV_full_mort_stocha",
-                  "Part_know_IV_full_mort_stocha_disp_abund",
-                  "Part_know_IV_start_1_ind_sp_mort_stocha",
-                  "Part_know_IV_start_1_ind_sp_mort_stocha_disp_abund",
-                  "Part_know_IV_start_10_ind_sp_mort_stocha",
-                  "Part_know_IV_start_10_ind_sp_mort_stocha_disp_abund",
-                  "Part_know_IV_full_mort_fixed",
-                  "Part_know_IV_full_mort_fixed_disp_abund",
-                  "Part_know_IV_start_10_ind_sp_mort_fixed",
-                  "Part_know_IV_start_10_ind_sp_mort_fixed_disp_abund",
-                  "Part_know_full_mort_stocha",
-                  "Part_know_full_mort_stocha_disp_abund",
-                  "Part_know_start_1_ind_sp_mort_stocha",
-                  "Part_know_start_1_ind_sp_mort_stocha_disp_abund",
-                  "Part_know_full_mort_fixed",
-                  "Part_know_full_mort_fixed_disp_abund",
-                  "Part_know_start_10_ind_sp_mort_fixed",
-                  "Part_know_start_10_ind_sp_mort_fixed_disp_abund")
-  
-  models_choices <- c("Perf_know_start_10_ind_sp_mort_fixed",
-                      "Perf_know_start_10_ind_sp_mort_fixed_disp_abund",
-                      "Part_know_start_10_ind_sp_mort_fixed",
-                      "Part_know_start_10_ind_sp_mort_fixed_disp_abund",
-                      "Part_know_IV_start_10_ind_sp_mort_fixed",
-                      "Part_know_IV_start_10_ind_sp_mort_fixed_disp_abund")
-  
-  models <- models_choices
-  
-  # 1: Compare the species diversity at the end of the simulations within a model (Shannon diversity index)
-  
-  Shannon_all_models <- data.frame(Shannon=numeric(), Model=factor())
-  
-  for (m in 1:length(models)) {
-    model <- models[m]
-    load(here::here("outputs", model, glue::glue("Shannon_{model}.RData")))
-    Shannon_all_models <- rbind(Shannon_all_models, data.frame(Shannon=Shannon, Model=rep(m, length(Shannon))))
-  }
-  
-  p <- ggplot2::ggplot(data=Shannon_all_models, ggplot2::aes(x=as.factor(Model), y=Shannon))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)))+
-    ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
-    ggplot2::labs(title = "Beeswarmplot of the Shannon diversity index \n at the end of each simulation \n with different models",
-                  x = "Model",
-                  y = "Shannon diversity index")+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Shannon.png"),
-                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
-  
-  
-  # 2: Compare the species ranks in the end of the simulations within a model (Spearman pairwise correlation)
-  
-  Spearman_all_models <- data.frame(Spearman=numeric(), Model=factor())
-  
-  for (m in 1:length(models)) {
-    model <- models[m]
-    load(here::here("outputs", model, glue::glue("Spearman_{model}.RData")))
-    Spearman_all_models <- rbind(Spearman_all_models, data.frame(Spearman=c(Spearman), Model=rep(m, length(Spearman))))
-  }
-  
-  p <- ggplot2::ggplot(data=Spearman_all_models, ggplot2::aes(x=as.factor(Model), y=Spearman))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)))+
-    ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
-    ggplot2::labs(title = "Beeswamplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation \n with different models",
-                  x = "Model",
-                  y = "Spearman pairwise correlation")+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Spearman.png"),
-                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
-  
-  # 3: Compare the composition of the community at the end of the simulations between models (similarity matrix)
-  # 4: Percentage similarity
-  
-  jaccard <- function(a, b) {
-    intersection = length(intersect(a, b))
-    union = length(a) + length(b) - intersection
-    return (intersection/union)
-  }
-  
-  percentage_similarity <- function(a, b) {
-    A <- sum(a)
-    B <- sum(b)
-    W <- sum(pmin(a, b))
-    return((2*W)/(A+B))
-  }
-  
-  Jaccard_all_models <- data.frame(Jaccard=numeric(), Model=factor())
-  Percentage_similarity_all_models <- data.frame(Percentage_similarity=numeric(), Model=factor())
-  
-  combi_models <- gtools::combinations(n = length(c(1:length(models))), r = 2, v = c(1:length(models)), repeats.allowed = TRUE)
-  
-  combi_rep <- expand.grid(A=c(1:nrep), B=c(1:nrep))
-  
-  combi_rep_same_model <- t(combn(c(1:nrep), 2))
-  
-  for (m in 1:length(models)) {
-    model <- models[m]
-    load(here::here("outputs", model, glue::glue("Abundances_{model}.RData")))
-    abund_end <- matrix(nrow=nrep, ncol=nsp)
-    species_end <- list()
-    for (r in 1:nrep) {
-      abund_end[r,] <- Abundances[[r]][ngen,]
-      species_end[[r]] <- unique(which(abund_end[r,]!=0))
-    }
-    assign(glue::glue("abund_end_{m}"), abund_end)
-    assign(glue::glue("species_end_{m}"), species_end)
-  }
-  
-  list_jaccard_matrix <- list()
-  mean_jaccard <- c()
-  
-  list_percentage_similarity_matrix <- list()
-  mean_percentage_similarity <- c()
-  
-  for (l in 1:nrow(combi_models)){
-    mod1 <- combi_models[l, 1]
-    mod2 <- combi_models[l, 2]
-    if(mod1==mod2){
-      list_jaccard_matrix[[l]] <- matrix(nrow=nrow(combi_rep_same_model), ncol=1)
-      list_percentage_similarity_matrix[[l]] <- matrix(nrow=nrow(combi_rep_same_model), ncol=1)
-      for (c in 1:nrow(combi_rep_same_model)){
-        list_jaccard_matrix[[l]][c,1] <- jaccard(a=get(glue::glue("species_end_{mod1}"))[[combi_rep_same_model[c,1]]], b=get(glue::glue("species_end_{mod2}"))[[combi_rep_same_model[c,2]]])
-        list_percentage_similarity_matrix[[l]][c,1] <- percentage_similarity(a=get(glue::glue("abund_end_{mod1}"))[combi_rep_same_model[c,1],], b=get(glue::glue("abund_end_{mod2}"))[combi_rep_same_model[c,2],])
-      }
-    }
-    else {
-      list_jaccard_matrix[[l]] <- matrix(nrow=nrep, ncol=nrep)
-      list_percentage_similarity_matrix[[l]] <- matrix(nrow=nrep, ncol=nrep)
-      for (c in 1:nrow(combi_rep)){
-        list_jaccard_matrix[[l]][combi_rep[c,1], combi_rep[c,2]] <- jaccard(a=get(glue::glue("species_end_{mod1}"))[[combi_rep[c,1]]], b=get(glue::glue("species_end_{mod2}"))[[combi_rep[c,2]]])
-        list_percentage_similarity_matrix[[l]][combi_rep[c,1], combi_rep[c,2]] <- percentage_similarity(a=get(glue::glue("abund_end_{mod1}"))[combi_rep[c,1],], b=get(glue::glue("abund_end_{mod2}"))[combi_rep[c,2],])
-      }
-    }
-    mean_jaccard[l] <- mean(list_jaccard_matrix[[l]])
-    mean_percentage_similarity[l] <- mean(list_percentage_similarity_matrix[[l]])
-  }
-  
-  combi_models_jaccard <- as.data.frame(combi_models)
-  combi_models_jaccard$Jaccard <- mean_jaccard
-  colnames(combi_models_jaccard)[1:2] <- c("mod1", "mod2")
-  
-  combi_models_percentage_similarity <- as.data.frame(combi_models)
-  combi_models_percentage_similarity$Percentage_similarity <- mean_percentage_similarity
-  colnames(combi_models_percentage_similarity)[1:2] <- c("mod1", "mod2")
-  
-  p <- ggplot2::ggplot(data = combi_models_jaccard, ggplot2::aes(x=mod1, y=mod2, fill=Jaccard))+ 
-    ggplot2::geom_tile()+
-    ggplot2::scale_fill_viridis_c()+
-    ggplot2::coord_fixed()+
-    ggplot2::labs(title="Jaccard index of the composition of the final community \n (mean of all repetitions)",
-                  x="Model 1",
-                  y = "Model 2",
-                  fill="Jaccard index")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Jaccard.png"),
-                  width=fig_width, height=fig_width, units="cm", dpi=300)
-  
-  p <- ggplot2::ggplot(data = combi_models_percentage_similarity, ggplot2::aes(x=mod1, y=mod2, fill=Percentage_similarity))+ 
-    ggplot2::geom_tile()+
-    ggplot2::scale_fill_viridis_c()+
-    ggplot2::coord_fixed()+
-    ggplot2::labs(title="Percentage similarity index of the species abundances \n of the final community (mean of all repetitions)",
-                  x="Model 1",
-                  y = "Model 2",
-                  fill="Percentage similarity")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Percentage_similarity.png"),
-                  width=fig_width, height=fig_width, units="cm", dpi=300)
-}
-
+source("Model_comparison.R")
+compare_models()
 
 # =========================
 # End of file
