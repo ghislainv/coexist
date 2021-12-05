@@ -33,7 +33,7 @@ launch_model <- function(){
     load(here::here("outputs", model, "sites.RData"))
     load(here::here("outputs", model, "env.RData"))
   } else {
-    X1 <- as.vector(sites[,1])
+    #X1 <- as.vector(sites[,1])
     Obs_env <- sites[,1:n_observed_axis]
   }
   # Plot the environment
@@ -73,9 +73,17 @@ launch_model <- function(){
     
     Obs_env_mat <- list()
     
-    for(k in 1:ncol(Obs_env)){
-      Obs_env_mat[[k]] <- matrix(rep(Obs_env[,k], nsp), ncol=nsp)
-      Obs_env_mat[[k+ncol(Obs_env)]] <- matrix(rep((Obs_env[,k])^2, nsp), ncol=nsp)
+    if(is.null(ncol(Obs_env))==FALSE){
+    
+      for(k in 1:ncol(Obs_env)){
+        Obs_env_mat[[k]] <- matrix(rep(Obs_env[,k], nsp), ncol=nsp)
+        Obs_env_mat[[k+ncol(Obs_env)]] <- matrix(rep((Obs_env[,k])^2, nsp), ncol=nsp)
+      }
+    }
+    
+    else{
+      Obs_env_mat[[1]] <- matrix(rep(Obs_env, nsp), ncol=nsp)
+      Obs_env_mat[[2]] <- matrix(rep(Obs_env^2, nsp), ncol=nsp)
     }
     
     # beta_0_mat <- matrix(rep(beta_0,each=nsite), ncol=nsp)
@@ -450,6 +458,7 @@ launch_model <- function(){
         #Some sites have a 0 but then they are not taken into account since there is no distance associated with "species 0".
         dist_site <- diag(dist_E_Sp[, as.vector(t(community))])
       }
+      
       if(perf_know==FALSE){
         
         # /!\ to check
@@ -461,22 +470,41 @@ launch_model <- function(){
         #E_seq_mat <- matrix(rep(E_seq, nsp), ncol=nsp)
         
         E_seq_mat <- list()
-        E_seq <- matrix(nrow=100, ncol=n_observed_axis)
         
-        for(k in 1:ncol(Obs_env)){
-          E_seq[,k] <- seq(min(Obs_env[,k]), max(Obs_env[,k]), length.out=nrow(E_seq))
-          E_seq_mat[[k]] <- matrix(rep(E_seq[,k], nsp), ncol=nsp)
-          E_seq_mat[[k+ncol(Obs_env)]] <- E_seq_mat[[k]]^2
+        if(n_observed_axis>1){
+          
+          E_seq <- matrix(nrow=100, ncol=n_observed_axis)
+        
+          for(k in 1:ncol(Obs_env)){
+            E_seq[,k] <- seq(min(Obs_env[,k]), max(Obs_env[,k]), length.out=nrow(E_seq))
+            E_seq_mat[[k]] <- matrix(rep(E_seq[,k], nsp), ncol=nsp)
+            E_seq_mat[[k+ncol(Obs_env)]] <- E_seq_mat[[k]]^2
+          }
+          
         }
         
+        else{
+          E_seq <- seq(min(Obs_env), max(Obs_env), length.out=100)
+          E_seq_mat[[1]] <- matrix(rep(E_seq, nsp), ncol=nsp)
+          E_seq_mat[[2]] <- E_seq_mat[[1]]^2
+        }
+          
         #beta_0_mat_E_seq <- matrix(rep(beta_0,each=length(E_seq)), ncol=nsp)
         #beta_1_mat_E_seq <- matrix(rep(beta_1,each=length(E_seq)), ncol=nsp)
         #beta_2_mat_E_seq <- matrix(rep(beta_2,each=length(E_seq)), ncol=nsp)
         
         Inferred_parameters_mat_E_seq <-list()
         
-        for(k in 1:ncol(Inferred_species_parameters)){
-          Inferred_parameters_mat_E_seq[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=nrow(E_seq)), ncol=nsp)
+        if(n_observed_axis>1){
+          for(k in 1:ncol(Inferred_species_parameters)){
+            Inferred_parameters_mat_E_seq[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=nrow(E_seq)), ncol=nsp)
+          }
+        }
+        
+        else{
+          for(k in 1:ncol(Inferred_species_parameters)){
+            Inferred_parameters_mat_E_seq[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=length(E_seq)), ncol=nsp)
+          }
         }
         
         #Mat_perf_inferred <- beta_0_mat_E_seq+beta_1_mat_E_seq*E_seq_mat+beta_2_mat_E_seq*E_seq_mat^2
@@ -492,26 +520,33 @@ launch_model <- function(){
         #colnames(Mat_perf_inferred) <- c("E", paste0("Sp",1:nsp))
         
         
-        Optimum_Sp_inferred <- c()
-        for (k in 1:nsp) {
-          Optimum_Sp_inferred[k] <- Mat_perf_inferred[which.max(Mat_perf_inferred[,k+1]),]$E
-        }
+        # Optimum_Sp_inferred <- c()
+        # for (k in 1:nsp) {
+        #   Optimum_Sp_inferred[k] <- Mat_perf_inferred[which.max(Mat_perf_inferred[,k+1]),]$E
+        # }
         
-        Optimum_Sp_inferred <- matrix(nrow=n_observed_axis, ncol=nsp)
-        for(k in 1:nsp){
-          for(l in 1:n_observed_axis){
-            Optimum_Sp_inferred[l,k] <- E_seq[which.max(Mat_perf_inferred[,k]),l]
+        if(n_observed_axis>1){
+          Optimum_Sp_inferred <- matrix(nrow=n_observed_axis, ncol=nsp)
+          for(sp in 1:nsp){
+            for(l in 1:n_observed_axis){
+              Optimum_Sp_inferred[l,sp] <- E_seq[which.max(Mat_perf_inferred[,sp]),l]
+            }
+          }
+          Optimum_Sp_inferred <- t(Optimum_Sp_inferred)
+        }else{
+          Optimum_Sp_inferred <- c()
+          for(sp in 1:nsp){
+            Optimum_Sp_inferred[sp] <- E_seq[which.max(Mat_perf_inferred[,sp])]
           }
         }
         
         #Optimum_Sp_inferred_community <- Optimum_Sp_inferred[community]
         
-        Optimum_Sp_inferred_community <- Optimum_Sp_inferred[,community]
-        
         #dist_site <- sqrt((Optimum_Sp_inferred_community-X1[which(as.vector(community)!=0)])^2)
-        dist_site <- dist_Site_Sp(as.matrix(Obs_env[which(as.vector(community)!=0),]), as.matrix(Optimum_Sp_inferred_community))
+        dist_site <- dist_Site_Sp(as.matrix(Obs_env), as.matrix(Optimum_Sp_inferred))
+        dist_site <- diag(dist_site[, as.vector(t(community))])
         
-      }
+      }#end condition perf_know==FALSE
       
       env_filt[g, r] <- mean(dist_site)
       
