@@ -1,19 +1,22 @@
 # Seed for reproducibility
-seed <- 1234
+seed <- 12345
 
 # Figure width
 fig_width <- 16.6 # in cm
 
 # Number of niche/environmental axes
-n_axis<-3
+n_axis <- 10
+
+# Number of observed axes in partial models
+n_observed_axis <- 1
 
 # Perfect of partial knowledge
-perf_know<-TRUE
+perf_know <- FALSE
 
 if(perf_know==FALSE){part_know<-TRUE} else{part_know<-FALSE}
 
 #Intraspecific variability
-IV<-FALSE
+IV<-TRUE
 
 #Random optimum of species
 randomOptSp<-TRUE
@@ -24,7 +27,7 @@ start_one_ind_per_species<-FALSE
 start_ten_ind_per_species<-TRUE
 
 #Dependence of the dispersion of seeds to the abundance of species
-disp_dep_abund<-FALSE
+disp_dep_abund<-TRUE
 
 #Probability of mortality as a function of species performance
 mortality_fixed<-TRUE
@@ -42,10 +45,10 @@ b <- -0.5
 fecundity <- 0.5
 
 # Number of repetitions
-nrep <- 10
+nrep <- 2
 
 # Number of generations
-ngen <- 10000
+ngen <-1000
 
 ############
 #Model name#
@@ -68,21 +71,21 @@ if(perf_know==TRUE&&disp_dep_abund==TRUE&&start_full_landscape==TRUE&&mortality_
 ###Start with one individual per species
 
 if(perf_know==TRUE&&disp_dep_abund==FALSE&&start_one_ind_per_species==TRUE&&mortality_fixed==FALSE){
-  model <- "Perf_know_start_1_ind_sp_mort_stocha"
+  model <- "Perf_know_start_1_mort_stocha"
 }
 
 if(perf_know==TRUE&&disp_dep_abund==TRUE&&start_one_ind_per_species==TRUE&&mortality_fixed==FALSE){
-  model <- "Perf_know_start_1_ind_sp_mort_stocha_disp_abund"
+  model <- "Perf_know_start_1_mort_stocha_disp_abund"
 }
 
 ###Start with ten individual per species
 
 if(perf_know==TRUE&&disp_dep_abund==FALSE&&start_ten_ind_per_species==TRUE&&mortality_fixed==FALSE){
-  model <- "Perf_know_start_10_ind_sp_mort_stocha"
+  model <- "Perf_know_start_10_mort_stocha"
 }
 
 if(perf_know==TRUE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==TRUE&&mortality_fixed==FALSE){
-  model <- "Perf_know_start_10_ind_sp_mort_stocha_disp_abund"
+  model <- "Perf_know_start_10_mort_stocha_disp_abund"
 }
 
 ##Fixed mortality
@@ -106,13 +109,13 @@ if(perf_know==TRUE&&disp_dep_abund==TRUE&&start_full_landscape==TRUE&&mortality_
 ####Dispersal is not dependent of species abundance
 
 if(perf_know==TRUE&&disp_dep_abund==FALSE&&start_ten_ind_per_species==TRUE&&mortality_fixed==TRUE){
-  model <- "Perf_know_start_10_ind_sp_mort_fixed"
+  model <- "Perf_know_start_10_mort_fixed"
 }
 
 ####Dispersal is dependent of species abundance
 
 if(perf_know==TRUE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==TRUE&&mortality_fixed==TRUE){
-  model <- "Perf_know_start_10_ind_sp_mort_fixed_disp_abund"
+  model <- "Perf_know_start_10_mort_fixed_disp_abund"
 }
 
 
@@ -143,27 +146,27 @@ if(part_know==TRUE&&IV==TRUE&&disp_dep_abund==TRUE&&start_full_landscape==TRUE&&
 #####Dispersal is not dependent of species abundance
 
 if(part_know==TRUE&&IV==TRUE&&disp_dep_abund==FALSE&&start_one_ind_per_species==TRUE){
-  model <- "Part_know_IV_start_1_ind_sp_mort_stocha"
-  model_perf <- "Perf_know_start_1_ind_sp_mort_stocha"
+  model <- "Part_know_IV_start_1_mort_stocha"
+  model_perf <- "Perf_know_start_1_mort_stocha"
 }
 
 #####Dispersal is dependent of species abundance
 
 if(part_know==TRUE&&IV==TRUE&&disp_dep_abund==TRUE&&start_one_ind_per_species==TRUE){
-  model <- "Part_know_IV_start_1_ind_sp_mort_stocha_disp_abund"
-  model_perf <- "Perf_know_start_1_ind_sp_mort_stocha_disp_abund"
+  model <- "Part_know_IV_start_1_mort_stocha_disp_abund"
+  model_perf <- "Perf_know_start_1_mort_stocha_disp_abund"
 }
 
 ###Start with ten individual per species
 
 if(part_know==TRUE&&IV==TRUE&&disp_dep_abund==FALSE&&start_ten_ind_per_species==TRUE&&mortality_fixed==FALSE){
-  model <- "Part_know_IV_start_10_ind_sp_mort_stocha"
-  model_perf <- "Perf_know_start_10_ind_sp_mort_stocha"
+  model <- "Part_know_IV_start_10_mort_stocha"
+  model_perf <- "Perf_know_start_10_mort_stocha"
 }
 
 if(part_know==TRUE&&IV==TRUE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==TRUE&&mortality_fixed==FALSE){
-  model <- "Part_know_IV_start_10_ind_sp_mort_stocha_disp_abund"
-  model_perf <- "Perf_know_start_10_ind_sp_mort_stocha_disp_abund"
+  model <- "Part_know_IV_start_10_mort_stocha_disp_abund"
+  model_perf <- "Perf_know_start_10_mort_stocha_disp_abund"
 }
 
 ###Fixed mortality
@@ -189,15 +192,15 @@ if(part_know==TRUE&&IV==TRUE&&disp_dep_abund==TRUE&&start_full_landscape==TRUE&&
 #####Dispersal is not dependent of species abundance
 
 if(part_know==TRUE&&IV==TRUE&&disp_dep_abund==FALSE&&start_ten_ind_per_species==TRUE&&mortality_fixed==TRUE){
-  model <- "Part_know_IV_start_10_ind_sp_mort_fixed"
-  model_perf <- "Perf_know_start_10_ind_sp_mort_fixed"
+  model <- "Part_know_IV_start_10_mort_fixed"
+  model_perf <- "Perf_know_start_10_mort_fixed"
 }
 
 #####Dispersal is dependent of species abundance
 
 if(part_know==TRUE&&IV==TRUE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==TRUE&&mortality_fixed==TRUE){
-  model <- "Part_know_IV_start_10_ind_sp_mort_fixed_disp_abund"
-  model_perf <- "Perf_know_start_10_ind_sp_mort_fixed_disp_abund"
+  model <- "Part_know_IV_start_10_mort_fixed_disp_abund"
+  model_perf <- "Perf_know_start_10_mort_fixed_disp_abund"
 }
 
 ##No IV
@@ -225,15 +228,15 @@ if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==TRUE&&start_full_landscape==TRUE&
 #####Dispersal is not dependent of species abundance
 
 if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==FALSE&&start_one_ind_per_species==TRUE){
-  model <- "Part_know_start_1_ind_sp_mort_stocha"
-  model_perf <- "Perf_know_start_1_ind_sp_mort_stocha"
+  model <- "Part_know_start_1_mort_stocha"
+  model_perf <- "Perf_know_start_1_mort_stocha"
 }
 
 #####Dispersal is dependent of species abundance
 
 if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==TRUE&&start_one_ind_per_species==TRUE){
-  model <- "Part_know_start_1_ind_sp_mort_stocha_disp_abund"
-  model_perf <- "Perf_know_start_1_ind_sp_mort_stocha_disp_abund"
+  model <- "Part_know_start_1_mort_stocha_disp_abund"
+  model_perf <- "Perf_know_start_1_mort_stocha_disp_abund"
 }
 
 ###Fixed mortality
@@ -259,15 +262,22 @@ if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==TRUE&&start_full_landscape==TRUE&
 #####Dispersal is not dependent of species abundance
 
 if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==FALSE&&start_ten_ind_per_species==TRUE&&mortality_fixed==TRUE){
-  model <- "Part_know_start_10_ind_sp_mort_fixed"
-  model_perf <- "Perf_know_start_10_ind_sp_mort_fixed"
+  model <- "Part_know_start_10_mort_fixed"
+  model_perf <- "Perf_know_start_10_mort_fixed"
 }
 
 #####Dispersal is dependent of species abundance
 
 if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==TRUE&&mortality_fixed==TRUE){
-  model <- "Part_know_start_10_ind_sp_mort_fixed_disp_abund"
-  model_perf <- "Perf_know_start_10_ind_sp_mort_fixed_disp_abund"
+  model <- "Part_know_start_10_mort_fixed_disp_abund"
+  model_perf <- "Perf_know_start_10_mort_fixed_disp_abund"
+}
+
+# Add the number of axes!!
+
+model <- paste0(model, "_", n_axis, "_axes_", n_observed_axis, "_obs")
+if(part_know==TRUE){
+  model_perf <- paste0(model_perf, "_", n_axis, "_axes_", n_observed_axis, "_obs")
 }
 
 ##############
@@ -281,6 +291,8 @@ if(part_know==TRUE){
   load(file=here::here("outputs", model_perf, "lm_fit.RData"))
   load(here::here("outputs", model_perf, "sites.RData"))
   load(here::here("outputs", model_perf, "env.RData"))
+  load(file=here::here("outputs", model_perf, "niche_optimum.RData"))
+  load(file=here::here("outputs", model_perf, "Inferred_species_parameters.RData"))
 }
 
 #Number of species

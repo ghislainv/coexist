@@ -1,9 +1,12 @@
+colourCount = nsp
+getPalette = colorRampPalette(RColorBrewer::brewer.pal(9, "Set1"))
+
 plot_environment <- function(model, fig_width, n_axis, env){
   
   png(file=here::here("outputs", model, "environment.png"),
         width=fig_width, height=fig_width, units="cm", res=300)
   
-  par(mfrow=c(2,2), bty = "n")
+  par(mfrow=c(4,ceiling(n_axis/4)), bty = "n")
   
   for(k in 1:n_axis){
     plot(raster::raster(env[[k]]), main=glue::glue("Environment var{k}"), col=topo.colors(255), cex.main=1.2)
@@ -23,7 +26,7 @@ plot_hab_freq <- function(n_axis, model, fig_width, env){
   for(k in 1:n_axis){
     png(file=here::here("outputs", model, glue::glue("hab_freq_{k}.png")),
         width=fig_width, height=fig_width, units="cm", res=300)
-    hist(env[[k]], main="", xlab=glue::glue("Environment var{k}"))   
+    hist(env[[k]], main="", xlab=glue::glue("Environment var{k}")) 
     dev.off()
   }
 }
@@ -32,7 +35,7 @@ plot_species_optima <- function(model, fig_width, niche_optimum){
   png(file=here::here("outputs", model, "species_niche.png"),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(mar=c(1,1,2,2))
-  scatter3D(niche_optimum$sp_x, niche_optimum$sp_y, niche_optimum$sp_z,
+  scatter3D(niche_optimum[,1], niche_optimum[,2], niche_optimum[,3],
             pch=16, 
             colvar=1:nsp, col=viridis(nsp),
             bty = "f", main ="Three-dimensional species optima", phi=0,
@@ -64,7 +67,7 @@ plot_species_habitat_freq <- function(model, fig_width, sp_hab_freq){
   png(file=here::here("outputs", model, "species_habitat_freq.png"),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(cex.lab=1.5)
-  plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency")
+  plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency", col=getPalette(colourCount))
   dev.off()
 }
 
@@ -72,8 +75,10 @@ plot_community_start <- function(model, fig_width, community, nsp){
   png(file=here::here("outputs", model, "community_start.png"),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(bty = "n")
+  # plot(raster::raster(community), main="Species - Start", zlim=c(0, nsp),
+  #      col=c("black",  viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
   plot(raster::raster(community), main="Species - Start", zlim=c(0, nsp),
-       col=c("black",  viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
+       col=c("black",  getPalette(colourCount)), legend=FALSE, cex.main=2, cex.axis=1.5)
   dev.off()
 }
 
@@ -90,8 +95,10 @@ plot_community_end <- function(model, fig_width, community, nsp){
 png(file=here::here("outputs", model, "community_end.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 par(bty = "n")
-plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"),
-     zlim=c(0, nsp), col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
+# plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"),
+#      zlim=c(0, nsp), col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
+plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"), 
+     zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=FALSE, cex.main=2, cex.axis=1.5)
 dev.off()
 }
 
@@ -108,20 +115,45 @@ plot_species_richness <- function(nrep, sp_rich, model, fig_width){
     ggplot2::xlab("Generations") + 
     ggplot2::ylab("Species richness")+
     ggplot2::theme(legend.position = "none",
-          text = ggplot2::element_text(size = 20))+
+                   text = ggplot2::element_text(size = 20))+
     ggplot2::ylim(0,nsp)
   ggplot2::ggsave(p, filename=here::here("outputs", model, "species_richness_with_time.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
 }
 
+plot_species_richness_log_10 <- function(sp_rich, ngen, model, fig_width){
+  
+  load(here::here("outputs", model, glue::glue("sp_rich_{model}.RData")))
+  
+  if(ncol(sp_rich)>1){
+    sp_rich_gen <- data.frame(sp_rich=sp_rich[,1], gen=c(1:ngen))
+  }else{sp_rich_gen <- data.frame(sp_rich=sp_rich, gen=c(1:ngen))}
+  
+  p <- ggplot2::ggplot(data=sp_rich_gen, ggplot2::aes(x=as.numeric(gen), y=sp_rich)) +
+    ggplot2::geom_line() +
+    scale_x_continuous(trans='log10')+
+    ggplot2::xlab("Generations") + 
+    ggplot2::ylab("Species richness")+
+    ggplot2::theme(legend.position = "none",
+                   text = ggplot2::element_text(size = 20))+
+    ggplot2::ylim(0,nsp)
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", model, "species_richness_log_10.png"),
+                  width=fig_width, height=fig_width/2, units="cm", dpi=300)
+}
+
 plot_mean_rank_hab_freq <- function(sp_mean_rank, sp_hab_freq, model, fig_width){
-  df <- data.frame(cbind(sp_mean_rank, sp_hab_freq))
-  p <- ggplot2::ggplot(data=df, ggplot2::aes(x=sp_hab_freq, y=sp_mean_rank)) +
+  df <- data.frame(cbind(Species=1:nsp, Hab_freq=sp_hab_freq, Rank=sp_mean_rank))
+  
+  p <- ggplot2::ggplot(data=df, ggplot2::aes(x=Hab_freq, y=Rank, colour=as.factor(Species))) +
     ggplot2::geom_point() +
     ggplot2::geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
     ggplot2::xlab("Species suitable habitat frequency") +
     ggplot2::ylab("Species mean rank (higher rank = lower abundance)") +
-    ggplot2::theme(axis.title=ggplot2::element_text(size=16))
+    ggplot2::theme(axis.title=ggplot2::element_text(size=16))+
+    #ggplot2::scale_colour_viridis_d()+
+    ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))
+  
   ggplot2::ggsave(p, filename=here::here("outputs", model, "mean_rank-habitat_freq.png"),
          width=fig_width, height=fig_width, units="cm", dpi=300)
 }
@@ -219,66 +251,155 @@ plot_random_species_niche <- function(seed, df_perf, model, fig_width){
 }
 
 plot_IV <- function(V_intra, model, fig_width){
-  p <- ggplot2::ggplot(data=V_intra, ggplot2::aes(x=Species, y=V)) +
+  p <- ggplot2::ggplot(data=V_intra, ggplot2::aes(x=Species, y=V, fill=as.factor(Species))) +
     ggplot2::geom_col() +
+    ggplot2::scale_fill_manual(name="Species", values = getPalette(colourCount))+
     ggplot2::theme(axis.text.x=ggplot2::element_text(angle=90, size=6),
-          text = ggplot2::element_text(size = 20)) +
+                   text = ggplot2::element_text(size = 20),
+                   legend.title = ggplot2::element_text(size=14),
+                   legend.text =  ggplot2::element_text(size=10),
+                   legend.key.size = unit(0.3, 'cm'),
+                   plot.margin=unit(c(1, 5, 1, 1), 'lines'),
+                   legend.position=c(1.1, 0.4)) +
     ggplot2::ylab("Intraspecific variance")
   ggplot2::ggsave(p, filename=here::here("outputs", model, "intraspecific_variance.png"),
          width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
+plot_optima_real_estim <- function(nsp, n_observed_axis, niche_optimum, Inferred_species_parameters, model, fig_width){
+  
+  opt_sp_estim_vs_real <- data.frame(Species = 1:nsp, Real=numeric(nsp), Estim=numeric(nsp))
+  
+  for(sp in 1:nsp){
 
-plot_inferred_perf_environment <- function(env, lm_fit, nsp, model, fig_width){
+    for(axis in 1:n_observed_axis){
+      opt_sp_estim_vs_real$Real[sp] <- niche_optimum[sp, axis]
+      opt_sp_estim_vs_real$Estim[sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
+    }
 
-  X1 <- env[[1]]
+  }
   
-  beta_0 <- as.vector(lm_fit$coefficients[1:nsp])
-  beta_1 <- as.vector(c(lm_fit$coefficients[nsp+1], lm_fit$coefficients[(nsp+3):(2*nsp+1)]))
-  beta_2 <- as.vector(c(lm_fit$coefficients[nsp+2], lm_fit$coefficients[(2*nsp+2):(3*nsp)]))
+  p <- ggplot2::ggplot(data=opt_sp_estim_vs_real, ggplot2::aes(x=Real, y=Estim, colour=factor(Species)))+
+    ggplot2::geom_point()+
+    #ggplot2::scale_colour_viridis_d()+
+    ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))
+    #ggplot2::xlim(c(0,1))+
+    #ggplot2::ylim(c(0,1))
+
+  ggplot2::ggsave(p, filename=here::here("outputs", model, "optima_real_estim.png"),
+                  width=fig_width, height=fig_width, units="cm", dpi=300)
+}
+
+plot_inferred_perf_environment <- function(E_seq, Mat_perf_inferred, nsp, model, fig_width){
+
+  if(n_observed_axis>1){
+    
+    for(k in 1:n_observed_axis){
   
-  E_seq <- seq(min(X1), max(X1), length.out=100)
-  E_seq_mat <- matrix(rep(E_seq, nsp), ncol=nsp)
-  
-  beta_0_mat_E_seq <- matrix(rep(beta_0,each=length(E_seq)), ncol=nsp)
-  beta_1_mat_E_seq <- matrix(rep(beta_1,each=length(E_seq)), ncol=nsp)
-  beta_2_mat_E_seq <- matrix(rep(beta_2,each=length(E_seq)), ncol=nsp)
-  
-  Mat_perf_inferred <- beta_0_mat_E_seq+beta_1_mat_E_seq*E_seq_mat+beta_2_mat_E_seq*E_seq_mat^2
-  Mat_perf_inferred <- as.data.frame(cbind(E_seq, Mat_perf_inferred))
-  
-  colnames(Mat_perf_inferred) <- c("E", paste0("Sp",1:nsp))
-  
-  Mat_perf_inferred_long <- Mat_perf_inferred %>%
-    tidyr::pivot_longer(cols=2:(nsp+1), names_to="Sp",
-                 names_prefix="Sp", values_to="Perf")
-  
-  p <- ggplot2::ggplot(data=Mat_perf_inferred_long, ggplot2::aes(x=E, y=Perf, col=Sp)) +
-    ggplot2::geom_line() +
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::xlab("Environment") + 
-    ggplot2::ylab("Species performance")+
-    ggplot2::theme(legend.position = "none", text = ggplot2::element_text(size = 20))
-  ggplot2::ggsave(p, filename=here::here("outputs", model, "inferred_perf_environment.png"),
-         width=fig_width, height=fig_width/2, units="cm", dpi=300)
-  
+      Mat_perf_inferred_plot <- as.data.frame(cbind(E_seq[,k], Mat_perf_inferred))
+      
+      colnames(Mat_perf_inferred_plot) <- c("E", paste0("Sp",1:nsp))
+      
+      Mat_perf_inferred_plot <- Mat_perf_inferred_plot %>%
+        tidyr::pivot_longer(cols=2:(nsp+1), names_to="Sp",
+                            names_prefix="Sp", values_to="Perf")
+      
+      Mat_perf_inferred_plot$Sp <- as.numeric(Mat_perf_inferred_plot$Sp)
+      
+      p <- ggplot2::ggplot(data=Mat_perf_inferred_plot, ggplot2::aes(x=E, y=Perf, col=as.factor(Sp))) +
+        ggplot2::geom_line() +
+        #ggplot2::scale_colour_viridis_d()+
+        ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
+        ggplot2::xlab(glue::glue("Environment axis {k}")) + 
+        ggplot2::ylab("Species performance")+
+        ggplot2::theme(text = ggplot2::element_text(size = 20),
+                       legend.title = ggplot2::element_text(size=14),
+                       legend.text =  ggplot2::element_text(size=10),
+                       legend.key.size = unit(0.3, 'cm'),
+                       plot.margin=unit(c(1, 5, 1, 1), 'lines'),
+                       legend.position=c(1.1, 0.4))
+      
+      ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("inferred_perf_environment_{k}.png")),
+                      width=fig_width, height=fig_width/2, units="cm", dpi=300)
+      
+    }
+  } else {
+      
+      Mat_perf_inferred_plot <- as.data.frame(cbind(E_seq, Mat_perf_inferred))
+      
+      colnames(Mat_perf_inferred_plot) <- c("E", paste0("Sp",1:nsp))
+      
+      Mat_perf_inferred_plot <- Mat_perf_inferred_plot %>%
+        tidyr::pivot_longer(cols=2:(nsp+1), names_to="Sp",
+                            names_prefix="Sp", values_to="Perf")
+      
+      Mat_perf_inferred_plot$Sp <- as.numeric(Mat_perf_inferred_plot$Sp)
+      
+      p <- ggplot2::ggplot(data=Mat_perf_inferred_plot, ggplot2::aes(x=E, y=Perf, col=as.factor(Sp))) +
+        ggplot2::geom_line() +
+        #ggplot2::scale_colour_viridis_d()+
+        ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
+        ggplot2::xlab("Environment axis 1") + 
+        ggplot2::ylab("Species performance")+
+        ggplot2::theme(text = ggplot2::element_text(size = 20),
+                       legend.title = ggplot2::element_text(size=14),
+                       legend.text =  ggplot2::element_text(size=10),
+                       legend.key.size = unit(0.3, 'cm'),
+                       plot.margin=unit(c(1, 5, 1, 1), 'lines'),
+                       legend.position=c(1.1, 0.4))
+      ggplot2::ggsave(p, filename=here::here("outputs", model, "inferred_perf_environment.png"),
+                      width=fig_width, height=fig_width/2, units="cm", dpi=300)
+      }
+}
+
+plot_inferred_perf_IV <- function(n_observed_axis, Obs_env, nsp, Inferred_species_parameters, V_intra, model, fig_width){
+
   x <- seq(-3, 3, 0.01)
-  mean_x1 <- mean(X1)
   n_ind_simul <- length(x)
-  df_perf_IV <- data.frame(Species = rep(1:nsp, each=n_ind_simul), X = rep(x, nsp), Mean=rep(beta_0+beta_1*mean_x1+beta_2*(mean_x1^2), each=n_ind_simul))
-  df_perf_IV <- df_perf_IV%>%
-    dplyr::group_by(Species)%>%
-    dplyr::mutate(Density = dnorm(x, mean=Mean, sd=sqrt(V_intra$V[Species])))%>%
-    dplyr::ungroup()
   
-  p <- ggplot2::ggplot(df_perf_IV, ggplot2::aes(x = X, y = Density, colour = as.factor(Species))) +
-    ggplot2::geom_line()+
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::theme(legend.position = "none")+
-    ggplot2::labs(x = "Performance at mean environment variable X1",
-         y = "Density")
-  ggplot2::ggsave(p, filename=here::here("outputs", model, "Perf_overlap_IV.png"),
-         width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  if(n_observed_axis>1){
+    mean_env <- mean(Obs_env[,k])
+  } else{
+    mean_env <- mean(c(Obs_env))
+    }
+  
+  for(k in 1:n_observed_axis){
+    
+    Env_mat <- matrix(nrow=nsp, ncol=2*n_observed_axis+1)
+    
+    Env_mat[,1] <- rep(1, nsp)
+    
+    for (l in 1:n_observed_axis){
+      Env_mat[,l+1] <- rep(mean_env, nsp)
+      Env_mat[,l+1+n_observed_axis] <- rep(mean_env^2, nsp)
+    }
+    
+    perf_mean_env <- rowSums(Env_mat * Inferred_species_parameters)
+    
+    perf_IV <- data.frame(Species = rep(1:nsp, each=n_ind_simul), X = rep(x, nsp), Mean=rep(perf_mean_env, each=n_ind_simul))
+    
+    perf_IV <- perf_IV%>%
+      dplyr::group_by(Species)%>%
+      dplyr::mutate(Density = dnorm(x, mean=Mean, sd=sqrt(V_intra$V[Species])))%>%
+      dplyr::ungroup()
+    
+    p <- ggplot2::ggplot(perf_IV, ggplot2::aes(x = X, y = Density, colour = as.factor(Species))) +
+      ggplot2::geom_line()+
+      #ggplot2::scale_colour_viridis_d()+
+      ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
+      ggplot2::labs(x = glue::glue("Performance at mean environment variable {k}"),
+                    y = "Density")+
+      ggplot2::theme(text = ggplot2::element_text(size = 20),
+                     legend.title = ggplot2::element_text(size=14),
+                     legend.text =  ggplot2::element_text(size=10),
+                     legend.key.size = unit(0.3, 'cm'),
+                     plot.margin=unit(c(1, 5, 1, 1), 'lines'),
+                     legend.position=c(1.1, 0.4))
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("Perf_overlap_IV_variable_{k}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+  }
 }
 
 plot_abundance_species <- function(Abundances, model, fig_width){
@@ -300,12 +421,18 @@ plot_abundance_species <- function(Abundances, model, fig_width){
   
   Abund_plot$Gen <- as.numeric(Abund_plot$Gen)
   
-  p <- ggplot2::ggplot(data=Abund_plot, ggplot2::aes(x=Gen, y=Mean_sp_gen, colour=Sp))+
+  p <- ggplot2::ggplot(data=Abund_plot, ggplot2::aes(x=Gen, y=Mean_sp_gen, colour=as.factor(Sp)))+
     ggplot2::geom_line()+
     #ggplot2::geom_ribbon(ggplot2::aes(y=Mean_sp_gen, ymin=CI_025, ymax=CI_975, fill=Sp), alpha=0.5)+
-    ggplot2::scale_colour_viridis_d()+
+    #ggplot2::scale_colour_viridis_d()+
+    ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
     ggplot2::labs(x="Generations", y="Species abundance")+
-    ggplot2::theme(legend.position = "none")
+    ggplot2::theme(text = ggplot2::element_text(size = 20),
+                   legend.title = ggplot2::element_text(size=14),
+                   legend.text =  ggplot2::element_text(size=10),
+                   legend.key.size = unit(0.3, 'cm'),
+                   plot.margin=unit(c(1, 5, 1, 1), 'lines'),
+                   legend.position=c(1.1, 0.4))
   
   ggplot2::ggsave(p, filename=here::here("outputs", model, "Abundances.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)

@@ -1,0 +1,220 @@
+compare_models<-function(){
+  models_all <- c("Perf_know_full_mort_stocha",
+                  "Perf_know_full_mort_stocha_disp_abund",
+                  "Perf_know_start_1_mort_stocha",
+                  "Perf_know_start_1_mort_stocha_disp_abund",
+                  "Perf_know_start_10_mort_stocha",
+                  "Perf_know_start_10_mort_stocha_disp_abund",
+                  "Perf_know_full_mort_fixed",
+                  "Perf_know_full_mort_fixed_disp_abund",
+                  "Perf_know_start_10_mort_fixed",
+                  "Perf_know_start_10_mort_fixed_disp_abund",
+                  "Part_know_IV_full_mort_stocha",
+                  "Part_know_IV_full_mort_stocha_disp_abund",
+                  "Part_know_IV_start_1_mort_stocha",
+                  "Part_know_IV_start_1_mort_stocha_disp_abund",
+                  "Part_know_IV_start_10_mort_stocha",
+                  "Part_know_IV_start_10_mort_stocha_disp_abund",
+                  "Part_know_IV_full_mort_fixed",
+                  "Part_know_IV_full_mort_fixed_disp_abund",
+                  "Part_know_IV_start_10_mort_fixed",
+                  "Part_know_IV_start_10_mort_fixed_disp_abund",
+                  "Part_know_full_mort_stocha",
+                  "Part_know_full_mort_stocha_disp_abund",
+                  "Part_know_start_1_mort_stocha",
+                  "Part_know_start_1_mort_stocha_disp_abund",
+                  "Part_know_full_mort_fixed",
+                  "Part_know_full_mort_fixed_disp_abund",
+                  "Part_know_start_10_mort_fixed",
+                  "Part_know_start_10_mort_fixed_disp_abund")
+  
+  models_choices <- c("Perf_know_start_10_mort_fixed",
+                      "Perf_know_start_10_mort_fixed_disp_abund",
+                      "Part_know_start_10_mort_fixed",
+                      "Part_know_start_10_mort_fixed_disp_abund",
+                      "Part_know_IV_start_10_mort_fixed",
+                      "Part_know_IV_start_10_mort_fixed_disp_abund")
+  
+  models_choices <- c("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+                      "Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs",
+                      "Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+                      "Part_know_start_10_mort_fixed_disp_abund_10_axes_5_obs",
+                      "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+                      "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_5_obs")
+  
+  models_choices <- c("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+                      "Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+                      "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs")
+  
+  models <- models_choices
+  
+  # 1: Compare the species diversity at the end of the simulations within a model (Shannon diversity index)
+  
+  Shannon_all_models <- data.frame(Shannon=numeric(), Model=factor())
+  
+  for (m in 1:length(models)) {
+    model <- models[m]
+    load(here::here("outputs", model, glue::glue("Shannon_{model}.RData")))
+    Shannon_all_models <- rbind(Shannon_all_models, data.frame(Shannon=Shannon, Model=rep(m, length(Shannon))))
+  }
+  
+  p <- ggplot2::ggplot(data=Shannon_all_models, ggplot2::aes(x=as.factor(Model), y=Shannon))+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), groupOnX=FALSE)+
+    ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
+    ggplot2::labs(title = "Beeswarmplot of the Shannon diversity index \n at the end of each simulation \n with different models",
+                  x = "Model",
+                  y = "Shannon diversity index")+
+    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Shannon.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+  
+  # 2: Compare the species ranks in the end of the simulations within a model (Spearman pairwise correlation)
+  
+  Spearman_all_models <- data.frame(Spearman=numeric(), Model=factor())
+  
+  for (m in 1:length(models)) {
+    model <- models[m]
+    load(here::here("outputs", model, glue::glue("Spearman_{model}.RData")))
+    Spearman_all_models <- rbind(Spearman_all_models, data.frame(Spearman=c(Spearman), Model=rep(m, length(Spearman))))
+  }
+  
+  p <- ggplot2::ggplot(data=Spearman_all_models, ggplot2::aes(x=as.factor(Model), y=Spearman))+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), groupOnX=TRUE)+
+    ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
+    ggplot2::labs(title = "Beeswamplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation \n with different models",
+                  x = "Model",
+                  y = "Spearman pairwise correlation")+
+    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Spearman.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+  # 3: Compare the composition of the community at the end of the simulations between models (similarity matrix)
+  # 4: Percentage similarity
+  
+  jaccard <- function(a, b) {
+    intersection = length(intersect(a, b))
+    union = length(a) + length(b) - intersection
+    return (intersection/union)
+  }
+  
+  percentage_similarity <- function(a, b) {
+    A <- sum(a)
+    B <- sum(b)
+    W <- sum(pmin(a, b))
+    return((2*W)/(A+B))
+  }
+  
+  Jaccard_all_models <- data.frame(Jaccard=numeric(), Model=factor())
+  Percentage_similarity_all_models <- data.frame(Percentage_similarity=numeric(), Model=factor())
+  
+  combi_models <- gtools::combinations(n = length(c(1:length(models))), r = 2, v = c(1:length(models)), repeats.allowed = TRUE)
+  
+  combi_rep <- expand.grid(A=c(1:nrep), B=c(1:nrep))
+  
+  combi_rep_same_model <- t(combn(c(1:nrep), 2))
+  
+  for (m in 1:length(models)) {
+    model <- models[m]
+    load(here::here("outputs", model, glue::glue("Abundances_{model}.RData")))
+    abund_end <- matrix(nrow=nrep, ncol=nsp)
+    species_end <- list()
+    for (r in 1:nrep) {
+      abund_end[r,] <- Abundances[[r]][ngen,]
+      species_end[[r]] <- unique(which(abund_end[r,]!=0))
+    }
+    assign(glue::glue("abund_end_{m}"), abund_end)
+    assign(glue::glue("species_end_{m}"), species_end)
+  }
+  
+  list_jaccard_matrix <- list()
+  mean_jaccard <- c()
+  
+  list_percentage_similarity_matrix <- list()
+  mean_percentage_similarity <- c()
+  
+  for (l in 1:nrow(combi_models)){
+    mod1 <- combi_models[l, 1]
+    mod2 <- combi_models[l, 2]
+    if(mod1==mod2){
+      list_jaccard_matrix[[l]] <- matrix(nrow=nrow(combi_rep_same_model), ncol=1)
+      list_percentage_similarity_matrix[[l]] <- matrix(nrow=nrow(combi_rep_same_model), ncol=1)
+      for (c in 1:nrow(combi_rep_same_model)){
+        list_jaccard_matrix[[l]][c,1] <- jaccard(a=get(glue::glue("species_end_{mod1}"))[[combi_rep_same_model[c,1]]], b=get(glue::glue("species_end_{mod2}"))[[combi_rep_same_model[c,2]]])
+        list_percentage_similarity_matrix[[l]][c,1] <- percentage_similarity(a=get(glue::glue("abund_end_{mod1}"))[combi_rep_same_model[c,1],], b=get(glue::glue("abund_end_{mod2}"))[combi_rep_same_model[c,2],])
+      }
+    }
+    else {
+      list_jaccard_matrix[[l]] <- matrix(nrow=nrep, ncol=nrep)
+      list_percentage_similarity_matrix[[l]] <- matrix(nrow=nrep, ncol=nrep)
+      for (c in 1:nrow(combi_rep)){
+        list_jaccard_matrix[[l]][combi_rep[c,1], combi_rep[c,2]] <- jaccard(a=get(glue::glue("species_end_{mod1}"))[[combi_rep[c,1]]], b=get(glue::glue("species_end_{mod2}"))[[combi_rep[c,2]]])
+        list_percentage_similarity_matrix[[l]][combi_rep[c,1], combi_rep[c,2]] <- percentage_similarity(a=get(glue::glue("abund_end_{mod1}"))[combi_rep[c,1],], b=get(glue::glue("abund_end_{mod2}"))[combi_rep[c,2],])
+      }
+    }
+    mean_jaccard[l] <- mean(list_jaccard_matrix[[l]])
+    mean_percentage_similarity[l] <- mean(list_percentage_similarity_matrix[[l]])
+  }
+  
+  combi_models_jaccard <- as.data.frame(combi_models)
+  combi_models_jaccard$Jaccard <- mean_jaccard
+  colnames(combi_models_jaccard)[1:2] <- c("mod1", "mod2")
+  
+  combi_models_percentage_similarity <- as.data.frame(combi_models)
+  combi_models_percentage_similarity$Percentage_similarity <- mean_percentage_similarity
+  colnames(combi_models_percentage_similarity)[1:2] <- c("mod1", "mod2")
+  
+  p <- ggplot2::ggplot(data = combi_models_jaccard, ggplot2::aes(x=mod1, y=mod2, fill=Jaccard))+ 
+    ggplot2::geom_tile()+
+    ggplot2::scale_fill_viridis_c()+
+    ggplot2::coord_fixed()+
+    ggplot2::labs(title="Jaccard index of the composition of the final community \n (mean of all repetitions)",
+                  x="Model 1",
+                  y = "Model 2",
+                  fill="Jaccard index")
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Jaccard.png"),
+                  width=fig_width, height=fig_width, units="cm", dpi=300)
+  
+  p <- ggplot2::ggplot(data = combi_models_percentage_similarity, ggplot2::aes(x=mod1, y=mod2, fill=Percentage_similarity))+ 
+    ggplot2::geom_tile()+
+    ggplot2::scale_fill_viridis_c()+
+    ggplot2::coord_fixed()+
+    ggplot2::labs(title="Percentage similarity index of the species abundances \n of the final community (mean of all repetitions)",
+                  x="Model 1",
+                  y = "Model 2",
+                  fill="Percentage similarity")
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Percentage_similarity.png"),
+                  width=fig_width, height=fig_width, units="cm", dpi=300)
+}
+
+Compare_IV_axis_nb <- function(){
+  models <- c("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+                      "Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs")
+  
+  nb_obs_axes <- c(1, 5)
+  
+  IV_all_models <- data.frame(IV=numeric(), Model=factor())
+  
+  for (m in 1:length(models)) {
+    model <- models[m]
+    load(here::here("outputs", model, glue::glue("V_intra.RData")))
+    IV_all_models <- rbind(IV_all_models, data.frame(IV=V_intra$V, Model=rep(m, nrow(V_intra))))
+  }
+  
+  p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Model), y=IV))+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), groupOnX=TRUE)+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(title = "Beeswarmplot of the intraspecific variability index \n inferred with different levels of knowledge",
+                  x = "Number of observed axes",
+                  y = "IV")+
+    scale_x_discrete(labels=nb_obs_axes)+
+    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "IV_nb_axes.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+}
