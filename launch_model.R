@@ -43,7 +43,6 @@ launch_model <- function(){
   if(perf_know==TRUE){
     niche_optimum <- NULL
     niche_optimum <- generate_species_optima(model=model, randomOptSp=randomOptSp, niche_width=niche_width, nsp=nsp, env=env, seed=seed)
-    save(niche_optimum, file=here::here("outputs", model, "niche_optimum.RData"))
   } else {
     
     Inferred_species_parameters_mat <-list()

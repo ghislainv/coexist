@@ -33,13 +33,13 @@ infer_IV <- function(model, n_observed_axis){
     pivot_longer(cols=c(Sp_01:glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
   
   # Observed niche
-  plot_random_species_niche(seed, df_perf, model, fig_width)
+  plot_species_niche(seed, df_perf, model, fig_width)
   
   #Check that the model well fits the data if all environmental variables are included
   
   #lm_all_env <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq+Species*Env_2+Species*Env_2_sq+Species*Env_3+Species*Env_3_sq, data=df_perf)
   
-  formula <- as.formula(paste0("Perf~Species+Species:", paste0(colnames(df_perf)[1:(2*n_axis)], collapse= "+Species:")))
+  formula <- as.formula(paste0("Perf~-1+Species+Species:", paste0(colnames(df_perf)[1:(2*n_axis)], collapse= "+Species:")))
   
   lm_all_env <- lm(formula, data=df_perf)
   
@@ -47,7 +47,7 @@ infer_IV <- function(model, n_observed_axis){
   
   # Observed intraspecific variability
   
-  formula <- as.formula(paste0("Perf~Species+Species:",
+  formula <- as.formula(paste0("Perf~-1+Species+Species:",
                                paste0(colnames(df_perf)[1:n_observed_axis], collapse= "+Species:"),
                                "+Species:",
                                paste0(colnames(df_perf)[(n_axis+1):(n_axis+n_observed_axis)], collapse= "+Species:")))

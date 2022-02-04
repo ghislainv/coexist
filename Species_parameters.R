@@ -7,7 +7,7 @@ generate_species_optima <- function(model, randomOptSp, niche_width, nsp, env, s
     # Number of species
     nsp <- n_niche^n_axis
     
-    # Species coordinates on the three niche axis (x, y, z)
+    # Species coordinates on three niche axis (x, y, z)
     base_coord <- seq(0, 1, length.out=n_niche+1)[-(n_niche+1)]+niche_width/2
     sp_x <- rep(rep(base_coord, n_niche), n_niche)
     sp_y <- rep(rep(base_coord, each=n_niche), n_niche)
@@ -15,7 +15,7 @@ generate_species_optima <- function(model, randomOptSp, niche_width, nsp, env, s
     niche_optimum <- as.data.frame(cbind(sp_x, sp_y, sp_z))
   }
   
-  # Random optimum for species
+  # Random optimum for species (unlimited number of species)
   if (randomOptSp) {
     set.seed(seed)
     niche_optimum <- data.frame(matrix(ncol=n_axis, nrow=nsp))
@@ -23,6 +23,7 @@ generate_species_optima <- function(model, randomOptSp, niche_width, nsp, env, s
   }
   
   rownames(niche_optimum)<-1:nrow(niche_optimum)
+  save(niche_optimum, file=here::here("outputs", model, "niche_optimum.RData"))
   
   # Plot the species niche
   if(n_axis==3){

@@ -59,7 +59,7 @@ compare_models<-function(){
   }
   
   p <- ggplot2::ggplot(data=Shannon_all_models, ggplot2::aes(x=as.factor(Model), y=Shannon))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), groupOnX=FALSE)+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)))+
     ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
     ggplot2::labs(title = "Beeswarmplot of the Shannon diversity index \n at the end of each simulation \n with different models",
                   x = "Model",
@@ -81,7 +81,7 @@ compare_models<-function(){
   }
   
   p <- ggplot2::ggplot(data=Spearman_all_models, ggplot2::aes(x=as.factor(Model), y=Spearman))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), groupOnX=TRUE)+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)))+
     ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
     ggplot2::labs(title = "Beeswamplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation \n with different models",
                   x = "Model",
@@ -135,6 +135,10 @@ compare_models<-function(){
   list_percentage_similarity_matrix <- list()
   mean_percentage_similarity <- c()
   
+  vec_percentage_similarity <- c()
+  vec_combi_models_percentage_similarity <- c()
+  vec_combi_rep_percentage_similarity <- c()
+  
   for (l in 1:nrow(combi_models)){
     mod1 <- combi_models[l, 1]
     mod2 <- combi_models[l, 2]
@@ -145,6 +149,9 @@ compare_models<-function(){
         list_jaccard_matrix[[l]][c,1] <- jaccard(a=get(glue::glue("species_end_{mod1}"))[[combi_rep_same_model[c,1]]], b=get(glue::glue("species_end_{mod2}"))[[combi_rep_same_model[c,2]]])
         list_percentage_similarity_matrix[[l]][c,1] <- percentage_similarity(a=get(glue::glue("abund_end_{mod1}"))[combi_rep_same_model[c,1],], b=get(glue::glue("abund_end_{mod2}"))[combi_rep_same_model[c,2],])
       }
+      vec_percentage_similarity <- c(vec_percentage_similarity, c(list_percentage_similarity_matrix[[l]]))
+      vec_combi_models_percentage_similarity <- c(vec_combi_models_percentage_similarity, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep_same_model)))
+      vec_combi_rep_percentage_similarity <- c(vec_combi_rep_percentage_similarity, paste0(combi_rep_same_model[,1], "-", combi_rep_same_model[,2]))
     }
     else {
       list_jaccard_matrix[[l]] <- matrix(nrow=nrep, ncol=nrep)
@@ -153,6 +160,9 @@ compare_models<-function(){
         list_jaccard_matrix[[l]][combi_rep[c,1], combi_rep[c,2]] <- jaccard(a=get(glue::glue("species_end_{mod1}"))[[combi_rep[c,1]]], b=get(glue::glue("species_end_{mod2}"))[[combi_rep[c,2]]])
         list_percentage_similarity_matrix[[l]][combi_rep[c,1], combi_rep[c,2]] <- percentage_similarity(a=get(glue::glue("abund_end_{mod1}"))[combi_rep[c,1],], b=get(glue::glue("abund_end_{mod2}"))[combi_rep[c,2],])
       }
+      vec_percentage_similarity <- c(vec_percentage_similarity, c(list_percentage_similarity_matrix[[l]]))
+      vec_combi_models_percentage_similarity <- c(vec_combi_models_percentage_similarity, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep)))
+      vec_combi_rep_percentage_similarity <- c(vec_combi_rep_percentage_similarity, paste0(combi_rep[,1], "-", combi_rep[,2]))
     }
     mean_jaccard[l] <- mean(list_jaccard_matrix[[l]])
     mean_percentage_similarity[l] <- mean(list_percentage_similarity_matrix[[l]])
@@ -189,6 +199,22 @@ compare_models<-function(){
   
   ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Percentage_similarity.png"),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
+  
+  Percentage_similarity_all_models <- data.frame(percentage_similarity=vec_percentage_similarity,
+                                                 combi_models=vec_combi_models_percentage_similarity,
+                                                 combi_rep=vec_combi_rep_percentage_similarity)
+  
+  p <- ggplot2::ggplot(data=Percentage_similarity_all_models, ggplot2::aes(x=as.factor(combi_models), y=percentage_similarity))+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(combi_models)))+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(title = "Beeswarmplot of the percentage similarity of species abundance; \n each point is a comparison between two repetitions ",
+                  x = "Model combination",
+                  y = "Percentage similarity of species abundance")+
+    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Percentage_similarity_beeswarmplot.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
 }
 
 Compare_IV_axis_nb <- function(){
@@ -206,7 +232,7 @@ Compare_IV_axis_nb <- function(){
   }
   
   p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Model), y=IV))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), groupOnX=TRUE)+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)))+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Beeswarmplot of the intraspecific variability index \n inferred with different levels of knowledge",
                   x = "Number of observed axes",

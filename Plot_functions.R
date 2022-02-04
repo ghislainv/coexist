@@ -37,7 +37,7 @@ plot_species_optima <- function(model, fig_width, niche_optimum){
   par(mar=c(1,1,2,2))
   scatter3D(niche_optimum[,1], niche_optimum[,2], niche_optimum[,3],
             pch=16, 
-            colvar=1:nsp, col=viridis(nsp),
+            colvar=1:nsp, col=getPalette(colourCount),
             bty = "f", main ="Three-dimensional species optima", phi=0,
             xlim=c(0,1), ylim=c(0,1), zlim=c(0,1))
   dev.off()
@@ -87,7 +87,7 @@ plot_mortality_events <- function(model, fig_width, community, nsp){
       width=fig_width, height=fig_width, units="cm", res=300)
   par(bty = "n")
   plot(raster::raster(community), main="Species - with vacant sites", zlim=c(0, nsp),
-       col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
+       col=c("black", getPalette(colourCount)), legend=FALSE, cex.main=2, cex.axis=1.5)
   dev.off()
 }
 
@@ -98,7 +98,7 @@ par(bty = "n")
 # plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"),
 #      zlim=c(0, nsp), col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
 plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"), 
-     zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=FALSE, cex.main=2, cex.axis=1.5)
+     zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=TRUE, cex.main=2, cex.axis=1.5)
 dev.off()
 }
 
@@ -181,9 +181,9 @@ plot_env_species<- function(model, fig_width, community_start, community_end, en
       width=fig_width, height=fig_width, units="cm", res=300)
   par(mfrow=c(2,2), bty = "n")
   plot(raster::raster(community_start), main="Species - Start", zlim=c(0, nsp),
-       col=c("black", viridis(nsp)), legend=FALSE)
+       col=c("black", getPalette(colourCount)), legend=FALSE)
   plot(raster::raster(community_end), main="Species - End", zlim=c(0, nsp),
-       col=c("black", viridis(nsp)), legend=FALSE)
+       col=c("black", getPalette(colourCount)), legend=FALSE)
   env_stack <- stack(raster::raster(env[[1]]*255), raster::raster(env[[2]]*255), raster::raster(env[[3]]*255))
   crs(env_stack) <- "+proj=utm +zone=1"
   plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
@@ -235,19 +235,29 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, model, fig_
   dev.off()
 }
 
-plot_random_species_niche <- function(seed, df_perf, model, fig_width){ 
+plot_species_niche <- function(seed, df_perf, model, fig_width){ 
   # Select 8 species at random
-  set.seed(seed)
-  sp_sel <- sample(unique(df_perf$Species), 9, replace=FALSE)
-  df_sp_sel <- df_perf %>% filter(Species %in% sp_sel)
-  p <- ggplot2::ggplot(data=df_sp_sel, ggplot2::aes(x=Env_1, y=Perf)) +
+  #set.seed(seed)
+  #sp_sel <- sample(unique(df_perf$Species), 9, replace=FALSE)
+  #df_sp_sel <- df_perf %>% filter(Species %in% sp_sel)
+  
+  df_perf_sp_niche <- df_perf
+  load(here::here("outputs", model, "niche_optimum.RData"))
+  df_perf_sp_niche$optimum <- rep(niche_optimum$X1, nsite)
+  df_perf_sp_niche$dist <- sqrt((df_perf_sp_niche$Env_1-df_perf_sp_niche$optimum)^2)
+  df_perf_sp_niche$dist <- df_perf_sp_niche$dist - mean(df_perf_sp_niche$dist) / sd(df_perf_sp_niche$dist)
+
+  p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf)) +
     ggplot2::geom_point() +
-    ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE) +
+    ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE, col="#008071") +
+    #ggplot2::stat_function(fun=function(Env_1) Env_1-optimum)+
+    ggplot2::geom_line(aes(x=Env_1, y=-dist), col="#088000")+
+    geom_vline(aes(xintercept=optimum), col="#80002D")+
     ggplot2::facet_wrap(vars(Species), nrow=3) +
     ggplot2::xlab("Environment (first axis)") +
     ggplot2::ylab("Performance")
   ggplot2::ggsave(p, filename=here::here("outputs", model, "infering_species_niche.png"),
-         width=fig_width, height=fig_width, units="cm", dpi=300)
+         width=fig_width*2, height=fig_width, units="cm", dpi=300)
 }
 
 plot_IV <- function(V_intra, model, fig_width){
