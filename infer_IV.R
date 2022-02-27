@@ -30,7 +30,7 @@ infer_IV <- function(model, n_observed_axis){
   colnames(df_perf) <- c(sprintf("Sp_%02d", 1:nsp), sprintf("Env_%d", 1:n_axis), sprintf("Env_%d_sq", 1:n_axis))
   
   df_perf <- df_perf %>%
-    pivot_longer(cols=c(Sp_01:glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
+    tidyr::pivot_longer(cols=c(Sp_01:glue::glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
   
   # Observed niche
   plot_species_niche(seed, df_perf, model, fig_width)
@@ -78,6 +78,9 @@ infer_IV <- function(model, n_observed_axis){
   
   save(Inferred_species_parameters, file=here::here("outputs", model, "Inferred_species_parameters.RData"))
   
+  load(file=here::here("outputs", model, "Inferred_species_parameters.RData"))
+  load(file=here::here("outputs", model, "niche_optimum.RData"))
+  
   plot_optima_real_estim(nsp, n_observed_axis, niche_optimum, Inferred_species_parameters, model, fig_width)
   
   V_intra <- df_perf %>%
@@ -85,6 +88,8 @@ infer_IV <- function(model, n_observed_axis){
     group_by(Species) %>%
     summarise(V=var(res))
   save(V_intra, file = here::here("outputs", model, "V_intra.RData"))
+  
+  load(here::here("outputs", model, "V_intra.RData"))
   
   plot_IV(V_intra, model, fig_width)
   

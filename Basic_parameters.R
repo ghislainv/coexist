@@ -1,6 +1,3 @@
-# Seed for reproducibility
-seed <- 12345
-
 # Figure width
 fig_width <- 16.6 # in cm
 
@@ -11,12 +8,7 @@ n_axis <- 10
 n_observed_axis <- 1
 
 # Perfect of partial knowledge
-perf_know <- FALSE
-
 if(perf_know==FALSE){part_know<-TRUE} else{part_know<-FALSE}
-
-#Intraspecific variability
-IV<-TRUE
 
 #Random optimum of species
 randomOptSp<-TRUE
@@ -45,10 +37,10 @@ b <- -0.5
 fecundity <- 0.5
 
 # Number of repetitions
-nrep <- 2
+nrep <- 100
 
 # Number of generations
-ngen <-1000
+ngen <-10000
 
 ############
 #Model name#
@@ -273,11 +265,18 @@ if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==
   model_perf <- "Perf_know_start_10_mort_fixed_disp_abund"
 }
 
-# Add the number of axes!!
+# Add the number of axes
 
 model <- paste0(model, "_", n_axis, "_axes_", n_observed_axis, "_obs")
 if(part_know==TRUE){
   model_perf <- paste0(model_perf, "_", n_axis, "_axes_", n_observed_axis, "_obs")
+}
+
+# Add the seed
+
+model <- paste0(model, "_seed_", seed)
+if(part_know==TRUE){
+  model_perf <- paste0(model_perf, "_seed_", seed)
 }
 
 ##############
@@ -293,6 +292,7 @@ if(part_know==TRUE){
   load(here::here("outputs", model_perf, "env.RData"))
   load(file=here::here("outputs", model_perf, "niche_optimum.RData"))
   load(file=here::here("outputs", model_perf, "Inferred_species_parameters.RData"))
+  load(file=here::here("outputs", model_perf, "env_stack.RData"))
 }
 
 #Number of species

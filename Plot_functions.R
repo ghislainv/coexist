@@ -82,12 +82,14 @@ plot_community_start <- function(model, fig_width, community, nsp){
   dev.off()
 }
 
-plot_mortality_events <- function(model, fig_width, community, nsp){
+plot_mortality_events <- function(model, fig_width, community, mortality, nsp){
   png(file=here::here("outputs", model, "mortality_events.png"),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(bty = "n")
-  plot(raster::raster(community), main="Species - with vacant sites", zlim=c(0, nsp),
-       col=c("black", getPalette(colourCount)), legend=FALSE, cex.main=2, cex.axis=1.5)
+  community_mortality <- community
+  community_mortality[mortality==1] <- nsp+1
+  plot(raster::raster(community_mortality), main="Species (colours) and vacant sites \n (black = old, white = new)", zlim=c(0, nsp),
+       col=c("black", getPalette(colourCount)), "white", legend=FALSE, cex.main=2, cex.axis=1.5)
   dev.off()
 }
 
@@ -109,6 +111,7 @@ plot_species_richness <- function(nrep, sp_rich, model, fig_width){
     dplyr::mutate(gen=1:(ngen)) %>%
     tidyr::pivot_longer(cols=colnames_long, names_to="rep",
                  names_prefix="X", values_to="sp_rich")
+  #One curve per repetition
   p <- ggplot2::ggplot(data=sp_rich_long, ggplot2::aes(x=gen, y=sp_rich, col=rep)) +
     ggplot2::geom_line() +
     ggplot2::scale_colour_viridis_d()+
@@ -119,35 +122,63 @@ plot_species_richness <- function(nrep, sp_rich, model, fig_width){
     ggplot2::ylim(0,nsp)
   ggplot2::ggsave(p, filename=here::here("outputs", model, "species_richness_with_time.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
-}
-
-plot_species_richness_log_10 <- function(sp_rich, ngen, model, fig_width){
   
-  load(here::here("outputs", model, glue::glue("sp_rich_{model}.RData")))
+  #Mean and 95% interval
+  if(nrep>1){
+    sp_rich_mean <- data.frame(Gen = 1:nrow(sp_rich), Mean=rowMeans(sp_rich), Low=apply(sp_rich, 1, quantile, probs=0.025), High=apply(sp_rich, 1, quantile, probs=0.975))
+    
+    p <- ggplot2::ggplot(data=sp_rich_mean, ggplot2::aes(x=Gen, y=Mean)) +
+      ggplot2::geom_line(col="#008071") +
+      ggplot2::geom_ribbon(aes(ymin=Low, ymax=High), col="#008071", fill="#008071", alpha=0.5)+
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Species richness")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 20))+
+      ggplot2::ylim(0,nsp)
+    ggplot2::ggsave(p, filename=here::here("outputs", model, "species_richness_with_time_mean.png"),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
   
-  if(ncol(sp_rich)>1){
-    sp_rich_gen <- data.frame(sp_rich=sp_rich[,1], gen=c(1:ngen))
-  }else{sp_rich_gen <- data.frame(sp_rich=sp_rich, gen=c(1:ngen))}
+  # Log_10 plot
   
-  p <- ggplot2::ggplot(data=sp_rich_gen, ggplot2::aes(x=as.numeric(gen), y=sp_rich)) +
-    ggplot2::geom_line() +
-    scale_x_continuous(trans='log10')+
-    ggplot2::xlab("Generations") + 
-    ggplot2::ylab("Species richness")+
-    ggplot2::theme(legend.position = "none",
-                   text = ggplot2::element_text(size = 20))+
-    ggplot2::ylim(0,nsp)
+  if(nrep==1){
+    sp_rich_log <- data.frame(Sp_rich=sp_rich, Gen=c(1:ngen))
+    p <- ggplot2::ggplot(data=sp_rich_log, ggplot2::aes(x=as.numeric(Gen), y=Sp_rich)) +
+      ggplot2::geom_line(col="#008071")+
+      scale_x_continuous(trans='log10')+
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Species richness")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 20))+
+      ggplot2::ylim(0,nsp)
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", model, "species_richness_log_10.png"),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    }
   
-  ggplot2::ggsave(p, filename=here::here("outputs", model, "species_richness_log_10.png"),
-                  width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  else{
+    p <- ggplot2::ggplot(data=sp_rich_mean, ggplot2::aes(x=as.numeric(Gen), y=Mean)) +
+      ggplot2::geom_line(col="#008071")+
+      ggplot2::geom_ribbon(aes(ymin=Low, ymax=High), col="#008071", fill="#008071", alpha=0.5)+
+      scale_x_continuous(trans='log10')+
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Species richness")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 20))+
+      ggplot2::ylim(0,nsp)
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", model, "species_richness_log_10.png"),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    }
 }
 
 plot_mean_rank_hab_freq <- function(sp_mean_rank, sp_hab_freq, model, fig_width){
-  df <- data.frame(cbind(Species=1:nsp, Hab_freq=sp_hab_freq, Rank=sp_mean_rank))
+  mean_rank_hab_freq <- data.frame(cbind(Species=1:nsp, Hab_freq=sp_hab_freq, Rank=sp_mean_rank))
   
-  p <- ggplot2::ggplot(data=df, ggplot2::aes(x=Hab_freq, y=Rank, colour=as.factor(Species))) +
+  p <- ggplot2::ggplot(data=mean_rank_hab_freq, ggplot2::aes(x=Hab_freq, y=Rank, colour=as.factor(Species))) +
     ggplot2::geom_point() +
-    ggplot2::geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="red", fill="#69b3a2", se=TRUE) +
+    ggplot2::geom_smooth(method="gam", formula=y~s(x, bs = "cs"), color="#008071", fill="#69b3a2", se=TRUE) +
     ggplot2::xlab("Species suitable habitat frequency") +
     ggplot2::ylab("Species mean rank (higher rank = lower abundance)") +
     ggplot2::theme(axis.title=ggplot2::element_text(size=16))+
@@ -174,6 +205,22 @@ plot_env_filt<- function(nrep, env_filt, model, fig_width){
     ggplot2::ylab("Mean env-species perf difference")
   ggplot2::ggsave(p, filename=here::here("outputs", model, "environmental_filtering.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  
+  #Mean and 95% interval
+  if(nrep>1){
+    env_filt_mean <- data.frame(Gen = 1:nrow(env_filt), Mean=rowMeans(env_filt), Low=apply(env_filt, 1, quantile, probs=0.025), High=apply(env_filt, 1, quantile, probs=0.975))
+    
+    p <- ggplot2::ggplot(data=env_filt_mean, ggplot2::aes(x=Gen, y=Mean)) +
+      ggplot2::geom_line(col="#008071") +
+      ggplot2::geom_ribbon(aes(ymin=Low, ymax=High), col="#008071", fill="#008071", alpha=0.5)+
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Species richness")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 20))
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", model, "environmental_filtering_mean.png"),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
 }
   
 plot_env_species<- function(model, fig_width, community_start, community_end, env){
@@ -184,13 +231,39 @@ plot_env_species<- function(model, fig_width, community_start, community_end, en
        col=c("black", getPalette(colourCount)), legend=FALSE)
   plot(raster::raster(community_end), main="Species - End", zlim=c(0, nsp),
        col=c("black", getPalette(colourCount)), legend=FALSE)
-  env_stack <- stack(raster::raster(env[[1]]*255), raster::raster(env[[2]]*255), raster::raster(env[[3]]*255))
-  crs(env_stack) <- "+proj=utm +zone=1"
-  plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
-  dev.off()
+  if(n_axis==3){
+    env_stack <- raster::stack(raster::raster(env[[1]]*255), raster::raster(env[[2]]*255), raster::raster(env[[3]]*255))
+    raster::crs(env_stack) <- "+proj=utm +zone=1"
+    save(env_stack, file = here::here("outputs", model, "env_stack.RData"))
+    raster::plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
+    dev.off()
+  }
+  else{
+    pca_env <- prcomp(sites, scale = TRUE)
+    pca_env$rotation <- -pca_env$rotation
+    pca_env$x <- -pca_env$x
+    env_stack <- raster::stack(
+      raster::raster(matrix(range_0_255(pca_env$x[,1]), nrow=nsite_side, ncol=nsite_side, byrow=TRUE)),
+      raster::raster(matrix(range_0_255(pca_env$x[,2]), nrow=nsite_side, ncol=nsite_side, byrow=TRUE)),
+      raster::raster(matrix(range_0_255(pca_env$x[,3]), nrow=nsite_side, ncol=nsite_side, byrow=TRUE))
+      )
+    raster::crs(env_stack) <- "+proj=utm +zone=1"
+    save(env_stack, file = here::here("outputs", model, "env_stack.RData"))
+    raster::plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
+    dev.off()
+    var_explained <- pca_env$sdev^2 / sum(pca_env$sdev^2)
+    p <- ggplot2::ggplot(data.frame(Prin_comp=c(1:length(var_explained)),
+                                    Prop=cumsum(var_explained)),
+                         ggplot2::aes(x=Prin_comp, y=Prop))+
+      ggplot2::geom_col()+
+      ggplot2::labs(x="Principal component",
+                    y="Cumulative proportion of explained variance")
+    ggplot2::ggsave(p, filename=here::here("outputs", model, "pca_prop_var.png"),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
 }
 
-plot_theta_community<-function(theta_comm, ngen, model, fig_width){
+plot_theta_community<-function(theta_comm, ngen, nrep, model, fig_width){
   colnames_long <- paste0("X", 1:nrep)
   
   theta_comm_long <- theta_comm %>%
@@ -205,22 +278,69 @@ plot_theta_community<-function(theta_comm, ngen, model, fig_width){
     ggplot2::ylab("Mean mortality rate in the community")
   ggplot2::ggsave(p, filename=here::here("outputs", model, "mortality_rate_community.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  
+  #Mean and 95% interval
+  if(nrep>1){
+    theta_comm_mean <- data.frame(Gen = 1:nrow(theta_comm), Mean=rowMeans(theta_comm), Low=apply(theta_comm, 1, quantile, probs=0.025), High=apply(theta_comm, 1, quantile, probs=0.975))
+    
+    p <- ggplot2::ggplot(data=theta_comm_mean, ggplot2::aes(x=Gen, y=Mean)) +
+      ggplot2::geom_line(col="#008071") +
+      ggplot2::geom_ribbon(aes(ymin=Low, ymax=High), col="#008071", fill="#008071", alpha=0.5)+
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Species richness")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 20))
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", model, "mortality_rate_community_mean.png"),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
 }
 
-plot_spatial_autocorr <- function(community_end, sites, niche_width, model, fig_width){
+plot_spatial_autocorr <- function(community_end, sites, niche_width, env_stack, model, fig_width){
   # Species autocorrelation
   sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
   names(sp_XY) <- c("x", "y", "sp")
   vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
+  plot(vario_sp[["bins.lim"]][-length(vario_sp[["bins.lim"]])], vario_sp[["v"]])
   # Environment autocorrelation
   # 3D voxel for each site
-  x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
-  y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
-  z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
-  n_niche <- 1/niche_width
-  class_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
-  vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
+  if(n_axis==3){
+    if(randomOptSp==FALSE){
+      x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
+      y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
+      z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
+      n_niche <- 1/niche_width
+      # This is done to avoid having the same class for different combinations (the function is not continuous)
+      class_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
+      vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
+    }
+    else{
+      x_site <- floor(sites$V1_env*10)
+      y_site <- floor(sites$V2_env*10)
+      z_site <- floor(sites$V3_env*10)
+      class_site <- z_site*10^2+y_site*10+x_site
+      vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
+    }
+  }
+  else{
+    class_site <- entrelac(
+      raster::values(env_stack@layers[[1]]),
+      raster::values(env_stack@layers[[2]]),
+      raster::values(env_stack@layers[[3]])
+      )
+    
+    png(file=here::here("outputs", model, "pca_rgb.png"),
+        width=fig_width, height=fig_width*0.8, units="cm", res=300)
+    raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), col=viridisLite::viridis(255^3))
+    dev.off()
+    
+    vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
+    
+    semivar_env <- semivar_mutlidim(sites, n_axis, sp_XY, vario_sp)
+    plot(vario_env[["bins.lim"]][-length(vario_env[["bins.lim"]])], semivar_env)
+  }
   # Plot with correlation
+  plot(vario_sp[["v"]] , semivar_env)
   png(file=here::here("outputs", model, "sp_autocorrelation.png"),
       width=fig_width, height=fig_width*0.8, units="cm", res=300)
   par(mfrow=c(2,2), bty = "n")
@@ -230,12 +350,12 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, model, fig_
        main = "Regression",
        xlab="Semivariance for environment",
        ylab="Semivariance for species")
-  m <- lm(vario_sp$v ~ vario_env$v-1)
+  m <- lm(vario_sp$v ~ vario_env$v)
   abline(a=0, b=coef(m), col="red")
   dev.off()
 }
 
-plot_species_niche <- function(seed, df_perf, model, fig_width){ 
+plot_species_niche <- function(seed, df_perf, model, fig_width){
   # Select 8 species at random
   #set.seed(seed)
   #sp_sel <- sample(unique(df_perf$Species), 9, replace=FALSE)
@@ -251,9 +371,9 @@ plot_species_niche <- function(seed, df_perf, model, fig_width){
     ggplot2::geom_point() +
     ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE, col="#008071") +
     #ggplot2::stat_function(fun=function(Env_1) Env_1-optimum)+
-    ggplot2::geom_line(aes(x=Env_1, y=-dist), col="#088000")+
-    geom_vline(aes(xintercept=optimum), col="#80002D")+
-    ggplot2::facet_wrap(vars(Species), nrow=3) +
+    ggplot2::geom_line(ggplot2::aes(x=Env_1, y=-dist), col="#088000")+
+    ggplot2::geom_vline(ggplot2::aes(xintercept=optimum), col="#80002D")+
+    ggplot2::facet_wrap(ggplot2::vars(Species), nrow=3) +
     ggplot2::xlab("Environment (first axis)") +
     ggplot2::ylab("Performance")
   ggplot2::ggsave(p, filename=here::here("outputs", model, "infering_species_niche.png"),
@@ -292,11 +412,37 @@ plot_optima_real_estim <- function(nsp, n_observed_axis, niche_optimum, Inferred
   p <- ggplot2::ggplot(data=opt_sp_estim_vs_real, ggplot2::aes(x=Real, y=Estim, colour=factor(Species)))+
     ggplot2::geom_point()+
     #ggplot2::scale_colour_viridis_d()+
-    ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))
-    #ggplot2::xlim(c(0,1))+
-    #ggplot2::ylim(c(0,1))
+    ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
+    ggplot2::labs(x="Real species optima on axis X1", y="Estimated species optima")
 
   ggplot2::ggsave(p, filename=here::here("outputs", model, "optima_real_estim.png"),
+                  width=fig_width, height=fig_width, units="cm", dpi=300)
+  
+  opt_sp_estim_vs_real$Horizontal <- rep(0, nrow(opt_sp_estim_vs_real))
+  
+  p <- ggplot2::ggplot(data=opt_sp_estim_vs_real, ggplot2::aes(x=Estim, y=Horizontal,  colour=factor(Species)))+
+    ggplot2::geom_point()+
+    #ggplot2::scale_colour_viridis_d()+
+    ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
+    ggplot2::theme(axis.text.y = element_blank(),
+                   axis.title.y = element_blank(),
+                   axis.ticks.y = element_blank())
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", model, "optima_estim.png"),
+                  width=fig_width, height=fig_width, units="cm", dpi=300)
+  
+  opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim>1,]$Estim <- 1
+  opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim<0,]$Estim <- 0
+  
+  p <- ggplot2::ggplot(data=opt_sp_estim_vs_real, ggplot2::aes(x=Estim, y=Horizontal,  colour=factor(Species)))+
+    ggplot2::geom_point()+
+    #ggplot2::scale_colour_viridis_d()+
+    ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
+    ggplot2::theme(axis.text.y = element_blank(),
+                   axis.title.y = element_blank(),
+                   axis.ticks.y = element_blank())
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", model, "optima_estim_0_1.png"),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
@@ -446,4 +592,40 @@ plot_abundance_species <- function(Abundances, model, fig_width){
   
   ggplot2::ggsave(p, filename=here::here("outputs", model, "Abundances.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
+}
+
+plot_perf_community_end <- function(community_end, perf_Sp_mean, sites, fig_width){
+  nrep <- length(community_end)
+  nsite <- nrow(sites)
+  for(r in 1:nrep){
+    community <- community_end[[r]]
+    perf_present <- rep(NA, nsite)
+    w0 <- (as.vector(t(community))==0)
+    perf_present[w0] <- NA
+    perf_present[!w0] <- diag(perf_Sp_mean[!w0, as.vector(t(community))[!w0]])
+    df_perf_sp_present_x1 <- data.frame(Species = as.vector(t(community)), Perf = perf_present, X1=sites[,1])
+    
+    p <- ggplot2::ggplot(df_perf_sp_present_x1, aes(x=X1, y=Perf, colour=as.factor(Species)))+
+      ggplot2::geom_point()+
+      ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount)[sort(unique(df_perf_sp_present_x1$Species))])+
+      ggplot2::labs(x="Environment (first axis)", y="Performance of final community")
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("perf_community_end_{r}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
+}
+
+plot_perf_suitable_habitat <- function(perf_Sp_mean, sites, fig_width){
+  nsite <- nrow(sites)
+  
+  df_perf_suitable_x1 <- data.frame(Species = apply(perf_Sp_mean,1,which.max), Perf = apply(perf_Sp_mean,1,max), X1=sites[,1])
+    
+  p <- ggplot2::ggplot(df_perf_suitable_x1, aes(x=X1, y=Perf, colour=as.factor(Species)))+
+    ggplot2::geom_point()+
+    ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount)[sort(unique(df_perf_suitable_x1$Species))])+
+    ggplot2::labs(x="Environment (first axis)", y="Performance of the theoretical winner")
+    
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", model, "perf_suitable_habitat.png"),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
 }

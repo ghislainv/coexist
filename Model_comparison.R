@@ -42,9 +42,9 @@ compare_models<-function(){
                       "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs",
                       "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_5_obs")
   
-  models_choices <- c("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-                      "Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-                      "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs")
+  models_choices <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
+                      glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
+                      glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"))
   
   models <- models_choices
   
@@ -59,8 +59,10 @@ compare_models<-function(){
   }
   
   p <- ggplot2::ggplot(data=Shannon_all_models, ggplot2::aes(x=as.factor(Model), y=Shannon))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)))+
-    ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
+    ggplot2::geom_boxplot()+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
+    ggplot2::scale_colour_manual(values=c("#80002D", "#008071", "#088000"))+
+    #ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
     ggplot2::labs(title = "Beeswarmplot of the Shannon diversity index \n at the end of each simulation \n with different models",
                   x = "Model",
                   y = "Shannon diversity index")+
@@ -81,8 +83,10 @@ compare_models<-function(){
   }
   
   p <- ggplot2::ggplot(data=Spearman_all_models, ggplot2::aes(x=as.factor(Model), y=Spearman))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)))+
-    ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
+    ggplot2::geom_boxplot()+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
+    ggplot2::scale_colour_manual(values=c("#80002D", "#008071", "#088000"))+
+    #ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
     ggplot2::labs(title = "Beeswamplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation \n with different models",
                   x = "Model",
                   y = "Spearman pairwise correlation")+
@@ -205,7 +209,8 @@ compare_models<-function(){
                                                  combi_rep=vec_combi_rep_percentage_similarity)
   
   p <- ggplot2::ggplot(data=Percentage_similarity_all_models, ggplot2::aes(x=as.factor(combi_models), y=percentage_similarity))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(combi_models)))+
+    ggplot2::geom_boxplot()+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Beeswarmplot of the percentage similarity of species abundance; \n each point is a comparison between two repetitions ",
                   x = "Model combination",
@@ -232,7 +237,8 @@ Compare_IV_axis_nb <- function(){
   }
   
   p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Model), y=IV))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)))+
+    ggplot2::geom_box()+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Beeswarmplot of the intraspecific variability index \n inferred with different levels of knowledge",
                   x = "Number of observed axes",

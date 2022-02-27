@@ -1,12 +1,12 @@
 generate_environment <- function(nsite_side, model){
   # Landscape
   mat <- matrix(0, nrow=nsite_side, ncol=nsite_side)
-  r <- raster(mat, crs="+proj=utm +zone=1")
+  r <- raster::raster(mat, crs="+proj=utm +zone=1")
   nsite <- nsite_side^2
-  coords <- coordinates(r)
+  coords <- sp::coordinates(r)
   
   # Neighbourhood matrix
-  neighbors.mat <- adjacent(r, cells=c(1:nsite), directions=8,
+  neighbors.mat <- raster::adjacent(r, cells=c(1:nsite), directions=8,
                             pairs=TRUE, sorted=TRUE)
   # Number of neighbours by site
   n.neighbors <- as.data.frame(table(as.factor(neighbors.mat[,1])))[,2]
@@ -29,13 +29,13 @@ generate_environment <- function(nsite_side, model){
   
   # Environment on each site
   #CGT 01/12/2021
-  sites <- data.frame(V1_env=rep(NA, nsite), V2_env=NA, V3_env=NA)
+  #sites <- data.frame(V1_env=rep(NA, nsite), V2_env=NA, V3_env=NA)
   sites <- data.frame(matrix(ncol=n_axis, nrow=nsite))
   colnames(sites) <- c(sprintf("V%d_env", 1:n_axis))
   env <- list()
   for (i in 1:n_axis) {
-    seed <- 1234 + i - 1
-    rho <- c(rmvn(1, mu=rep(0, nsite), V=covrho, seed=seed)) # Spatial Random Effects
+    seed_env <- 1234 + i - 1
+    rho <- c(rmvn(1, mu=rep(0, nsite), V=covrho, seed=seed_env)) # Spatial Random Effects
     rho <- rho-mean(rho) # Centering rhos on zero
     #rho <- scales::rescale(rho, to=c(0, 1))
     rho <- (rho - min(rho)) / (max(rho) - min(rho))
@@ -48,9 +48,9 @@ generate_environment <- function(nsite_side, model){
   save(env, file = here::here("outputs", model, "env.RData"))
   
   #Look at the correlations between environmental variables
-  print(glue::glue("Variables 1 and 2 have a correlation of {cor(c(env[[1]]), c(env[[2]]))},
-                   variables 1 and 3 have a correlation of {cor(c(env[[1]]), c(env[[3]]))}
-                   and variables 2 and 3 have a correlation of {cor(c(env[[2]]), c(env[[3]]))}"))
+  print(glue::glue("Variables 1 and 2 have a correlation of {cor(raster::values(raster::raster(env[[1]])), raster::values(raster::raster(env[[2]])))},
+                   variables 1 and 3 have a correlation of {cor(raster::values(raster::raster(env[[1]])), raster::values(raster::raster(env[[3]])))}
+                   and variables 2 and 3 have a correlation of {cor(raster::values(raster::raster(env[[2]])), raster::values(raster::raster(env[[3]])))}"))
   
   
   # Plot the environment

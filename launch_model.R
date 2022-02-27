@@ -2,8 +2,6 @@ launch_model <- function(){
   
   source(file = "./call_libraries.R")
   
-  source(file = here::here("Basic_parameters.R"))
-  
   # Create output directories
   dir.create(here::here("outputs", model), recursive=TRUE)
   
@@ -87,6 +85,7 @@ launch_model <- function(){
     for(k in 1:length(Obs_env_mat)){
       perf_Sp_mean <- perf_Sp_mean + Inferred_species_parameters_mat[[k+1]]*Obs_env_mat[[k]]
     }
+    save(perf_Sp_mean, file = here::here("outputs", model, glue::glue("perf_Sp_mean_{model}.RData")))
   }
   
   # =========================================
@@ -149,6 +148,9 @@ launch_model <- function(){
   Shannon <- c(nrep)
   #Abundance matrices
   Abundances <- list()
+  #Community at the beginning and the end of the simulation
+  community_end <- list()
+  community_start <- list()
   
   # Loop on repetitions
   print("Entering the repetition loop")
@@ -166,6 +168,8 @@ launch_model <- function(){
     # -----------------------------------------
     print("Initialising the landscape...")
     
+    set.seed(NULL)
+    
     if(start_full_landscape==TRUE){
       # Draw species at random in the landscape (one individual per site)
       sp <- sample(1:nsp, size=nsite, replace=TRUE)
@@ -176,7 +180,7 @@ launch_model <- function(){
       sites_start <- sample(1:nsite, size=nsp, replace=FALSE)
       sp_start<- sample(1:nsp, size=nsp, replace=FALSE)
       community <- matrix(0, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
-      community_rast <- raster(community)
+      community_rast <- raster::raster(community)
       community_rast[sites_start] <- sp_start
       community <- as.matrix(community_rast)
     }
@@ -185,15 +189,15 @@ launch_model <- function(){
       sites_start <- sample(1:nsite, size=nsp*10, replace=FALSE)
       sp_start<- rep(1:nsp, each=10)
       community <- matrix(0, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
-      community_rast <- raster(community)
+      community_rast <- raster::raster(community)
       community_rast[sites_start] <- sp_start
       community <- as.matrix(community_rast)
     }
-    community_start <- community
+    community_start[[r]] <- community
     
     # Plot the community at the start of the first repetition
     if (r==1) {
-      plot_community_start(model=model, fig_width=fig_width, community=community_start, nsp=nsp)
+      plot_community_start(model=model, fig_width=fig_width, community=community_start[[r]], nsp=nsp)
     }
     
     if(perf_know==FALSE&&IV==TRUE){
@@ -279,8 +283,6 @@ launch_model <- function(){
         
       }
       
-      #/!\ to be tested
-      
       if(mortality_fixed==TRUE){
         # No stocasticity: the 10 less performant individuals of the community die each generation
         
@@ -315,13 +317,14 @@ launch_model <- function(){
       
       if(n_mort!=0){
         
+        # Plot once
+        if (r==1 & g==1) {
+          plot_mortality_events(model, fig_width, community, mortality, nsp)
+        }
+        
         # Update community
         community[mortality==1] <- 0
         
-        # Plot once
-        if (r==1 & g==1 & start_full_landscape==TRUE) {
-          plot_mortality_events(model=model, fig_width=fig_width, community=community, nsp=nsp)
-        }
         
         # *********************
         # Fecundity/Recruitment
@@ -334,8 +337,8 @@ launch_model <- function(){
         nsp_present <- length(sp_present)
         
         # Vacant sites
-        community_rast <- raster(community)
-        sites_vacant <- which(values(community_rast)==0)
+        community_rast <- raster::raster(community)
+        sites_vacant <- which(raster::values(community_rast)==0)
         nsite_vacant <- length(sites_vacant)
         
         if(perf_know==FALSE&&IV==TRUE){
@@ -452,8 +455,6 @@ launch_model <- function(){
       
       if(perf_know==FALSE){
         
-        # /!\ to check
-        
         # Environmental filtering for the partial knowledge model
         #distance between the observed optimum of the species and the environmental conditions
         
@@ -469,9 +470,7 @@ launch_model <- function(){
             E_seq_mat[[k+ncol(Obs_env)]] <- E_seq_mat[[k]]^2
           }
           
-        }
-        
-        else{
+        }else{
           E_seq <- seq(min(Obs_env), max(Obs_env), length.out=100)
           E_seq_mat[[1]] <- matrix(rep(E_seq, nsp), ncol=nsp)
           E_seq_mat[[2]] <- E_seq_mat[[1]]^2
@@ -483,9 +482,7 @@ launch_model <- function(){
           for(k in 1:ncol(Inferred_species_parameters)){
             Inferred_parameters_mat_E_seq[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=nrow(E_seq)), ncol=nsp)
           }
-        }
-        
-        else{
+        }else{
           for(k in 1:ncol(Inferred_species_parameters)){
             Inferred_parameters_mat_E_seq[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=length(E_seq)), ncol=nsp)
           }
@@ -504,15 +501,17 @@ launch_model <- function(){
         if(n_observed_axis>1){
           Optimum_Sp_inferred <- matrix(nrow=n_observed_axis, ncol=nsp)
           for(sp in 1:nsp){
-            for(l in 1:n_observed_axis){
-              Optimum_Sp_inferred[l,sp] <- E_seq[which.max(Mat_perf_inferred[,sp]),l]
+            for(axis in 1:n_observed_axis){
+              #Optimum_Sp_inferred[l,sp] <- E_seq[which.max(Mat_perf_inferred[,sp]),l]
+              Optimum_Sp_inferred[axis,sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
             }
           }
           Optimum_Sp_inferred <- t(Optimum_Sp_inferred)
         }else{
           Optimum_Sp_inferred <- c()
           for(sp in 1:nsp){
-            Optimum_Sp_inferred[sp] <- E_seq[which.max(Mat_perf_inferred[,sp])]
+            #Optimum_Sp_inferred[sp] <- E_seq[which.max(Mat_perf_inferred[,sp])]
+            Optimum_Sp_inferred[sp] <- (-Inferred_species_parameters[sp,2])/(2*Inferred_species_parameters[sp,3])
           }
         }
         
@@ -537,12 +536,11 @@ launch_model <- function(){
       
     } # End ngen
     
-    community_end <- community
+    # store final community and plot it once
+    community_end[[r]] <- community
     
-    # Plot final community once
     if (r==1) {
-      plot_community_end(model=model, fig_width=fig_width, community=community_end, nsp=nsp)
-      save(community_end, file=here::here("outputs", model, glue::glue("community_end_{model}.RData")))
+      plot_community_end(model=model, fig_width=fig_width, community=community_end[[r]], nsp=nsp)
     }
     
     # Species rank
@@ -559,8 +557,10 @@ launch_model <- function(){
     #To keep the abundance matrixes in order to infer alpha matrix
     Abundances[[r]] <- abund
     
-    
   } # End nrep
+  
+  save(community_start, file=here::here("outputs", model, glue::glue("community_start_{model}.RData")))
+  save(community_end, file=here::here("outputs", model, glue::glue("community_end_{model}.RData")))
   
   sp_rich <- data.frame(sp_rich)
   env_filt <- data.frame(env_filt)
@@ -585,8 +585,6 @@ launch_model <- function(){
   # ---------------------------------------------
   
   plot_species_richness(nrep=nrep, sp_rich=sp_rich, model=model, fig_width=fig_width)
-  
-  plot_species_richness_log_10(sp_rich, ngen, model, fig_width)
   
   sp_rich_final <- sp_rich[ngen,]
   save(sp_rich_final, file=here::here("outputs", model, glue::glue("Species_richness_{model}.RData")))
@@ -619,20 +617,29 @@ launch_model <- function(){
   # ---------------------------------------------
   
   plot_env_filt(nrep, env_filt, model, fig_width)
-  plot_env_species(model, fig_width, community_start, community_end, env)
+  plot_env_species(model, fig_width, community_start[[r]], community_end[[r]], env)
   
   # ---------------------------------------------
   # Theta community
   # ---------------------------------------------
   
   if(mortality_fixed==FALSE){
-    plot_theta_community(theta_comm, ngen, model, fig_width)
+    plot_theta_community(theta_comm, ngen, nrep, model, fig_width)
   }
   
   # ----------------------------------
   # Spatial autocorrelation of species
   # ----------------------------------
   
-  plot_spatial_autocorr(community_end, sites, niche_width, model, fig_width)
+  plot_spatial_autocorr(community_end[[1]], sites, niche_width, env_stack, model, fig_width)
+
+  # ------------------------------------------------------
+  # Performance of species that *should* win vs. *do* win
+  # in the partial knowledge model
+  # ------------------------------------------------------
+  if(perf_know==FALSE){
+    plot_perf_suitable_habitat(perf_Sp_mean, sites, fig_width)
+    plot_perf_community_end(community_end, perf_Sp_mean, sites, fig_width)
+  }
   
 }
