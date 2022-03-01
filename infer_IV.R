@@ -16,14 +16,14 @@ infer_IV <- function(model, n_observed_axis){
   names(df) <- c(sprintf("Sp_%02d", 1:nsp))
   
   #df_perf <- tibble(df) %>%
-  #mutate(Env_1=values(raster(env[[1]])), Env_2=values(raster(env[[2]])), Env_3=values(raster(env[[3]]))) %>%
-  #mutate(Env_1_sq=Env_1^2, Env_2_sq=Env_2^2, Env_3_sq=Env_3^2) %>%
-  #pivot_longer(cols=c(Sp_001:glue("Sp_0{nsp-1}"), glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
+  #dplyr::mutate(Env_1=raster::values(raster::raster(env[[1]])), Env_2=raster::values(raster::raster(env[[2]])), Env_3=raster::values(raster::raster(env[[3]]))) %>%
+  #dplyr::mutate(Env_1_sq=Env_1^2, Env_2_sq=Env_2^2, Env_3_sq=Env_3^2) %>%
+  #tidyr::pivot_longer(cols=c(Sp_001:glue::glue("Sp_0{nsp-1}"), glue::glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
   
   df_perf <- data.frame(matrix(nrow=nrow(df), ncol=ncol(df)+2*n_axis))
   df_perf[,1:ncol(df)] <- df
   for(k in 1:n_axis){
-    df_perf[,ncol(df)+k] <- values(raster(env[[k]]))
+    df_perf[,ncol(df)+k] <- raster::values(raster::raster(env[[k]]))
     df_perf[,ncol(df)+(k+n_axis)] <- (df_perf[,ncol(df)+k])^2
   }
   

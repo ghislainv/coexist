@@ -153,11 +153,11 @@ launch_model <- function(){
   community_start <- list()
   
   # Loop on repetitions
-  print("Entering the repetition loop")
+  #print("Entering the repetition loop")
   
   for (r in 1:nrep) {
     
-    print(paste0("Repetition ", r))
+    print(paste0("Repetition ", r, "/", nrep))
     
     abund <- matrix(NA, ncol=nsp, nrow=ngen)
     #used if disp_dep_abund==TRUE 
@@ -210,12 +210,12 @@ launch_model <- function(){
     # Dynamics
     # -----------------------------------------
     
-    print("Entering the loop on generations")
+    #print("Entering the loop on generations")
     
     # Simulating generation
     for (g in 1:ngen) {
       
-      print(paste0("Generation ", g))
+      print(paste0("Generation ", g, "/", ngen, " of repetition ", r, "/", nrep))
       
       # Species richness
       sp_rich[g, r] <- length(unique(as.vector(community[community!=0])))
@@ -225,7 +225,7 @@ launch_model <- function(){
       # Mortality
       # ******************
       
-      print("Computing mortality...")
+      #print("Computing mortality...")
       
       if(mortality_fixed==FALSE){
         
@@ -330,7 +330,7 @@ launch_model <- function(){
         # Fecundity/Recruitment
         # *********************
         
-        print("Computing recruitment...")
+        #print("Computing recruitment...")
         
         # Species present in the community
         sp_present <- sort(unique(community[community!=0]))
@@ -445,7 +445,7 @@ launch_model <- function(){
       # Diversity
       # *********************
       
-      print("Computing abundances and ecological indices...")
+      #print("Computing abundances and ecological indices...")
       
       # Environmental filtering
       if(IV==FALSE&&perf_know==TRUE){
@@ -631,6 +631,7 @@ launch_model <- function(){
   # Spatial autocorrelation of species
   # ----------------------------------
   
+  load(here::here("outputs", model, "env_stack.RData"))
   plot_spatial_autocorr(community_end[[1]], sites, niche_width, env_stack, model, fig_width)
 
   # ------------------------------------------------------

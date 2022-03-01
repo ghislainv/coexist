@@ -1,50 +1,51 @@
 compare_models<-function(){
-  models_all <- c("Perf_know_full_mort_stocha",
-                  "Perf_know_full_mort_stocha_disp_abund",
-                  "Perf_know_start_1_mort_stocha",
-                  "Perf_know_start_1_mort_stocha_disp_abund",
-                  "Perf_know_start_10_mort_stocha",
-                  "Perf_know_start_10_mort_stocha_disp_abund",
-                  "Perf_know_full_mort_fixed",
-                  "Perf_know_full_mort_fixed_disp_abund",
-                  "Perf_know_start_10_mort_fixed",
-                  "Perf_know_start_10_mort_fixed_disp_abund",
-                  "Part_know_IV_full_mort_stocha",
-                  "Part_know_IV_full_mort_stocha_disp_abund",
-                  "Part_know_IV_start_1_mort_stocha",
-                  "Part_know_IV_start_1_mort_stocha_disp_abund",
-                  "Part_know_IV_start_10_mort_stocha",
-                  "Part_know_IV_start_10_mort_stocha_disp_abund",
-                  "Part_know_IV_full_mort_fixed",
-                  "Part_know_IV_full_mort_fixed_disp_abund",
-                  "Part_know_IV_start_10_mort_fixed",
-                  "Part_know_IV_start_10_mort_fixed_disp_abund",
-                  "Part_know_full_mort_stocha",
-                  "Part_know_full_mort_stocha_disp_abund",
-                  "Part_know_start_1_mort_stocha",
-                  "Part_know_start_1_mort_stocha_disp_abund",
-                  "Part_know_full_mort_fixed",
-                  "Part_know_full_mort_fixed_disp_abund",
-                  "Part_know_start_10_mort_fixed",
-                  "Part_know_start_10_mort_fixed_disp_abund")
+  dir.create(here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs")))
+  # models_all <- c("Perf_know_full_mort_stocha",
+  #                 "Perf_know_full_mort_stocha_disp_abund",
+  #                 "Perf_know_start_1_mort_stocha",
+  #                 "Perf_know_start_1_mort_stocha_disp_abund",
+  #                 "Perf_know_start_10_mort_stocha",
+  #                 "Perf_know_start_10_mort_stocha_disp_abund",
+  #                 "Perf_know_full_mort_fixed",
+  #                 "Perf_know_full_mort_fixed_disp_abund",
+  #                 "Perf_know_start_10_mort_fixed",
+  #                 "Perf_know_start_10_mort_fixed_disp_abund",
+  #                 "Part_know_IV_full_mort_stocha",
+  #                 "Part_know_IV_full_mort_stocha_disp_abund",
+  #                 "Part_know_IV_start_1_mort_stocha",
+  #                 "Part_know_IV_start_1_mort_stocha_disp_abund",
+  #                 "Part_know_IV_start_10_mort_stocha",
+  #                 "Part_know_IV_start_10_mort_stocha_disp_abund",
+  #                 "Part_know_IV_full_mort_fixed",
+  #                 "Part_know_IV_full_mort_fixed_disp_abund",
+  #                 "Part_know_IV_start_10_mort_fixed",
+  #                 "Part_know_IV_start_10_mort_fixed_disp_abund",
+  #                 "Part_know_full_mort_stocha",
+  #                 "Part_know_full_mort_stocha_disp_abund",
+  #                 "Part_know_start_1_mort_stocha",
+  #                 "Part_know_start_1_mort_stocha_disp_abund",
+  #                 "Part_know_full_mort_fixed",
+  #                 "Part_know_full_mort_fixed_disp_abund",
+  #                 "Part_know_start_10_mort_fixed",
+  #                 "Part_know_start_10_mort_fixed_disp_abund")
+  # 
+  # models_choices <- c("Perf_know_start_10_mort_fixed",
+  #                     "Perf_know_start_10_mort_fixed_disp_abund",
+  #                     "Part_know_start_10_mort_fixed",
+  #                     "Part_know_start_10_mort_fixed_disp_abund",
+  #                     "Part_know_IV_start_10_mort_fixed",
+  #                     "Part_know_IV_start_10_mort_fixed_disp_abund")
+  # 
+  # models_choices <- c("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+  #                     "Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs",
+  #                     "Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+  #                     "Part_know_start_10_mort_fixed_disp_abund_10_axes_5_obs",
+  #                     "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs",
+  #                     "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_5_obs")
   
-  models_choices <- c("Perf_know_start_10_mort_fixed",
-                      "Perf_know_start_10_mort_fixed_disp_abund",
-                      "Part_know_start_10_mort_fixed",
-                      "Part_know_start_10_mort_fixed_disp_abund",
-                      "Part_know_IV_start_10_mort_fixed",
-                      "Part_know_IV_start_10_mort_fixed_disp_abund")
-  
-  models_choices <- c("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-                      "Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs",
-                      "Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-                      "Part_know_start_10_mort_fixed_disp_abund_10_axes_5_obs",
-                      "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-                      "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_5_obs")
-  
-  models_choices <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
-                      glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
-                      glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"))
+  models_choices <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"),
+                      glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"),
+                      glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"))
   
   models <- models_choices
   
@@ -63,12 +64,12 @@ compare_models<-function(){
     ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
     ggplot2::scale_colour_manual(values=c("#80002D", "#008071", "#088000"))+
     #ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
-    ggplot2::labs(title = "Beeswarmplot of the Shannon diversity index \n at the end of each simulation \n with different models",
+    ggplot2::labs(title = "Beeswarmplot of the Shannon diversity index \n at the end of each simulation",
                   x = "Model",
                   y = "Shannon diversity index")+
     ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Shannon.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Shannon_boxplot.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   
@@ -84,19 +85,25 @@ compare_models<-function(){
   
   p <- ggplot2::ggplot(data=Spearman_all_models, ggplot2::aes(x=as.factor(Model), y=Spearman))+
     ggplot2::geom_boxplot()+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Model)), alpha=0.1)+
+    #ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
     ggplot2::scale_colour_manual(values=c("#80002D", "#008071", "#088000"))+
     #ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
-    ggplot2::labs(title = "Beeswamplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation \n with different models",
+    # ggplot2::labs(title = "Beeswamplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation",
+    #               x = "Model",
+    #               y = "Spearman pairwise correlation")+
+    ggplot2::labs(title = "Jitterplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation",
                   x = "Model",
                   y = "Spearman pairwise correlation")+
     ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Spearman.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Spearman_boxplot.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
-  # 3: Compare the composition of the community at the end of the simulations between models (similarity matrix)
-  # 4: Percentage similarity
+  # 3: Compare the composition of the community at the end of the simulations between models
+  # Jaccard index (similarity matrix)
+  
+  # 4:  Percentage similarity of species abudances
   
   jaccard <- function(a, b) {
     intersection = length(intersect(a, b))
@@ -139,6 +146,10 @@ compare_models<-function(){
   list_percentage_similarity_matrix <- list()
   mean_percentage_similarity <- c()
   
+  vec_jaccard <- c()
+  vec_combi_models_jaccard <- c()
+  vec_combi_rep_jaccard <- c()
+  
   vec_percentage_similarity <- c()
   vec_combi_models_percentage_similarity <- c()
   vec_combi_rep_percentage_similarity <- c()
@@ -156,6 +167,9 @@ compare_models<-function(){
       vec_percentage_similarity <- c(vec_percentage_similarity, c(list_percentage_similarity_matrix[[l]]))
       vec_combi_models_percentage_similarity <- c(vec_combi_models_percentage_similarity, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep_same_model)))
       vec_combi_rep_percentage_similarity <- c(vec_combi_rep_percentage_similarity, paste0(combi_rep_same_model[,1], "-", combi_rep_same_model[,2]))
+      vec_jaccard <- c(vec_jaccard, c(list_jaccard_matrix[[l]]))
+      vec_combi_models_jaccard <- c(vec_combi_models_jaccard, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep_same_model)))
+      vec_combi_rep_jaccard <- c(vec_combi_rep_jaccard, paste0(combi_rep_same_model[,1], "-", combi_rep_same_model[,2]))
     }
     else {
       list_jaccard_matrix[[l]] <- matrix(nrow=nrep, ncol=nrep)
@@ -167,6 +181,9 @@ compare_models<-function(){
       vec_percentage_similarity <- c(vec_percentage_similarity, c(list_percentage_similarity_matrix[[l]]))
       vec_combi_models_percentage_similarity <- c(vec_combi_models_percentage_similarity, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep)))
       vec_combi_rep_percentage_similarity <- c(vec_combi_rep_percentage_similarity, paste0(combi_rep[,1], "-", combi_rep[,2]))
+      vec_jaccard <- c(vec_jaccard, c(list_jaccard_matrix[[l]]))
+      vec_combi_models_jaccard <- c(vec_combi_models_jaccard, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep)))
+      vec_combi_rep_jaccard <- c(vec_combi_rep_jaccard, paste0(combi_rep[,1], "-", combi_rep[,2]))
     }
     mean_jaccard[l] <- mean(list_jaccard_matrix[[l]])
     mean_percentage_similarity[l] <- mean(list_percentage_similarity_matrix[[l]])
@@ -189,7 +206,7 @@ compare_models<-function(){
                   y = "Model 2",
                   fill="Jaccard index")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Jaccard.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Jaccard_tileplot.png"),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
   
   p <- ggplot2::ggplot(data = combi_models_percentage_similarity, ggplot2::aes(x=mod1, y=mod2, fill=Percentage_similarity))+ 
@@ -201,8 +218,28 @@ compare_models<-function(){
                   y = "Model 2",
                   fill="Percentage similarity")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Percentage_similarity.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Percentage_similarity_tileplot.png"),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
+  
+  Jaccard_all_models <- data.frame(jaccard=vec_jaccard,
+                                   combi_models=vec_combi_models_jaccard,
+                                   combi_rep=vec_combi_rep_jaccard)
+  
+  p <- ggplot2::ggplot(data=Jaccard_all_models, ggplot2::aes(x=as.factor(combi_models), y=jaccard))+
+    ggplot2::geom_boxplot()+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.1)+
+    #ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.6)+
+    ggplot2::scale_colour_viridis_d()+
+    # ggplot2::labs(title = "Beeswarmplot of the Jaccard index of the composition \n of the final community; \n each point is a comparison between two repetitions ",
+    #               x = "Model combination",
+    #               y = "Jaccard index of the composition of the community")+
+    ggplot2::labs(title = "Jitterplot of the Jaccard index of the composition \n of the final community; \n each point is a comparison between two repetitions ",
+                  x = "Model combination",
+                  y = "Jaccard index of the composition of the community")+
+    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Jaccard_boxplot.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Percentage_similarity_all_models <- data.frame(percentage_similarity=vec_percentage_similarity,
                                                  combi_models=vec_combi_models_percentage_similarity,
@@ -210,21 +247,27 @@ compare_models<-function(){
   
   p <- ggplot2::ggplot(data=Percentage_similarity_all_models, ggplot2::aes(x=as.factor(combi_models), y=percentage_similarity))+
     ggplot2::geom_boxplot()+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.6)+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.1)+
+    #ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.6)+
     ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Beeswarmplot of the percentage similarity of species abundance; \n each point is a comparison between two repetitions ",
+    # ggplot2::labs(title = "Beeswarmplot of the percentage similarity of species abundance; \n each point is a comparison between two repetitions ",
+    #               x = "Model combination",
+    #               y = "Percentage similarity of species abundance")+
+    ggplot2::labs(title = "Jitterplot of the percentage similarity of species abundance; \n each point is a comparison between two repetitions ",
                   x = "Model combination",
                   y = "Percentage similarity of species abundance")+
     ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Percentage_similarity_beeswarmplot.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Percentage_similarity_boxplot.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
 }
 
 Compare_IV_axis_nb <- function(){
-  models <- c("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-                      "Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs")
+  dir.create(here::here("outputs", glue::glue("Comparison_seed_{seed}")))
+  
+  models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
+                      glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs_seed_{seed}"))
   
   nb_obs_axes <- c(1, 5)
   
@@ -237,7 +280,7 @@ Compare_IV_axis_nb <- function(){
   }
   
   p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Model), y=IV))+
-    ggplot2::geom_box()+
+    ggplot2::geom_boxplot()+
     ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Beeswarmplot of the intraspecific variability index \n inferred with different levels of knowledge",
@@ -246,7 +289,7 @@ Compare_IV_axis_nb <- function(){
     scale_x_discrete(labels=nb_obs_axes)+
     ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "IV_nb_axes.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}"), "IV_nb_axes.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
 }

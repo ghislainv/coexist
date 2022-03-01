@@ -26,6 +26,7 @@ launch_model()
 # ========================================
 
 if(perf_know==TRUE){
+  source(file = "./call_libraries.R")
   source("infer_IV.R")
   infer_IV(model, n_observed_axis)
 }

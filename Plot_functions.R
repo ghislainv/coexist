@@ -15,7 +15,13 @@ plot_environment <- function(model, fig_width, n_axis, env){
     #RGB environment
     env_stack <- stack(raster::raster(env[[1]]*255), raster::raster(env[[2]]*255), raster::raster(env[[3]]*255))
     crs(env_stack) <- "+proj=utm +zone=1"
-    plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
+    class_site <- entrelac(
+      raster::values(env_stack@layers[[1]]),
+      raster::values(env_stack@layers[[2]]),
+      raster::values(env_stack@layers[[3]])
+    )
+    raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), col=viridisLite::viridis(255^3))
+    #plotRGB(env_stack, main="Environment RGB", axes=TRUE, margins=TRUE)
   }
   
   dev.off()
@@ -202,7 +208,9 @@ plot_env_filt<- function(nrep, env_filt, model, fig_width){
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title="Environmental filtering") +
     ggplot2::xlab("Generations") + 
-    ggplot2::ylab("Mean env-species perf difference")
+    ggplot2::ylab("Mean env-species perf difference")+
+    ggplot2::theme(legend.position = "none",
+                   text = ggplot2::element_text(size = 20))
   ggplot2::ggsave(p, filename=here::here("outputs", model, "environmental_filtering.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
   
@@ -275,7 +283,9 @@ plot_theta_community<-function(theta_comm, ngen, nrep, model, fig_width){
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title="Environmental filtering") +
     ggplot2::xlab("Generations") + 
-    ggplot2::ylab("Mean mortality rate in the community")
+    ggplot2::ylab("Mean mortality rate in the community")+
+    ggplot2::theme(legend.position = "none",
+                   text = ggplot2::element_text(size = 20))
   ggplot2::ggsave(p, filename=here::here("outputs", model, "mortality_rate_community.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
   
@@ -301,7 +311,8 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, env_stack, 
   sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
   names(sp_XY) <- c("x", "y", "sp")
   vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
-  plot(vario_sp[["bins.lim"]][-length(vario_sp[["bins.lim"]])], vario_sp[["v"]])
+  #plot(vario_sp[["bins.lim"]][-length(vario_sp[["bins.lim"]])], vario_sp[["v"]])
+  
   # Environment autocorrelation
   # 3D voxel for each site
   if(n_axis==3){
@@ -334,24 +345,33 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, env_stack, 
     raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), col=viridisLite::viridis(255^3))
     dev.off()
     
-    vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
+    #vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
     
-    semivar_env <- semivar_mutlidim(sites, n_axis, sp_XY, vario_sp)
-    plot(vario_env[["bins.lim"]][-length(vario_env[["bins.lim"]])], semivar_env)
+    semivar_multidim_env <- semivar_mutlidim(sites, n_axis, sp_XY, vario_sp)
   }
   # Plot with correlation
-  plot(vario_sp[["v"]] , semivar_env)
   png(file=here::here("outputs", model, "sp_autocorrelation.png"),
       width=fig_width, height=fig_width*0.8, units="cm", res=300)
   par(mfrow=c(2,2), bty = "n")
   plot(vario_sp, main="Species - End")
-  plot(vario_env, main="Environment")
-  plot(vario_env$v, vario_sp$v,
+  #plot(vario_env, main="Environment")
+  plot(vario_sp[["bins.lim"]][-length(vario_sp[["bins.lim"]])], semivar_multidim_env,
+       main="Environment",
+       xlab="distance",
+       ylab="semivariance")
+  # plot(vario_env$v, vario_sp$v,
+  #      main = "Regression",
+  #      xlab="Semivariance for environment",
+  #      ylab="Semivariance for species")
+  # m <- lm(vario_sp$v ~ vario_env$v)
+  # /!\ a=intercept and b=slope
+  # abline(a=0, b=coef(m), col="red")
+  plot(semivar_multidim_env, vario_sp[["v"]],
        main = "Regression",
        xlab="Semivariance for environment",
        ylab="Semivariance for species")
-  m <- lm(vario_sp$v ~ vario_env$v)
-  abline(a=0, b=coef(m), col="red")
+  m <- lm(vario_sp$v ~ semivar_multidim_env)
+  abline(a=as.numeric(coef(m)[1]), b=as.numeric(coef(m)[2]), col="#008071")
   dev.off()
 }
 
