@@ -12,7 +12,8 @@ high_perf_sp <- function(dist, sp_pres) {
   return(sp_high_perf)
 }
 
-# Identify the species with the highest performance
+# Other Function to identify the species with the highest performance
+# For use in plyr::ddply
 f_sp <- function(x) {
   w <- which(x[,3]==max(x[,3]))
   return(x[sample(w, 1),1])

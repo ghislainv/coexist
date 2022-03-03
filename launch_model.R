@@ -345,7 +345,6 @@ launch_model <- function(){
           # New individual effects for potential new individuals (one per site and species)
           epsilon <- rnorm(nsite*nsp, 0, sd=sqrt(rep(V_intra$V, each=nsite)))
           perf_ind_pot <- perf_Sp_mean + epsilon
-          
         }
         
         if(disp_dep_abund==FALSE){
@@ -355,34 +354,46 @@ launch_model <- function(){
             # Performance of species on vacant sites
             dist_E_Sp_vacant <- dist_E_Sp[sites_vacant, ]
             
-            # Identify the species with the highest performance
+            # Identify the present species with the highest performance on vacant sites
             new_ind <- apply(dist_E_Sp_vacant, 1, high_perf_sp, sp_pres=sp_present)
             
             # Recruitment
             community_rast[sites_vacant] <- new_ind
             
-          } # end condition on no IV
+          } # end condition perfect knowledge and no IV
           
           if(perf_know==FALSE&&IV==FALSE){
-            # Identify the present species with the highest performance on vacant sites (maximum in each line)
-            sp_high_perf <- sp_present[apply(matrix(perf_Sp_mean[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
+            
+            # Identify the present species with the highest performance on vacant sites
+            #sp_high_perf <- sp_present[apply(matrix(perf_Sp_mean[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
+            sp_high_perf <- apply(-matrix(perf_Sp_mean[sites_vacant, sp_present], ncol=nsp_present), 1, high_perf_sp, sp_pres=sp_present)
             
             # Recruitment
             community_rast[sites_vacant] <- sp_high_perf
-          } # end condition on IV
+            
+          } # end condition partial knowledge and no IV
           
           if(perf_know==FALSE&&IV==TRUE){
-            # Update performance matrix
-            perf_ind[sites_vacant, sp_present] <- perf_ind_pot[sites_vacant, sp_present]
             
             # Identify the present species with the highest performance on vacant sites (maximum in each line)
-            sp_high_perf <- sp_present[apply(matrix(perf_ind_pot[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
+            #sp_high_perf <- sp_present[apply(matrix(perf_ind_pot[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
+            sp_high_perf <- apply(-matrix(perf_ind_pot[sites_vacant, sp_present], ncol=nsp_present), 1, high_perf_sp, sp_pres=sp_present)
             
             # Recruitment
             community_rast[sites_vacant] <- sp_high_perf
-          } # end condition on IV
+            
+            # Update performance matrix
+            # not OK if we want to change only recruited species:
+            #perf_ind[sites_vacant, sp_present] <- perf_ind_pot[sites_vacant, sp_present]
+            # OK:
+            # /!\ remove loop?
+            for(k in 1:nsite_vacant){
+              perf_ind[sites_vacant[k], sp_high_perf[k]] <- perf_ind_pot[sites_vacant[k], sp_high_perf[k]]
+            }
+            
+          } # end condition partial knowledge + IV
           
-        } # end condition on abundance dependence
+        } # end condition no abundance dependence
         
         if (disp_dep_abund==TRUE){
           
@@ -390,12 +401,13 @@ launch_model <- function(){
           nb_seeds_sp <- round(abund_after_mortality*fecundity)
           nb_seeds_tot <- sum(nb_seeds_sp)
           
+          # Each seed is dispersed to a random vacant site; several seeds can land on the same site.
           sites_of_seeds <- sample(sites_vacant, nb_seeds_tot, replace=TRUE)
           
-          # Performance of species on vacant sites
+          # Performance on vacant sites of species which have seeds
           seeds <- data.frame(Species=rep(1:nsp, times=nb_seeds_sp), Sites=sites_of_seeds)
           
-          if (nrow(seeds)>1) {
+          if (nb_seeds_tot>1) {
             if(perf_know==TRUE&&IV==FALSE){
               seeds$Perf <- diag(perf_E_Sp[seeds$Sites, seeds$Species])
             }
@@ -415,7 +427,7 @@ launch_model <- function(){
             if(perf_know==FALSE&&IV==TRUE){
               seeds$Perf <- perf_ind_pot[seeds$Sites, seeds$Species]
             }
-          } # end else number of seeds
+          } # end else (one seed)
           
           new_ind <- plyr::ddply(seeds, c("Sites"), f_sp)
           colnames(new_ind) <- c("Sites", "Species")
@@ -423,18 +435,15 @@ launch_model <- function(){
           # Recruitment
           community_rast[new_ind$Sites] <- new_ind$Species
           
+          # Update performance matrix with recruited seeds
           if(perf_know==FALSE&&IV==TRUE){
-            # /!\ remove loop
+            # /!\ remove loop?
             for(k in 1:nrow(new_ind)){
-              
               perf_ind[new_ind$Sites[k], new_ind$Species[k]] <- perf_ind_pot[new_ind$Sites[k], new_ind$Species[k]]
-              
             }
-            
           }
           
-        } # end condition on option on abundance dependence of dispersion 
-        
+        } # end condition on abundance dependence of dispersion
         
       }  # end condition on n_mort (contains all cases)
       

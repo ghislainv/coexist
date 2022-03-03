@@ -416,6 +416,82 @@ plot_IV <- function(V_intra, model, fig_width){
          width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
+plot_relationship_IV_inferred_optima <- function(V_intra,
+                                                 n_observed_axis,
+                                                 Inferred_species_parameters,
+                                                 community_end,
+                                                 sp_hab_freq,
+                                                 model,
+                                                 fig_width){
+
+  Freq_sp_model_IV <- as.data.frame(table(unlist(community_end)))
+  
+  IV_opt_sp_estim <- data.frame(Species = 1:nrow(V_intra),
+                                Opt_estim=numeric(nrow(V_intra)),
+                                Perf_opt=numeric(nrow(V_intra)),
+                                IV=V_intra$V,
+                                Frequency=numeric(nrow(V_intra)),
+                                Presence=numeric(nrow(V_intra)),
+                                Hab_freq=as.data.frame(sp_hab_freq)$Freq,
+                                Winner=character(nrow(V_intra)))
+  
+  for(sp in 1:nrow(V_intra)){
+    for(axis in 1:n_observed_axis){
+      IV_opt_sp_estim$Opt_estim[sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
+    }
+    if(sp%in%unlist(community_end)){
+      IV_opt_sp_estim$Frequency[sp] <- Freq_sp_model_IV[Freq_sp_model_IV$Var1==sp,]$Freq
+      IV_opt_sp_estim$Presence[sp] <- 1
+    }else{
+      IV_opt_sp_estim$Frequency[sp]<-0
+      IV_opt_sp_estim$Presence[sp] <- 0
+    }
+    if(IV_opt_sp_estim$Hab_freq[sp]!=0){
+      IV_opt_sp_estim$Winner[sp] <- "theoretical"
+    }else{IV_opt_sp_estim$Winner[sp] <- "not present"}
+  }
+  
+  if(length(IV_opt_sp_estim[IV_opt_sp_estim$Opt_estim>1,]$Opt_estim)!=0){
+    IV_opt_sp_estim[IV_opt_sp_estim$Opt_estim>1,]$Opt_estim <- 1
+  }
+  if(length(IV_opt_sp_estim[IV_opt_sp_estim$Opt_estim<0,]$Opt_estim)!=0){
+    IV_opt_sp_estim[IV_opt_sp_estim$Opt_estim<0,]$Opt_estim <- 0
+  }
+  
+  for(sp in 1:nrow(V_intra)){
+    for(axis in 1:n_observed_axis){
+      IV_opt_sp_estim$Perf_opt[sp] <- Inferred_species_parameters[sp,axis] + Inferred_species_parameters[sp,axis+1]*IV_opt_sp_estim$Opt_estim[sp] + Inferred_species_parameters[sp,2*axis+1]*(IV_opt_sp_estim$Opt_estim[sp])^2
+    }
+  }
+  
+  IV_opt_sp_estim[which(IV_opt_sp_estim$Winner!="theoretical"&IV_opt_sp_estim$Presence==1),]$Winner<-"IV"
+  
+  IV_opt_sp_estim$Freq_IV_winner <- c(0)
+  IV_opt_sp_estim[IV_opt_sp_estim$Winner=="IV",]$Freq_IV_winner <- IV_opt_sp_estim[IV_opt_sp_estim$Winner=="IV",]$Frequency
+  
+  ggplot2::ggplot(IV_opt_sp_estim, aes(Opt_estim, IV))+
+    ggplot2::geom_point(aes(shape=as.factor(Winner), colour=Freq_IV_winner), size=3)+
+    ggplot2::scale_colour_viridis_c(option = "plasma")+
+    ggplot2::labs(x="Estimated optimum",
+                  y="Estimated IV",
+                  shape="Species presence",
+                  colour="Frequency of presence \n in final community \n (only species maintained thanks to IV)")+
+    ggplot2::theme(text = ggplot2::element_text(size = 20),
+                   legend.title = ggplot2::element_text(size=14),
+                   legend.text =  ggplot2::element_text(size=14))
+  
+  ggplot2::ggplot(IV_opt_sp_estim, aes(Opt_estim, IV))+
+    ggplot2::geom_point(aes(shape=as.factor(Winner), colour=Perf_opt), size=3)+
+    ggplot2::scale_colour_viridis_c(option = "plasma")+
+    ggplot2::labs(x="Estimated optimum",
+                  y="Estimated IV",
+                  shape="Species presence",
+                  colour="Performance at optimum")+
+    ggplot2::theme(text = ggplot2::element_text(size = 20),
+                   legend.title = ggplot2::element_text(size=16),
+                   legend.text =  ggplot2::element_text(size=14))
+}
+
 plot_optima_real_estim <- function(nsp, n_observed_axis, niche_optimum, Inferred_species_parameters, model, fig_width){
   
   opt_sp_estim_vs_real <- data.frame(Species = 1:nsp, Real=numeric(nsp), Estim=numeric(nsp))
@@ -451,8 +527,11 @@ plot_optima_real_estim <- function(nsp, n_observed_axis, niche_optimum, Inferred
   ggplot2::ggsave(p, filename=here::here("outputs", model, "optima_estim.png"),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
   
-  opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim>1,]$Estim <- 1
-  opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim<0,]$Estim <- 0
+  if(length(opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim>1,]$Estim)!=0){
+    opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim>1,]$Estim <- 1}
+  if(length(opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim<0,]$Estim)!=0){
+    opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim<0,]$Estim <- 0
+  }
   
   p <- ggplot2::ggplot(data=opt_sp_estim_vs_real, ggplot2::aes(x=Estim, y=Horizontal,  colour=factor(Species)))+
     ggplot2::geom_point()+
@@ -648,4 +727,70 @@ plot_perf_suitable_habitat <- function(perf_Sp_mean, sites, fig_width){
     
     ggplot2::ggsave(p, filename=here::here("outputs", model, "perf_suitable_habitat.png"),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
+}
+
+
+plot_perf_opt_clandestine <- function(
+                              n_observed_axis,
+                              Inferred_species_parameters,
+                              community_end,
+                              sp_hab_freq,
+                              model,
+                              fig_width){
+  
+  Freq_sp_model_part_know <- as.data.frame(table(unlist(community_end)))
+  
+  opt_estim_winner <- data.frame(Species = 1:nrow(Inferred_species_parameters),
+                             Opt_estim=numeric(nrow(Inferred_species_parameters)),
+                             Perf_opt=numeric(nrow(Inferred_species_parameters)),
+                             Frequency=numeric(nrow(Inferred_species_parameters)),
+                             Presence=numeric(nrow(Inferred_species_parameters)),
+                             Hab_freq=as.data.frame(sp_hab_freq)$Freq,
+                             Winner=character(nrow(Inferred_species_parameters)))
+  
+  for(sp in 1:nrow(Inferred_species_parameters)){
+    for(axis in 1:n_observed_axis){
+      opt_estim_winner$Opt_estim[sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
+    }
+    if(sp%in%unlist(community_end)){
+      opt_estim_winner$Frequency[sp] <- Freq_sp_model_part_know[Freq_sp_model_part_know$Var1==sp,]$Freq
+      opt_estim_winner$Presence[sp] <- 1
+    }else{
+      opt_estim_winner$Frequency[sp]<- 0
+      opt_estim_winner$Presence[sp] <- 0
+    }
+    if(opt_estim_winner$Hab_freq[sp]!=0){
+      opt_estim_winner$Winner[sp] <- "theoretical"
+    }
+  }
+  
+  if(length(opt_estim_winner[opt_estim_winner$Opt_estim>1,]$Opt_estim)!=0){
+    opt_estim_winner[opt_estim_winner$Opt_estim>1,]$Opt_estim <- 1
+  }
+  if(length(opt_estim_winner[opt_estim_winner$Opt_estim<0,]$Opt_estim)!=0){
+    opt_estim_winner[opt_estim_winner$Opt_estim<0,]$Opt_estim <- 0
+  }
+  
+  for(sp in 1:nrow(Inferred_species_parameters)){
+    for(axis in 1:n_observed_axis){
+      opt_estim_winner$Perf_opt[sp] <- Inferred_species_parameters[sp,axis] + Inferred_species_parameters[sp,axis+1]*opt_estim_winner$Opt_estim[sp] + Inferred_species_parameters[sp,2*axis+1]*(opt_estim_winner$Opt_estim[sp])^2
+    }
+  }
+  
+  opt_estim_winner[which(opt_estim_winner$Winner!="theoretical"&opt_estim_winner$Presence==1),]$Winner<-"clandestine"
+  opt_estim_winner[which(opt_estim_winner$Winner=="theoretical"&opt_estim_winner$Presence==1),]$Winner<-"theoretical - present"
+  if(length(which(opt_estim_winner$Winner=="theoretical"&opt_estim_winner$Presence==0))!=0){
+    opt_estim_winner[which(opt_estim_winner$Winner=="theoretical"&opt_estim_winner$Presence==0),]$Winner<-"theoretical - absent"
+  }
+  opt_estim_winner[which(opt_estim_winner$Winner!="theoretical"&opt_estim_winner$Presence==0),]$Winner<-"disappeared"
+  
+  ggplot2::ggplot(opt_estim_winner, aes(Opt_estim, Perf_opt))+
+    ggplot2::geom_point(aes(colour=as.factor(Winner)), size=3)+
+    ggplot2::scale_colour_viridis_d(option = "plasma")+
+    ggplot2::labs(x="Estimated optimum",
+                  y="Performance at optimum",
+                  colour="Presence in final community")+
+    ggplot2::theme(text = ggplot2::element_text(size = 20),
+                   legend.title = ggplot2::element_text(size=16),
+                   legend.text =  ggplot2::element_text(size=14))
 }
