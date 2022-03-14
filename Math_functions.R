@@ -43,26 +43,89 @@ entrelac <- function(r, g, b){
   return (total)
 }
 
+# Function to identify the species with the highest performance
+high_perf_sp <- function(dist, sp_pres) {
+  dist_pres <- dist[sp_pres]
+  min_dist <- min(dist_pres)
+  sp_high_perf <- sp_pres[which(dist_pres==min_dist)]
+  # If more than one species, selection at random
+  if (length(sp_high_perf)>1) {
+    # Random permutation
+    sp_high_perf <- sample(sp_high_perf)
+    sp_high_perf <- sp_high_perf[1]
+  }
+  return(sp_high_perf)
+}
+
+# Other function to identify the species with the highest performance
+# For use in plyr::ddply
+f_sp <- function(x) {
+  w <- which(x[,3]==max(x[,3]))
+  return(x[sample(w, 1),1])
+}
+
 # Function to compute a multidimensional semivariance
 semivar_mutlidim <- function(sites, n_axis, sp_XY, vario_sp){
-  #Compute the sum of squared differences 
+  
+  #Compute the sum of squared differences of environmental conditions
   Dist_env <- as.vector(dist(sites[, 1]))^2
   for (k in 2:n_axis){
     Dist_env <- Dist_env + as.vector(dist(sites[, k]))^2
   }
-  #Compute the geographical distance between all cells
-  Dist_cells <- as.vector(dist(sp_XY[,-3]))
   
-  Dist_env_cells <- data.frame(Env=Dist_env, Cells=Dist_cells)
+  #Compute the sum of squared differences of species optima
+  dist_sp <- as.vector(dist(niche_optimum[,1]))^2
+  for (k in 2:n_axis){
+    dist_sp <- dist_sp + as.vector(dist(niche_optimum[, k]))^2
+  }
+  Dist_sp <- data.frame(Sp=t(combn(1:nsp, 2)), Dist_sp=dist_sp)
+  # Add diagonal without computing it
+  Dist_sp <- rbind(Dist_sp, data.frame(Sp.1=1:nsp, Sp.2=1:nsp, Dist_sp=rep(0, nsp)))
+  
+  # Compute the geographical distance between all cells
+  dist_cells <- as.vector(dist(sp_XY[,-3]))
+  # Associate each geographical distance to the cell number of the pair of cells
+  Dist_neigbours_cells <- data.frame(Neighbour=t(combn(1:nrow(sites), 2)), Cells=dist_cells)
+  # Add the species that is present on each cell
+  List_present_species <- data.frame(Cell=1:nrow(sites), Sp=as.vector(raster::raster(community_end[[1]])))
+  for(k in 1:nrow(Dist_neigbours_cells)){
+    Dist_neigbours_cells$Sp1[k] <- List_present_species[which(List_present_species$Cell==Dist_neigbours_cells$Neighbour.1[k]),]$Sp
+    Dist_neigbours_cells$Sp2[k] <- List_present_species[which(List_present_species$Cell==Dist_neigbours_cells$Neighbour.2[k]),]$Sp
+    
+    if(Dist_neigbours_cells$Sp1[k]>Dist_neigbours_cells$Sp2[k]){
+      Dist_neigbours_cells$Sp1[k] <- Dist_neigbours_cells$Sp2[k]
+      Dist_neigbours_cells$Sp2[k] <- Dist_neigbours_cells$Sp1[k]
+      Dist_neigbours_cells$Neighbour.1[k] <- Dist_neigbours_cells$Neighbour.2[k]
+      Dist_neigbours_cells$Neighbour.2[k] <- Dist_neigbours_cells$Neighbour.1[k]
+    }
+    
+    if(Dist_neigbours_cells$Sp1[k]==Dist_neigbours_cells$Sp2[k]){
+      Dist_neigbours_cells$Diff_sp[k] <- 0
+    }else{Dist_neigbours_cells$Diff_sp[k] <- 1}
+    
+    Dist_neigbours_cells$Dist_sp[k] <- Dist_sp[which(Dist_sp$Sp.1==Dist_neigbours_cells$Sp1[k]&Dist_sp$Sp.2==Dist_neigbours_cells$Sp2[k]),]$Dist_sp
+  }
+  # Associate each geographical distance to an environmental distance
+  Dist_env_cells <- data.frame(Env=Dist_env, Cells=dist_cells)
   
   # Using the distance bins made by geoR, compute the environmental semivariance of each bin
   Vario_env <- c()
+  Vario_sp <- c()
+  Vario_sp_0_1 <- c()
   
   for(k in 1:(length(vario_sp[["bins.lim"]])-1)){
     Dist_bin <- Dist_env_cells%>%
       dplyr::filter(Cells >= vario_sp[["bins.lim"]][k] & Cells < vario_sp[["bins.lim"]][k+1])
     Vario_env[k] <- sum(Dist_bin$Env)/(2*nrow(Dist_bin))
+    
+    Dist_bin <- Dist_neigbours_cells%>%
+      dplyr::filter(Cells >= vario_sp[["bins.lim"]][k] & Cells < vario_sp[["bins.lim"]][k+1])
+    Vario_sp[k] <- sum(Dist_bin$Dist_sp)/(2*nrow(Dist_bin))
+    
+    Dist_bin <- Dist_neigbours_cells%>%
+      dplyr::filter(Cells >= vario_sp[["bins.lim"]][k] & Cells < vario_sp[["bins.lim"]][k+1])
+    Vario_sp_0_1[k] <- sum(Dist_bin$Diff_sp)/(2*nrow(Dist_bin))
   }
   
-  return(Vario_env)
+  return(data.frame(Vario_sp=Vario_sp, Vario_sp_0_1=Vario_sp_0_1, Vario_env=Vario_env))
 }

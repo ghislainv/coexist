@@ -347,15 +347,24 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, env_stack, 
     
     #vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
     
-    semivar_multidim_env <- semivar_mutlidim(sites, n_axis, sp_XY, vario_sp)
+    semivar_multidim <- semivar_mutlidim(sites, n_axis, sp_XY, vario_sp)
+    semivar_multidim$Distance <- vario_sp[["bins.lim"]][-length(vario_sp[["bins.lim"]])]
+    # Remove last point if the number of pairs is too low
+    if(vario_sp[["n"]][length(vario_sp[["n"]])]<500){
+      semivar_multidim <- semivar_multidim[1:(nrow(semivar_multidim)-1),]
+    }
   }
   # Plot with correlation
   png(file=here::here("outputs", model, "sp_autocorrelation.png"),
       width=fig_width, height=fig_width*0.8, units="cm", res=300)
   par(mfrow=c(2,2), bty = "n")
-  plot(vario_sp, main="Species - End")
+  #plot(vario_sp, main="Species - End")
+  plot(semivar_multidim$Distance, semivar_multidim$Vario_sp,
+       main="Species - end",
+       xlab="distance",
+       ylab="semivariance")
   #plot(vario_env, main="Environment")
-  plot(vario_sp[["bins.lim"]][-length(vario_sp[["bins.lim"]])], semivar_multidim_env,
+  plot(semivar_multidim$Distance, semivar_multidim$Vario_env,
        main="Environment",
        xlab="distance",
        ylab="semivariance")
@@ -364,13 +373,13 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, env_stack, 
   #      xlab="Semivariance for environment",
   #      ylab="Semivariance for species")
   # m <- lm(vario_sp$v ~ vario_env$v)
-  # /!\ a=intercept and b=slope
+  # beware, a=intercept and b=slope
   # abline(a=0, b=coef(m), col="red")
-  plot(semivar_multidim_env, vario_sp[["v"]],
+  plot(semivar_multidim$Vario_env, semivar_multidim$Vario_sp,
        main = "Regression",
        xlab="Semivariance for environment",
        ylab="Semivariance for species")
-  m <- lm(vario_sp$v ~ semivar_multidim_env)
+  m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
   abline(a=as.numeric(coef(m)[1]), b=as.numeric(coef(m)[2]), col="#008071")
   dev.off()
 }
