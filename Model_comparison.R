@@ -263,33 +263,112 @@ compare_models<-function(){
   
 }
 
-Compare_IV_axis_nb <- function(){
+Compare_IV_axis_nb <- function(seed){
   dir.create(here::here("outputs", glue::glue("Comparison_seed_{seed}")))
   
   models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
-                      glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs_seed_{seed}"))
+              glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_3_obs_seed_{seed}"),
+              glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs_seed_{seed}"),
+              glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_7_obs_seed_{seed}"))
   
-  nb_obs_axes <- c(1, 5)
+  nb_obs_axes <- c(1, 3, 5, 7)
   
   IV_all_models <- data.frame(IV=numeric(), Model=factor())
   
   for (m in 1:length(models)) {
     model <- models[m]
-    load(here::here("outputs", model, glue::glue("V_intra.RData")))
+    load(here::here("outputs", model, "V_intra.RData"))
     IV_all_models <- rbind(IV_all_models, data.frame(IV=V_intra$V, Model=rep(m, nrow(V_intra))))
+  }
+  
+  load(here::here("outputs", models[1], "sites.RData"))
+  sum_var <- 0
+  for(k in 1:ncol(sites)){sum_var <- sum_var + var(sites[,k])}
+  percentage_inertia <- c()
+  percentage_inertia_cum <- c()
+  for(k in 1:ncol(sites)){
+    percentage_inertia[k]<-(var(sites[k])/sum_var)*100
+    if(k == 1){percentage_inertia_cum[k]<-percentage_inertia[k]}
+    if(k > 1){percentage_inertia_cum[k]<-percentage_inertia_cum[k-1]+percentage_inertia[k]}
   }
   
   p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Model), y=IV))+
     ggplot2::geom_boxplot()+
     ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
     ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Beeswarmplot of the intraspecific variability index \n inferred with different levels of knowledge",
+    ggplot2::labs(title = "Beeswarmplot of the intraspecific variability \n inferred with different levels of knowledge",
                   x = "Number of observed axes",
                   y = "IV")+
-    scale_x_discrete(labels=nb_obs_axes)+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
+    ggplot2::scale_x_discrete(labels=nb_obs_axes)+
+    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")+
+    ggplot2::geom_text(ggplot2::aes(x=1, y=1), label=paste(round(percentage_inertia_cum[nb_obs_axes])[1], "%", "inertia")) +
+    ggplot2::geom_text(ggplot2::aes(x=2, y=1), label=paste(round(percentage_inertia_cum[nb_obs_axes])[2], "%"))+
+    ggplot2::geom_text(ggplot2::aes(x=3, y=1), label=paste(round(percentage_inertia_cum[nb_obs_axes])[3], "%"))+
+    ggplot2::geom_text(ggplot2::aes(x=4, y=1), label=paste(round(percentage_inertia_cum[nb_obs_axes])[4], "%"))
   
   ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}"), "IV_nb_axes.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+}
+
+Compare_spatial_structure <- function(){
+  models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
+              glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
+              glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_3_obs_seed_{seed}"),
+              glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_5_obs_seed_{seed}"),
+              glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_7_obs_seed_{seed}"),
+              glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
+              glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_3_obs_seed_{seed}"),
+              glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_5_obs_seed_{seed}"),
+              glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_7_obs_seed_{seed}"))
+  model_names <- c("Perfect knowledge",
+                   "Partial knowledge \n (1 observed axis)",
+                   "Partial knowledge \n (3 observed axis)",
+                   "Partial knowledge \n (5 observed axis)",
+                   "Partial knowledge \n (7 observed axis)",
+                   "Partial knowledge + IV \n (1 observed axis)",
+                   "Partial knowledge + IV \n (3 observed axis)",
+                   "Partial knowledge + IV \n (5 observed axis)",
+                   "Partial knowledge + IV \n (7 observed axis)")
+  # Models <- c("Perf", rep("Part", 4), rep("Part_IV", 4))
+  # Nb_axes <- c(" ", rep(c(1, 3, 5, 7), 2))
+  nb_obs_axes <- c(1, 3, 5, 7)
+  
+  # semivar_all_models <- data.frame(Semivar_sp=numeric(), Semivar_env=numeric(), Model=factor(), Nb_axes=factor())
+  # 
+  # for (m in 1:length(models)) {
+  #   model <- models[m]
+  #   load(here::here("outputs", model, glue::glue("semivar_multidim.RData")))
+  #   if(semivar_multidim$Sample_size[nrow(semivar_multidim)]<500){
+  #     semivar_multidim <- semivar_multidim[1:(nrow(semivar_multidim)-1),]
+  #   }
+  #   semivar_all_models <- rbind(semivar_all_models, data.frame(Semivar_sp=semivar_multidim$vario_sp, Semivar_env=semivar_multidim$Vario_env, Model=rep(Models[m], nrow(semivar_multidim)), Nb_axes=rep(Nb_axes[m], nrow(semivar_multidim))))
+  # }
+  
+  png(file=here::here("outputs", glue::glue("Comparison_seed_{seed}"), "Semivar_nb_axes.png"),
+      width=fig_width, height=fig_width*0.8, units="cm", res=300)
+  par(mfrow=c(length(nb_obs_axes),3), bty = "n")
+  
+  for (m in 1:length(models)) {
+    model <- models[m]
+    load(here::here("outputs", model, glue::glue("semivar_multidim.RData")))
+    # if(semivar_multidim$Sample_size[nrow(semivar_multidim)]<500){
+    #   semivar_multidim <- semivar_multidim[1:(nrow(semivar_multidim)-1),]
+    # }
+    plot(semivar_multidim$Vario_env, semivar_multidim$Vario_sp,
+         main=model_names[m],
+         xlab="Semivariance for environment",
+         ylab="Semivariance for species")
+    m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
+    abline(a=as.numeric(coef(m)[1]), b=as.numeric(coef(m)[2]), col="#008071")
+  }
+  
+  # for(i in unique(semivar_all_models$Model)){
+  #   for(j in nb_obs_axes){
+  #     
+  #   }
+  # }
+  
+  dev.off()
   
 }

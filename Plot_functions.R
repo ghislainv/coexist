@@ -348,9 +348,13 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, env_stack, 
     #vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
     
     semivar_multidim <- semivar_mutlidim(sites, n_axis, sp_XY, vario_sp)
-    semivar_multidim$Distance <- vario_sp[["bins.lim"]][-length(vario_sp[["bins.lim"]])]
+    semivar_multidim$Vario_sp_geoR <- vario_sp$u
+    semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
+    semivar_multidim$Sample_size <- vario_sp$n
+    save(semivar_multidim, file=here::here("outputs", model, "semivar_multidim.RData"))
+    
     # Remove last point if the number of pairs is too low
-    if(vario_sp[["n"]][length(vario_sp[["n"]])]<500){
+    if(semivar_multidim$Sample_size[nrow(semivar_multidim)]<500){
       semivar_multidim <- semivar_multidim[1:(nrow(semivar_multidim)-1),]
     }
   }
