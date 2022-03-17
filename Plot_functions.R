@@ -347,7 +347,7 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, env_stack, 
     
     #vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
     
-    semivar_multidim <- semivar_mutlidim(sites, n_axis, sp_XY, vario_sp)
+    semivar_multidim <- semivar_multidim(sites, n_axis, sp_XY, vario_sp)
     semivar_multidim$Vario_sp_geoR <- vario_sp$u
     semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
     semivar_multidim$Sample_size <- vario_sp$n

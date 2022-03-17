@@ -65,65 +65,98 @@ f_sp <- function(x) {
 }
 
 # Function to compute a multidimensional semivariance
-semivar_mutlidim <- function(sites, n_axis, sp_XY, vario_sp){
+semivar_multidim <- function(sites, n_axis, sp_XY, vario_sp){
   
-  #Compute the sum of squared differences of environmental conditions
-  Dist_env <- as.vector(dist(sites[, 1]))^2
+  ## COMPUTE DISTANCES
+  
+  # Compute the sum of squared differences of environmental conditions
+  dist_env <- as.vector(dist(sites[, 1]))^2
   for (k in 2:n_axis){
-    Dist_env <- Dist_env + as.vector(dist(sites[, k]))^2
+    dist_env <- dist_env + as.vector(dist(sites[, k]))^2
   }
   
-  #Compute the sum of squared differences of species optima
+  # Compute the sum of squared differences of species optima
   dist_sp <- as.vector(dist(niche_optimum[,1]))^2
   for (k in 2:n_axis){
     dist_sp <- dist_sp + as.vector(dist(niche_optimum[, k]))^2
   }
+  
+  # Compute the geographical distance between all cells
+  dist_spatial <- as.vector(dist(sp_XY[,-3]))
+  
+  ## SELECT SPECIES COUPLES
+  
+  # Associate the species couple to each species distance
   Dist_sp <- data.frame(Sp=t(combn(1:nsp, 2)), Dist_sp=dist_sp)
   # Add diagonal without computing it
   Dist_sp <- rbind(Dist_sp, data.frame(Sp.1=1:nsp, Sp.2=1:nsp, Dist_sp=rep(0, nsp)))
   
-  # Compute the geographical distance between all cells
-  dist_cells <- as.vector(dist(sp_XY[,-3]))
   # Associate each geographical distance to the cell number of the pair of cells
-  Dist_neigbours_cells <- data.frame(Neighbour=t(combn(1:nrow(sites), 2)), Cells=dist_cells)
-  # Add the species that is present on each cell
+  Dist_neighbours_cells <- data.frame(Neighbour=t(combn(1:nrow(sites), 2)), Dist_spatial=dist_spatial)
+  
+  # List of the species and the cells on which they are present
   List_present_species <- data.frame(Cell=1:nrow(sites), Sp=as.vector(raster::raster(community_end[[1]])))
-  for(k in 1:nrow(Dist_neigbours_cells)){
-    Dist_neigbours_cells$Sp1[k] <- List_present_species[which(List_present_species$Cell==Dist_neigbours_cells$Neighbour.1[k]),]$Sp
-    Dist_neigbours_cells$Sp2[k] <- List_present_species[which(List_present_species$Cell==Dist_neigbours_cells$Neighbour.2[k]),]$Sp
-    
-    if(Dist_neigbours_cells$Sp1[k]>Dist_neigbours_cells$Sp2[k]){
-      Dist_neigbours_cells$Sp1[k] <- Dist_neigbours_cells$Sp2[k]
-      Dist_neigbours_cells$Sp2[k] <- Dist_neigbours_cells$Sp1[k]
-      Dist_neigbours_cells$Neighbour.1[k] <- Dist_neigbours_cells$Neighbour.2[k]
-      Dist_neigbours_cells$Neighbour.2[k] <- Dist_neigbours_cells$Neighbour.1[k]
-    }
-    
-    if(Dist_neigbours_cells$Sp1[k]==Dist_neigbours_cells$Sp2[k]){
-      Dist_neigbours_cells$Diff_sp[k] <- 0
-    }else{Dist_neigbours_cells$Diff_sp[k] <- 1}
-    
-    Dist_neigbours_cells$Dist_sp[k] <- Dist_sp[which(Dist_sp$Sp.1==Dist_neigbours_cells$Sp1[k]&Dist_sp$Sp.2==Dist_neigbours_cells$Sp2[k]),]$Dist_sp
-  }
+  
+  # Associate the species that are present and their cells
+  Dist_neighbours_cells <- Dist_neighbours_cells%>%
+    dplyr::mutate(Cell=Neighbour.1)%>%
+    dplyr::inner_join(List_present_species, by="Cell")%>%
+    dplyr::rename(Sp1=Sp)%>%
+    dplyr::mutate(Cell=Neighbour.2)%>%
+    dplyr::inner_join(List_present_species, by="Cell")%>%
+    dplyr::rename(Sp2=Sp)%>%
+    dplyr::select(- Cell)%>%
+    dplyr::mutate(Sp1_temp = dplyr::case_when(Sp1>Sp2~Sp2, Sp1<=Sp2~Sp1),
+                  Sp2_temp = dplyr::case_when(Sp1>Sp2~Sp1, Sp1<=Sp2~Sp2),
+                  Neighbour.1_temp = dplyr::case_when(Sp1>Sp2~Neighbour.2, Sp1<=Sp2~Neighbour.1),
+                  Neighbour.2_temp = dplyr::case_when(Sp1>Sp2~Neighbour.1, Sp1<=Sp2~Neighbour.2))%>%
+    dplyr::select(-Sp1, -Sp2, -Neighbour.1, -Neighbour.2)%>%
+    dplyr::rename(Neighbour.1=Neighbour.1_temp, Neighbour.2=Neighbour.2_temp, Sp1=Sp1_temp, Sp2=Sp2_temp)%>%
+    dplyr::mutate(Diff_sp = dplyr::case_when(Sp1==Sp2~0, Sp1!=Sp2~1))%>%
+    dplyr::mutate(Sp.1=Sp1, Sp.2=Sp2)%>%
+    dplyr::inner_join(Dist_sp, by=c("Sp.1", "Sp.2"))%>%
+    dplyr::select(-Sp.1, -Sp.2)
+  
+  # for(k in 1:nrow(Dist_neighbours_cells)){
+  #   Dist_neighbours_cells$Sp1[k] <- List_present_species[which(List_present_species$Cell==Dist_neighbours_cells$Neighbour.1[k]),]$Sp
+  #   Dist_neighbours_cells$Sp2[k] <- List_present_species[which(List_present_species$Cell==Dist_neighbours_cells$Neighbour.2[k]),]$Sp
+  #   
+  #   # Sort species in the same order
+  #   if(Dist_neighbours_cells$Sp1[k]>Dist_neighbours_cells$Sp2[k]){
+  #     Dist_neighbours_cells$Sp1[k] <- Dist_neighbours_cells$Sp2[k]
+  #     Dist_neighbours_cells$Sp2[k] <- Dist_neighbours_cells$Sp1[k]
+  #     Dist_neighbours_cells$Neighbour.1[k] <- Dist_neighbours_cells$Neighbour.2[k]
+  #     Dist_neighbours_cells$Neighbour.2[k] <- Dist_neighbours_cells$Neighbour.1[k]
+  #   }
+  #   
+  #   # To compute the semivariogram with 0 and 1 rather than real distances
+  #   if(Dist_neighbours_cells$Sp1[k]==Dist_neighbours_cells$Sp2[k]){
+  #     Dist_neighbours_cells$Diff_sp[k] <- 0
+  #   }else{Dist_neighbours_cells$Diff_sp[k] <- 1}
+  #   
+  #   # Add species distances
+  #   Dist_neighbours_cells$Dist_sp[k] <- Dist_sp[which(Dist_sp$Sp.1==Dist_neighbours_cells$Sp1[k]&Dist_sp$Sp.2==Dist_neighbours_cells$Sp2[k]),]$Dist_sp
+  # }
+  
   # Associate each geographical distance to an environmental distance
-  Dist_env_cells <- data.frame(Env=Dist_env, Cells=dist_cells)
+  Dist_env_cells <- data.frame(Env=dist_env, Dist_spatial=dist_spatial)
   
   # Using the distance bins made by geoR, compute the environmental semivariance of each bin
   Vario_env <- c()
   Vario_sp <- c()
   Vario_sp_0_1 <- c()
   
-  for(k in 1:(length(vario_sp[["bins.lim"]])-1)){
+  for(k in 1:(length(vario_sp$bins.lim)-1)){
     Dist_bin <- Dist_env_cells%>%
-      dplyr::filter(Cells >= vario_sp[["bins.lim"]][k] & Cells < vario_sp[["bins.lim"]][k+1])
+      dplyr::filter(Dist_spatial >= vario_sp$bins.lim[k] & Dist_spatial < vario_sp$bins.lim[k+1])
     Vario_env[k] <- sum(Dist_bin$Env)/(2*nrow(Dist_bin))
     
-    Dist_bin <- Dist_neigbours_cells%>%
-      dplyr::filter(Cells >= vario_sp[["bins.lim"]][k] & Cells < vario_sp[["bins.lim"]][k+1])
+    Dist_bin <- Dist_neighbours_cells%>%
+      dplyr::filter(Dist_spatial >= vario_sp$bins.lim[k] & Dist_spatial < vario_sp$bins.lim[k+1])
     Vario_sp[k] <- sum(Dist_bin$Dist_sp)/(2*nrow(Dist_bin))
     
-    Dist_bin <- Dist_neigbours_cells%>%
-      dplyr::filter(Cells >= vario_sp[["bins.lim"]][k] & Cells < vario_sp[["bins.lim"]][k+1])
+    Dist_bin <- Dist_neighbours_cells%>%
+      dplyr::filter(Dist_spatial >= vario_sp[["bins.lim"]][k] & Dist_spatial < vario_sp$bins.lim[k+1])
     Vario_sp_0_1[k] <- sum(Dist_bin$Diff_sp)/(2*nrow(Dist_bin))
   }
   
