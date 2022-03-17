@@ -29,7 +29,7 @@ launch_model <- function(){
     Obs_env <- sites[,1:n_observed_axis]
   }
   # Plot the environment
-  plot_environment(model=model, fig_width=fig_width, n_axis=n_axis, env=env)
+  plot_environment(model=model, fig_width=fig_width, n_axis=n_axis, env=env, sites=sites)
   # Plot the habitat frequency
   plot_hab_freq(n_axis=n_axis, model=model, fig_width=fig_width, env=env)
   
@@ -626,7 +626,8 @@ launch_model <- function(){
   # ---------------------------------------------
   
   plot_env_filt(nrep, env_filt, model, fig_width)
-  plot_env_species(model, fig_width, community_start[[r]], community_end[[r]], env)
+  load(here::here("outputs", model, "env_entrelac.RData"))
+  plot_env_species(model, fig_width, community_start[[1]], community_end[[1]], class_site)
   
   # ---------------------------------------------
   # Theta community
@@ -639,9 +640,7 @@ launch_model <- function(){
   # ----------------------------------
   # Spatial autocorrelation of species
   # ----------------------------------
-  
-  load(here::here("outputs", model, "env_stack.RData"))
-  plot_spatial_autocorr(community_end[[1]], sites, niche_width, env_stack, model, fig_width)
+  plot_spatial_autocorr(community_end[[1]], sites, niche_width, model, fig_width)
 
   # ------------------------------------------------------
   # Performance of species that *should* win vs. *do* win

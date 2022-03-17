@@ -34,7 +34,7 @@ generate_environment <- function(nsite_side, model){
   colnames(sites) <- c(sprintf("V%d_env", 1:n_axis))
   env <- list()
   for (i in 1:n_axis) {
-    seed_env <- 1234 + i - 1
+    seed_env <- seed + i - 1
     rho <- c(rmvn(1, mu=rep(0, nsite), V=covrho, seed=seed_env)) # Spatial Random Effects
     rho <- rho-mean(rho) # Centering rhos on zero
     #rho <- scales::rescale(rho, to=c(0, 1))

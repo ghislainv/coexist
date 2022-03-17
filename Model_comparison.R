@@ -1,53 +1,9 @@
 compare_models<-function(){
-  dir.create(here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs")))
-  # models_all <- c("Perf_know_full_mort_stocha",
-  #                 "Perf_know_full_mort_stocha_disp_abund",
-  #                 "Perf_know_start_1_mort_stocha",
-  #                 "Perf_know_start_1_mort_stocha_disp_abund",
-  #                 "Perf_know_start_10_mort_stocha",
-  #                 "Perf_know_start_10_mort_stocha_disp_abund",
-  #                 "Perf_know_full_mort_fixed",
-  #                 "Perf_know_full_mort_fixed_disp_abund",
-  #                 "Perf_know_start_10_mort_fixed",
-  #                 "Perf_know_start_10_mort_fixed_disp_abund",
-  #                 "Part_know_IV_full_mort_stocha",
-  #                 "Part_know_IV_full_mort_stocha_disp_abund",
-  #                 "Part_know_IV_start_1_mort_stocha",
-  #                 "Part_know_IV_start_1_mort_stocha_disp_abund",
-  #                 "Part_know_IV_start_10_mort_stocha",
-  #                 "Part_know_IV_start_10_mort_stocha_disp_abund",
-  #                 "Part_know_IV_full_mort_fixed",
-  #                 "Part_know_IV_full_mort_fixed_disp_abund",
-  #                 "Part_know_IV_start_10_mort_fixed",
-  #                 "Part_know_IV_start_10_mort_fixed_disp_abund",
-  #                 "Part_know_full_mort_stocha",
-  #                 "Part_know_full_mort_stocha_disp_abund",
-  #                 "Part_know_start_1_mort_stocha",
-  #                 "Part_know_start_1_mort_stocha_disp_abund",
-  #                 "Part_know_full_mort_fixed",
-  #                 "Part_know_full_mort_fixed_disp_abund",
-  #                 "Part_know_start_10_mort_fixed",
-  #                 "Part_know_start_10_mort_fixed_disp_abund")
-  # 
-  # models_choices <- c("Perf_know_start_10_mort_fixed",
-  #                     "Perf_know_start_10_mort_fixed_disp_abund",
-  #                     "Part_know_start_10_mort_fixed",
-  #                     "Part_know_start_10_mort_fixed_disp_abund",
-  #                     "Part_know_IV_start_10_mort_fixed",
-  #                     "Part_know_IV_start_10_mort_fixed_disp_abund")
-  # 
-  # models_choices <- c("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-  #                     "Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs",
-  #                     "Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-  #                     "Part_know_start_10_mort_fixed_disp_abund_10_axes_5_obs",
-  #                     "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs",
-  #                     "Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_5_obs")
+  dir.create(here::here("outputs", glue::glue("Comparison_{n_observed_axis}_obs_axes")))
   
-  models_choices <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"),
+  models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"),
                       glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"),
                       glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"))
-  
-  models <- models_choices
   
   # 1: Compare the species diversity at the end of the simulations within a model (Shannon diversity index)
   
@@ -330,45 +286,40 @@ Compare_spatial_structure <- function(){
                    "Partial knowledge + IV \n (3 observed axis)",
                    "Partial knowledge + IV \n (5 observed axis)",
                    "Partial knowledge + IV \n (7 observed axis)")
-  # Models <- c("Perf", rep("Part", 4), rep("Part_IV", 4))
-  # Nb_axes <- c(" ", rep(c(1, 3, 5, 7), 2))
+  
   nb_obs_axes <- c(1, 3, 5, 7)
   
-  # semivar_all_models <- data.frame(Semivar_sp=numeric(), Semivar_env=numeric(), Model=factor(), Nb_axes=factor())
-  # 
-  # for (m in 1:length(models)) {
-  #   model <- models[m]
-  #   load(here::here("outputs", model, glue::glue("semivar_multidim.RData")))
-  #   if(semivar_multidim$Sample_size[nrow(semivar_multidim)]<500){
-  #     semivar_multidim <- semivar_multidim[1:(nrow(semivar_multidim)-1),]
-  #   }
-  #   semivar_all_models <- rbind(semivar_all_models, data.frame(Semivar_sp=semivar_multidim$vario_sp, Semivar_env=semivar_multidim$Vario_env, Model=rep(Models[m], nrow(semivar_multidim)), Nb_axes=rep(Nb_axes[m], nrow(semivar_multidim))))
-  # }
+  Correlation_env_sp <- data.frame(nb_obs_axes = nb_obs_axes,
+                                   perf_know=numeric(length(nb_obs_axes)),
+                                   part_know=numeric(length(nb_obs_axes)),
+                                   part_know_IV=numeric(length(nb_obs_axes)))
   
   png(file=here::here("outputs", glue::glue("Comparison_seed_{seed}"), "Semivar_nb_axes.png"),
       width=fig_width, height=fig_width*0.8, units="cm", res=300)
   par(mfrow=c(length(nb_obs_axes),3), bty = "n")
   
-  for (m in 1:length(models)) {
-    model <- models[m]
+  for (mod in 1:length(models)) {
+    model <- models[mod]
     load(here::here("outputs", model, glue::glue("semivar_multidim.RData")))
-    # if(semivar_multidim$Sample_size[nrow(semivar_multidim)]<500){
-    #   semivar_multidim <- semivar_multidim[1:(nrow(semivar_multidim)-1),]
-    # }
+    
     plot(semivar_multidim$Vario_env, semivar_multidim$Vario_sp,
-         main=model_names[m],
+         main=model_names[mod],
          xlab="Semivariance for environment",
          ylab="Semivariance for species")
     m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
     abline(a=as.numeric(coef(m)[1]), b=as.numeric(coef(m)[2]), col="#008071")
+    text(semivar_multidim$Vario_env[3],
+         max(semivar_multidim$Vario_sp)-0.1*max(semivar_multidim$Vario_sp),
+         paste("R =", round(sqrt(summary(m)$r.squared), digits = 2)))
+    
+    if(mod==1){Correlation_env_sp$perf_know[1] <- round(sqrt(summary(m)$r.squared), digits = 2)}
+    if(mod>=length(nb_obs_axes)+1 & mod<(2*length(nb_obs_axes))+1){Correlation_env_sp$part_know[mod-length(nb_obs_axes)] <- round(sqrt(summary(m)$r.squared), digits = 2)}
+    if(mod>=2*length(nb_obs_axes)+1){Correlation_env_sp$part_know_IV[mod-2*length(nb_obs_axes)] <- round(sqrt(summary(m)$r.squared), digits = 2)}
   }
   
-  # for(i in unique(semivar_all_models$Model)){
-  #   for(j in nb_obs_axes){
-  #     
-  #   }
-  # }
-  
   dev.off()
+  
+  Correlation_env_sp$perf_know[2:length(nb_obs_axes)]<-NA
+  save(Correlation_env_sp, file=here::here("outputs", glue::glue("Comparison_seed_{seed}"), "Correlation_env_sp.RData"))
   
 }

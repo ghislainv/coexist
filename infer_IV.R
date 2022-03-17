@@ -54,7 +54,7 @@ infer_IV <- function(model, n_observed_axis){
   
   #lm_fit <- lm(Perf~Species+Species*Env_1+Species*Env_1_sq, data=df_perf)
   lm_fit <- lm(formula, data=df_perf)
-  save(lm_fit, file = here::here("outputs", model,"lm_fit.RData"))
+  save(lm_fit, file = here::here("outputs", model, glue::glue("lm_fit_{n_observed_axis}_obs_axes.RData")))
   
   print(glue::glue("the r-squared with the first environmental variable is {summary(lm_fit)$adj.r.squared}"))
   
@@ -76,7 +76,7 @@ infer_IV <- function(model, n_observed_axis){
     Inferred_species_parameters[,k+1+n_observed_axis] <- as.vector(c(lm_fit$coefficients[(nsp*(n_observed_axis+k)+1):(nsp*(n_observed_axis+k+1))]))
   }
   
-  save(Inferred_species_parameters, file=here::here("outputs", model, "Inferred_species_parameters.RData"))
+  save(Inferred_species_parameters, file=here::here("outputs", model, glue::glue("Inferred_species_parameters_{n_observed_axis}_obs_axes.RData")))
   
   load(file=here::here("outputs", model, "Inferred_species_parameters.RData"))
   load(file=here::here("outputs", model, "niche_optimum.RData"))
@@ -87,7 +87,7 @@ infer_IV <- function(model, n_observed_axis){
     mutate(res=lm_fit$residuals) %>%
     group_by(Species) %>%
     summarise(V=var(res))
-  save(V_intra, file = here::here("outputs", model, "V_intra.RData"))
+  save(V_intra, file = here::here("outputs", model, glue::glue("V_intra_{n_observed_axis}_obs_axes.RData")))
   
   load(here::here("outputs", model, "V_intra.RData"))
   

@@ -4,9 +4,6 @@ fig_width <- 16.6 # in cm
 # Number of niche/environmental axes
 n_axis <- 10
 
-# Number of observed axes in partial models
-n_observed_axis <- 1
-
 # Perfect of partial knowledge
 if(perf_know==FALSE){part_know<-TRUE} else{part_know<-FALSE}
 
@@ -37,7 +34,7 @@ b <- -0.5
 fecundity <- 0.5
 
 # Number of repetitions
-nrep <- 100
+nrep <- 10
 
 # Number of generations
 ngen <-10000
@@ -265,11 +262,9 @@ if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==
   model_perf <- "Perf_know_start_10_mort_fixed_disp_abund"
 }
 
-# Add the number of axes
-
-model <- paste0(model, "_", n_axis, "_axes_", n_observed_axis, "_obs")
+# Add the number of axes for partial knowledge only
 if(part_know==TRUE){
-  model_perf <- paste0(model_perf, "_", n_axis, "_axes_", n_observed_axis, "_obs")
+  model <- paste0(model, "_", n_axis, "_axes_", n_observed_axis, "_obs")
 }
 
 # Add the seed
@@ -287,11 +282,11 @@ if(part_know==TRUE){
 if(part_know==TRUE){
   # Charge files from the model without IV
   # Use model run just before
-  load(file=here::here("outputs", model_perf, "lm_fit.RData"))
+  load(file=here::here("outputs", model_perf, glue::glue("lm_fit_{n_observed_axis}_obs_axes.RData")))
   load(here::here("outputs", model_perf, "sites.RData"))
   load(here::here("outputs", model_perf, "env.RData"))
   load(file=here::here("outputs", model_perf, "niche_optimum.RData"))
-  load(file=here::here("outputs", model_perf, "Inferred_species_parameters.RData"))
+  load(file=here::here("outputs", model_perf, glue::glue("Inferred_species_parameters_{n_observed_axis}_obs_axes.RData")))
   load(file=here::here("outputs", model_perf, "env_stack.RData"))
 }
 
@@ -302,7 +297,7 @@ if(part_know==TRUE){
 
 #Load IV
 if(IV==TRUE){
-  load(file=here::here("outputs", model_perf, "V_intra.RData"))
+  load(file=here::here("outputs", model_perf, glue::glue("V_intra_{n_observed_axis}_obs_axes.RData")))
 }
 
 #Size of the side of the environmental matrix

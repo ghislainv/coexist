@@ -65,7 +65,7 @@ f_sp <- function(x) {
 }
 
 # Function to compute a multidimensional semivariance
-semivar_multidim <- function(sites, n_axis, sp_XY, vario_sp){
+compute_semivar_multidim <- function(sites, n_axis, sp_XY, vario_sp){
   
   ## COMPUTE DISTANCES
   
