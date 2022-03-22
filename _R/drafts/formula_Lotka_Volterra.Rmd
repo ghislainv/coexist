@@ -1,0 +1,6 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+${\frac{dx_{i}}{dt}}=r_{i}x_{i}\left(1-{\frac{\sum_{{j=1}}^{N}\alpha_{{ij}}x_{j}}{K_{i}}}\right)$

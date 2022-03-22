@@ -9,7 +9,9 @@
 nb_obs_axes <- c(1, 3, 5, 7)
 
 # Seeds for reproducibility: it controls the environment × species parameters configuration.
-Seeds <- sample(1:10^6, 10)
+# Seeds <- sample(1:10^6, 10)
+# save(Seeds, file=here::here("outputs", "Seeds.RData"))
+load(here::here("outputs", "Seeds.RData"))
 
 for(configuration in 1:10){
   
@@ -27,34 +29,39 @@ for(configuration in 1:10){
   
   launch_model()
   
+  # ========================================
+  # Infer observed intraspecific variability
+  # ========================================
+  
   for(n_observed_axis in nb_obs_axes){
-    
-    # ========================================
-    # Infer observed intraspecific variability
-    # ========================================
   
     if(perf_know==TRUE){
-      source(file = "./call_libraries.R")
-      source("infer_IV.R")
+      source(file = here::here("_R", "call_libraries.R"))
+      source(here::here("_R", "infer_IV.R"))
       infer_IV(model, n_observed_axis)
     }
+  }
+  
+  # ========================================
+  # Launch partial knowledge models
+  # ========================================
     
-    # ========================================
-    # Launch partial knowledge models
-    # ========================================
+  perf_know <- FALSE
+  
+  for(n_observed_axis in nb_obs_axes){
     
     # Without IV
-    perf_know <- FALSE
-    source(file = here::here("Basic_parameters.R"))
+    IV <- FALSE
+    source(file = here::here("_R", "Basic_parameters.R"))
     
     launch_model()
     
     #With IV
     IV <- TRUE
-    source(file = here::here("Basic_parameters.R"))
+    source(file = here::here("_R", "Basic_parameters.R"))
     
     launch_model()
-  
+    
   }
 }
 
@@ -62,7 +69,7 @@ for(configuration in 1:10){
 # Compare models
 # ===============
 
-source("Model_comparison.R")
+source(here::here("_R", "Model_comparison.R"))
 compare_models()
 
 # =========================

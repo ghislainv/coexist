@@ -28,8 +28,6 @@ generate_environment <- function(nsite_side, model){
   covrho <- Vrho.target*solve(Q) # Covariance of rhos
   
   # Environment on each site
-  #CGT 01/12/2021
-  #sites <- data.frame(V1_env=rep(NA, nsite), V2_env=NA, V3_env=NA)
   sites <- data.frame(matrix(ncol=n_axis, nrow=nsite))
   colnames(sites) <- c(sprintf("V%d_env", 1:n_axis))
   env <- list()
@@ -54,8 +52,8 @@ generate_environment <- function(nsite_side, model){
   
   
   # Plot the environment
-  plot_environment(model, fig_width, n_axis, env)
+  plot_environment(model=model, fig_width=fig_width, n_axis=n_axis, env=env, sites=sites)
   
   # Plot the habitat frequency
-  plot_hab_freq(n_axis, model, fig_width, env)
+  plot_hab_freq(n_axis=n_axis, model=model, fig_width=fig_width, env=env)
 }

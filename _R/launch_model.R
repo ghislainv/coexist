@@ -1,20 +1,17 @@
 launch_model <- function(){
   
-  source(file = "./call_libraries.R")
+  source(file = here::here("_R", "call_libraries.R"))
   
   # Create output directories
   dir.create(here::here("outputs", model), recursive=TRUE)
   
-  source(file=here::here("Math_functions.R"))
+  source(file=here::here("_R", "Math_functions.R"))
   
-  source(file=here::here("Plot_functions.R"))
+  source(file=here::here("_R", "Plot_functions.R"))
   
-  source(file=here::here("Generate_environment.R"))
+  source(file=here::here("_R", "Generate_environment.R"))
   
-  source(file=here::here("Species_parameters.R"))
-  
-  # Function to identify the species with the highest performance
-  source(file=here::here("Functions_perf_mort.R"))
+  source(file=here::here("_R", "Species_parameters.R"))
   
   # =========================
   # Landscape and environment
@@ -25,13 +22,10 @@ launch_model <- function(){
     generate_environment(nsite_side=nsite_side, model=model)
     load(here::here("outputs", model, "sites.RData"))
     load(here::here("outputs", model, "env.RData"))
+    load(here::here("outputs", model, "env_entrelac.RData"))
   } else {
     Obs_env <- sites[,1:n_observed_axis]
   }
-  # Plot the environment
-  plot_environment(model=model, fig_width=fig_width, n_axis=n_axis, env=env, sites=sites)
-  # Plot the habitat frequency
-  plot_hab_freq(n_axis=n_axis, model=model, fig_width=fig_width, env=env)
   
   # =========================================
   # Species optima
@@ -85,7 +79,7 @@ launch_model <- function(){
     for(k in 1:length(Obs_env_mat)){
       perf_Sp_mean <- perf_Sp_mean + Inferred_species_parameters_mat[[k+1]]*Obs_env_mat[[k]]
     }
-    save(perf_Sp_mean, file = here::here("outputs", model, glue::glue("perf_Sp_mean_{model}.RData")))
+    save(perf_Sp_mean, file = here::here("outputs", model, "perf_Sp_mean.RData"))
   }
   
   # =========================================
@@ -511,7 +505,6 @@ launch_model <- function(){
           Optimum_Sp_inferred <- matrix(nrow=n_observed_axis, ncol=nsp)
           for(sp in 1:nsp){
             for(axis in 1:n_observed_axis){
-              #Optimum_Sp_inferred[l,sp] <- E_seq[which.max(Mat_perf_inferred[,sp]),l]
               Optimum_Sp_inferred[axis,sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
             }
           }
@@ -519,7 +512,6 @@ launch_model <- function(){
         }else{
           Optimum_Sp_inferred <- c()
           for(sp in 1:nsp){
-            #Optimum_Sp_inferred[sp] <- E_seq[which.max(Mat_perf_inferred[,sp])]
             Optimum_Sp_inferred[sp] <- (-Inferred_species_parameters[sp,2])/(2*Inferred_species_parameters[sp,3])
           }
         }
@@ -568,16 +560,16 @@ launch_model <- function(){
     
   } # End nrep
   
-  save(community_start, file=here::here("outputs", model, glue::glue("community_start_{model}.RData")))
-  save(community_end, file=here::here("outputs", model, glue::glue("community_end_{model}.RData")))
+  save(community_start, file=here::here("outputs", model, "community_start.RData"))
+  save(community_end, file=here::here("outputs", model, "community_end.RData"))
   
   sp_rich <- data.frame(sp_rich)
   env_filt <- data.frame(env_filt)
   theta_comm <- data.frame(theta_comm)
   
-  save(Abundances, file = here::here("outputs", model, glue::glue("Abundances_{model}.RData")))
-  save(sp_rich, file=here::here("outputs", model, glue::glue("sp_rich_{model}.RData")))
-  save(rank_sp, file=here::here("outputs", model, glue::glue("rank_sp_{model}.RData")))
+  save(Abundances, file = here::here("outputs", model, "Abundances.RData"))
+  save(sp_rich, file=here::here("outputs", model, "sp_rich.RData"))
+  save(rank_sp, file=here::here("outputs", model, "rank_sp.RData"))
   
   # =========================
   # Diversity analysis
@@ -596,21 +588,21 @@ launch_model <- function(){
   plot_species_richness(nrep=nrep, sp_rich=sp_rich, model=model, fig_width=fig_width)
   
   sp_rich_final <- sp_rich[ngen,]
-  save(sp_rich_final, file=here::here("outputs", model, glue::glue("Species_richness_{model}.RData")))
+  save(sp_rich_final, file=here::here("outputs", model, "Species_richness.RData"))
   
   # ---------------------------------------------
   # Shannon index and Shannon equitability index
   # ---------------------------------------------
-  save(Shannon, file = here::here("outputs", model, glue::glue("Shannon_{model}.RData")))
+  save(Shannon, file = here::here("outputs", model, "Shannon.RData"))
   Equitability <- Shannon/log(as.numeric(sp_rich[ngen,]))
-  save(Equitability, file = here::here("outputs", model, glue::glue("Equitability_{model}.RData")))
+  save(Equitability, file = here::here("outputs", model, "Equitability.RData"))
   
   # ---------------------------------------------------------------------------------
   # pairwise Spearman correlation on the species ranks at the end of each simulation
   # ---------------------------------------------------------------------------------
   
   Spearman <- as.dist(round(cor(t(rank_sp), method="spearman"),2))
-  save(Spearman, file = here::here("outputs", model, glue::glue("Spearman_{model}.RData")))
+  save(Spearman, file = here::here("outputs", model, "Spearman.RData"))
   
   # ---------------------------------------------
   # Link between final rank and habitat frequency
@@ -626,7 +618,6 @@ launch_model <- function(){
   # ---------------------------------------------
   
   plot_env_filt(nrep, env_filt, model, fig_width)
-  load(here::here("outputs", model, "env_entrelac.RData"))
   plot_env_species(model, fig_width, community_start[[1]], community_end[[1]], class_site)
   
   # ---------------------------------------------
@@ -640,7 +631,7 @@ launch_model <- function(){
   # ----------------------------------
   # Spatial autocorrelation of species
   # ----------------------------------
-  plot_spatial_autocorr(community_end[[1]], sites, niche_width, model, fig_width)
+  plot_spatial_autocorr(community_end, n_axis, sites, niche_optimum, niche_width, model, fig_width)
 
   # ------------------------------------------------------
   # Performance of species that *should* win vs. *do* win

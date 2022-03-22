@@ -9,7 +9,7 @@ plot_environment <- function(model, fig_width, n_axis, env, sites){
   par(mfrow=c(4,ceiling(n_axis/4)), bty = "n")
   
   for(k in 1:n_axis){
-    plot(raster::raster(env[[k]]), main=glue::glue("Environment var {k}"), col=topo.colors(255), cex.main=1.2)
+    raster::plot(raster::raster(env[[k]]), main=glue::glue("Environment var {k}"), col=topo.colors(255), cex.main=1.2)
   }
   #Summary of environment
   if(n_axis==3){
@@ -118,9 +118,9 @@ plot_community_start <- function(model, fig_width, community, nsp){
   png(file=here::here("outputs", model, "community_start.png"),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(bty = "n")
-  # plot(raster::raster(community), main="Species - Start", zlim=c(0, nsp),
+  # raster::plot(raster::raster(community), main="Species - Start", zlim=c(0, nsp),
   #      col=c("black",  viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
-  plot(raster::raster(community), main="Species - Start", zlim=c(0, nsp),
+  raster::plot(raster::raster(community), main="Species - Start", zlim=c(0, nsp),
        col=c("black",  getPalette(colourCount)), legend=FALSE, cex.main=2, cex.axis=1.5)
   dev.off()
 }
@@ -131,7 +131,7 @@ plot_mortality_events <- function(model, fig_width, community, mortality, nsp){
   par(bty = "n")
   community_mortality <- community
   community_mortality[mortality==1] <- nsp+1
-  plot(raster::raster(community_mortality), main="Species (colours) and vacant sites \n (black = old, white = new)", zlim=c(0, nsp),
+  raster::plot(raster::raster(community_mortality), main="Species (colours) and vacant sites \n (black = old, white = new)", zlim=c(0, nsp),
        col=c("black", getPalette(colourCount)), "white", legend=FALSE, cex.main=2, cex.axis=1.5)
   dev.off()
 }
@@ -140,9 +140,9 @@ plot_community_end <- function(model, fig_width, community, nsp){
 png(file=here::here("outputs", model, "community_end.png"),
     width=fig_width, height=fig_width, units="cm", res=300)
 par(bty = "n")
-# plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"),
+# raster::plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"),
 #      zlim=c(0, nsp), col=c("black", viridis(nsp)), legend=FALSE, cex.main=2, cex.axis=1.5)
-plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"), 
+raster::plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"), 
      zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=TRUE, cex.main=2, cex.axis=1.5)
 dev.off()
 }
@@ -316,8 +316,8 @@ plot_theta_community<-function(theta_comm, ngen, nrep, model, fig_width){
   }
 }
 
-plot_spatial_autocorr <- function(community_end, sites, niche_width, model, fig_width){
-  sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
+plot_spatial_autocorr <- function(community_end, n_axis, sites, niche_optimum, niche_width, model, fig_width){
+  sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end[[1]])))
   names(sp_XY) <- c("x", "y", "sp")
   vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
   
@@ -335,7 +335,7 @@ plot_spatial_autocorr <- function(community_end, sites, niche_width, model, fig_
     plot(vario_env$v, vario_sp$v)
   }else{
     
-    semivar_multidim <- compute_semivar_multidim(sites, n_axis, sp_XY, vario_sp)
+    semivar_multidim <- compute_semivar_multidim(sites, n_axis, niche_optimum, sp_XY, vario_sp, nsp, community_end)
     semivar_multidim$Vario_sp_geoR <- vario_sp$u
     semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
     semivar_multidim$Sample_size <- vario_sp$n
@@ -387,7 +387,6 @@ plot_species_niche <- function(seed, df_perf, model, fig_width){
   p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf)) +
     ggplot2::geom_point() +
     ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE, col="#008071") +
-    #ggplot2::stat_function(fun=function(Env_1) Env_1-optimum)+
     ggplot2::geom_line(ggplot2::aes(x=Env_1, y=-dist), col="#088000")+
     ggplot2::geom_vline(ggplot2::aes(xintercept=optimum), col="#80002D")+
     ggplot2::facet_wrap(ggplot2::vars(Species), nrow=3) +
@@ -409,7 +408,7 @@ plot_IV <- function(V_intra, model, fig_width){
                    plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                    legend.position=c(1.1, 0.4)) +
     ggplot2::ylab("Intraspecific variance")
-  ggplot2::ggsave(p, filename=here::here("outputs", model, "intraspecific_variance.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("IV_{n_observed_axis}_obs_axes.png")),
          width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
@@ -609,13 +608,13 @@ plot_inferred_perf_IV <- function(n_observed_axis, Obs_env, nsp, Inferred_specie
   x <- seq(-3, 3, 0.01)
   n_ind_simul <- length(x)
   
-  if(n_observed_axis>1){
-    mean_env <- mean(Obs_env[,k])
-  } else{
-    mean_env <- mean(c(Obs_env))
-    }
-  
   for(k in 1:n_observed_axis){
+    
+    if(n_observed_axis>1){
+      mean_env <- mean(Obs_env[,k])
+    } else{
+      mean_env <- mean(c(Obs_env))
+    }
     
     Env_mat <- matrix(nrow=nsp, ncol=2*n_observed_axis+1)
     
@@ -641,14 +640,14 @@ plot_inferred_perf_IV <- function(n_observed_axis, Obs_env, nsp, Inferred_specie
       ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
       ggplot2::labs(x = glue::glue("Performance at mean environment variable {k}"),
                     y = "Density")+
-      ggplot2::theme(text = ggplot2::element_text(size = 20),
+      ggplot2::theme(text = ggplot2::element_text(size = 18),
                      legend.title = ggplot2::element_text(size=14),
                      legend.text =  ggplot2::element_text(size=10),
                      legend.key.size = unit(0.3, 'cm'),
                      plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                      legend.position=c(1.1, 0.4))
     
-    ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("Perf_overlap_IV_variable_{k}.png")),
+    ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("Perf_overlap_IV_variable_{k}_{n_observed_axis}_obs_axes.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
     
   }

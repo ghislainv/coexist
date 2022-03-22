@@ -262,9 +262,13 @@ if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==
   model_perf <- "Perf_know_start_10_mort_fixed_disp_abund"
 }
 
-# Add the number of axes for partial knowledge only
+# Add the number of axes and observed axes for partial knowledge only
+if(part_know==FALSE){
+  model <- paste0(model, "_", n_axis, "_axes_")
+}
 if(part_know==TRUE){
   model <- paste0(model, "_", n_axis, "_axes_", n_observed_axis, "_obs")
+  model_perf <- paste0(model_perf, "_", n_axis, "_axes_")
 }
 
 # Add the seed
@@ -287,7 +291,7 @@ if(part_know==TRUE){
   load(here::here("outputs", model_perf, "env.RData"))
   load(file=here::here("outputs", model_perf, "niche_optimum.RData"))
   load(file=here::here("outputs", model_perf, glue::glue("Inferred_species_parameters_{n_observed_axis}_obs_axes.RData")))
-  load(file=here::here("outputs", model_perf, "env_stack.RData"))
+  load(file=here::here("outputs", model_perf, "env_entrelac.RData"))
 }
 
 #Number of species

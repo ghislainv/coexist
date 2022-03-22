@@ -65,7 +65,7 @@ f_sp <- function(x) {
 }
 
 # Function to compute a multidimensional semivariance
-compute_semivar_multidim <- function(sites, n_axis, sp_XY, vario_sp){
+compute_semivar_multidim <- function(sites, n_axis, niche_optimum, sp_XY, vario_sp, nsp, community_end){
   
   ## COMPUTE DISTANCES
   
@@ -117,27 +117,6 @@ compute_semivar_multidim <- function(sites, n_axis, sp_XY, vario_sp){
     dplyr::inner_join(Dist_sp, by=c("Sp.1", "Sp.2"))%>%
     dplyr::select(-Sp.1, -Sp.2)
   
-  # for(k in 1:nrow(Dist_neighbours_cells)){
-  #   Dist_neighbours_cells$Sp1[k] <- List_present_species[which(List_present_species$Cell==Dist_neighbours_cells$Neighbour.1[k]),]$Sp
-  #   Dist_neighbours_cells$Sp2[k] <- List_present_species[which(List_present_species$Cell==Dist_neighbours_cells$Neighbour.2[k]),]$Sp
-  #   
-  #   # Sort species in the same order
-  #   if(Dist_neighbours_cells$Sp1[k]>Dist_neighbours_cells$Sp2[k]){
-  #     Dist_neighbours_cells$Sp1[k] <- Dist_neighbours_cells$Sp2[k]
-  #     Dist_neighbours_cells$Sp2[k] <- Dist_neighbours_cells$Sp1[k]
-  #     Dist_neighbours_cells$Neighbour.1[k] <- Dist_neighbours_cells$Neighbour.2[k]
-  #     Dist_neighbours_cells$Neighbour.2[k] <- Dist_neighbours_cells$Neighbour.1[k]
-  #   }
-  #   
-  #   # To compute the semivariogram with 0 and 1 rather than real distances
-  #   if(Dist_neighbours_cells$Sp1[k]==Dist_neighbours_cells$Sp2[k]){
-  #     Dist_neighbours_cells$Diff_sp[k] <- 0
-  #   }else{Dist_neighbours_cells$Diff_sp[k] <- 1}
-  #   
-  #   # Add species distances
-  #   Dist_neighbours_cells$Dist_sp[k] <- Dist_sp[which(Dist_sp$Sp.1==Dist_neighbours_cells$Sp1[k]&Dist_sp$Sp.2==Dist_neighbours_cells$Sp2[k]),]$Dist_sp
-  # }
-  
   # Associate each geographical distance to an environmental distance
   Dist_env_cells <- data.frame(Env=dist_env, Dist_spatial=dist_spatial)
   
@@ -161,4 +140,19 @@ compute_semivar_multidim <- function(sites, n_axis, sp_XY, vario_sp){
   }
   
   return(data.frame(Vario_sp=Vario_sp, Vario_sp_0_1=Vario_sp_0_1, Vario_env=Vario_env))
+}
+
+#Compute Jaccard similarity index
+jaccard <- function(a, b) {
+  intersection = length(intersect(a, b))
+  union = length(a) + length(b) - intersection
+  return (intersection/union)
+}
+
+#Compute percentage similarity
+percentage_similarity <- function(a, b) {
+  A <- sum(a)
+  B <- sum(b)
+  W <- sum(pmin(a, b))
+  return((2*W)/(A+B))
 }
