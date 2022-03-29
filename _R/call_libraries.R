@@ -1,4 +1,5 @@
 # Libraries
+library(utils) # write.table()
 library(raster)
 library(here)
 library(scales)

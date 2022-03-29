@@ -264,11 +264,11 @@ if(part_know==TRUE&&IV==FALSE&&disp_dep_abund==TRUE&&start_ten_ind_per_species==
 
 # Add the number of axes and observed axes for partial knowledge only
 if(part_know==FALSE){
-  model <- paste0(model, "_", n_axis, "_axes_")
+  model <- paste0(model, "_", n_axis, "_axes")
 }
 if(part_know==TRUE){
   model <- paste0(model, "_", n_axis, "_axes_", n_observed_axis, "_obs")
-  model_perf <- paste0(model_perf, "_", n_axis, "_axes_")
+  model_perf <- paste0(model_perf, "_", n_axis, "_axes")
 }
 
 # Add the seed

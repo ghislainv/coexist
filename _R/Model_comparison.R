@@ -1,3 +1,5 @@
+source(file=here::here("_R", "Math_functions.R"))
+
 compare_models_per_seed_nb_obs<-function(n_observed_axis, seed){
   dir.create(here::here("outputs", glue::glue("Comparison_{n_observed_axis}_obs_axes")))
   
@@ -205,25 +207,20 @@ compare_models_per_seed_nb_obs<-function(n_observed_axis, seed){
   
 }
 
-Compare_IV_axis_nb_per_seed <- function(seed){
+Compare_IV_axis_nb_per_seed <- function(seed, nb_obs_axes){
   dir.create(here::here("outputs", glue::glue("Comparison_seed_{seed}")))
   
-  models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
-              glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_3_obs_seed_{seed}"),
-              glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_5_obs_seed_{seed}"),
-              glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_7_obs_seed_{seed}"))
+  model <- glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}")
   
-  nb_obs_axes <- c(1, 3, 5, 7)
+  IV_all_models <- data.frame(IV=numeric(), N_obs_axes=factor())
   
-  IV_all_models <- data.frame(IV=numeric(), Model=factor())
-  
-  for (m in 1:length(models)) {
-    model <- models[m]
-    load(here::here("outputs", model, "V_intra.RData"))
-    IV_all_models <- rbind(IV_all_models, data.frame(IV=V_intra$V, Model=rep(m, nrow(V_intra))))
+  for (n_observed_axes in nb_obs_axes) {
+    load(here::here("outputs", model, glue::glue("V_intra_{n_observed_axes}_obs_axes.RData")))
+    IV_all_models <- rbind(IV_all_models, data.frame(IV=V_intra$V, N_obs_axes=rep(n_observed_axes, nrow(V_intra))))
   }
   
-  load(here::here("outputs", models[1], "sites.RData"))
+  # Compute % of inertia of each environmental axis
+  load(here::here("outputs", model, "sites.RData"))
   sum_var <- 0
   for(k in 1:ncol(sites)){sum_var <- sum_var + var(sites[,k])}
   percentage_inertia <- c()
@@ -234,9 +231,9 @@ Compare_IV_axis_nb_per_seed <- function(seed){
     if(k > 1){percentage_inertia_cum[k]<-percentage_inertia_cum[k-1]+percentage_inertia[k]}
   }
   
-  p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Model), y=IV))+
+  p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(N_obs_axes), y=IV))+
     ggplot2::geom_boxplot()+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(N_obs_axes)), alpha=0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Beeswarmplot of the intraspecific variability \n inferred with different levels of knowledge",
                   x = "Number of observed axes",
@@ -253,7 +250,7 @@ Compare_IV_axis_nb_per_seed <- function(seed){
   
 }
 
-Compare_spatial_structure_per_seed <- function(seed){
+Compare_spatial_structure_per_seed <- function(seed, nb_obs_axes){
   models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
               glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
               glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_3_obs_seed_{seed}"),
@@ -272,8 +269,6 @@ Compare_spatial_structure_per_seed <- function(seed){
                    "Partial knowledge + IV \n (3 observed axis)",
                    "Partial knowledge + IV \n (5 observed axis)",
                    "Partial knowledge + IV \n (7 observed axis)")
-  
-  nb_obs_axes <- c(1, 3, 5, 7)
   
   Correlation_env_sp <- data.frame(nb_obs_axes = nb_obs_axes,
                                    perf_know=numeric(length(nb_obs_axes)),
@@ -310,12 +305,87 @@ Compare_spatial_structure_per_seed <- function(seed){
   
 }
 
+Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
+  
+  dir.create(here::here("outputs", "Comparison"))
+  
+  IV_all_models <- data.frame(Sp=(rep(1:nsp, length(Seeds)*length(nb_obs_axes))),
+                              IV=numeric(nsp*length(nb_obs_axes)*length(Seeds)),
+                              Seed=rep(Seeds, each=nsp*length(nb_obs_axes)),
+                              Nb_obs_axes=rep(rep(nb_obs_axes, each=nsp), length(Seeds)))
+  Percentage_inertia <- data.frame(Seed=rep(Seeds, each=n_axis),
+                                   Nb_obs_axes=rep(1:n_axis, length(Seeds)),
+                                   PI=numeric(n_axis*length(Seeds)),
+                                   PI_cum=numeric(n_axis*length(Seeds)))
+  Level_explanation_axes_nb <- data.frame(Seed=rep(Seeds, each=length(nb_obs_axes)),
+                                          Nb_obs_axes=rep(nb_obs_axes, length(Seeds)),
+                                          R2=numeric(length(Seeds)*length(nb_obs_axes)))
+  
+  for(seed in Seeds){
+  
+    model <- glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}")
+    
+    for (n_observed_axes in nb_obs_axes) {
+      load(here::here("outputs", model, glue::glue("V_intra_{n_observed_axes}_obs_axes.RData")))
+      IV_all_models[IV_all_models$Seed==seed&IV_all_models$Nb_obs_axes==n_observed_axes,]$IV <- V_intra$V
+    }
+    
+    # Compute % of inertia of each environmental axis
+    load(here::here("outputs", model, "sites.RData"))
+    sum_var <- 0
+    for(k in 1:ncol(sites)){sum_var <- sum_var + var(sites[,k])}
+    percentage_inertia <- c()
+    percentage_inertia_cum <- c()
+    for(k in 1:ncol(sites)){
+      percentage_inertia[k]<-(var(sites[k])/sum_var)*100
+      if(k == 1){percentage_inertia_cum[k]<-percentage_inertia[k]}
+      if(k > 1){percentage_inertia_cum[k]<-percentage_inertia_cum[k-1]+percentage_inertia[k]}
+    }
+    Percentage_inertia[Percentage_inertia$Seed==seed,]$PI <- percentage_inertia
+    Percentage_inertia[Percentage_inertia$Seed==seed,]$PI_cum <- percentage_inertia_cum
+    
+    # Retrieve R2 of associated with each number of environmental axes
+    for(n_observed_axes in nb_obs_axes){
+      load(here::here("outputs", model, glue::glue("lm_fit_{n_observed_axes}_obs_axes.RData")))
+      Level_explanation_axes_nb[Level_explanation_axes_nb$Seed==seed,]$R2[n_observed_axes] <- summary(lm_fit)$r.squared
+    }
+  }
+  
+  Summary_percentage_inertia <- Percentage_inertia%>%
+    dplyr::group_by(Nb_obs_axes)%>%
+    dplyr::mutate(Mean_PI_cum=mean(PI_cum))%>%
+    dplyr::slice(1)%>%
+    dplyr::ungroup()%>%
+    dplyr::select(-Seed, -PI, -PI_cum)
+  
+  Summary_level_explanation_axes_nb <- Level_explanation_axes_nb%>%
+    dplyr::group_by(Nb_obs_axes)%>%
+    dplyr::mutate(Mean_explanation=mean(R2))%>%
+    dplyr::slice(1)%>%
+    dplyr::ungroup()%>%
+    dplyr::select(-Seed, -R2)
+  
+  p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Nb_obs_axes), y=IV))+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::geom_boxplot()+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(x = "Number of observed axes",
+                  y = "IV")+
+    ggplot2::scale_x_discrete(labels=nb_obs_axes)+
+    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")+
+    ggplot2::geom_point(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
+    ggplot2::geom_line(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
+    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ . * 1 / 1 , name = "R2 of the quadratic model"))
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "IV_nb_axes.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+}
 
-compare_models<-function(Seeds, nrep, nsp, ngen, nsite_side){
+
+compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
   
-  nb_obs_axes <- c(1, 3, 5, 7)
-  
-  dir.create(here::here("outputs", glue::glue("Comparison")))
+  dir.create(here::here("outputs", "Comparison"))
   
   # 1: Compare the species diversity at the end of the simulations within a model (Shannon diversity index)
   Shannon_all_models <- data.frame(Shannon=numeric(), Model=factor(), Nb_obs_axes=factor(), Seed=factor())
@@ -502,11 +572,11 @@ compare_models<-function(Seeds, nrep, nsp, ngen, nsite_side){
   Shannon_all_models_together <- Shannon_all_models[-which(Shannon_all_models$Model == "Perf_know" & Shannon_all_models$Nb_obs_axes != 1),]
   Shannon_all_models_together[Shannon_all_models_together$Model=="Perf_know",]$Nb_obs_axes <- "Perfect knowledge"
   
-  Shannon_one_plot <- ggplot2::ggplot(Shannon_all_models_test, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Shannon))+
-    ggplot2::geom_boxplot(data=Shannon_all_models_test[Shannon_all_models$Model=="Part_know",], colour="#B2BEB5")+
-    ggplot2::geom_boxplot(data=Shannon_all_models_test[Shannon_all_models$Model=="Part_know_IV",], colour="black")+
-    ggplot2::geom_boxplot(data=Shannon_all_models_test[Shannon_all_models$Model=="Perf_know",], colour="#54626F", ggplot2::aes(x="Perfect knowledge", y=Shannon))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+  Shannon_one_plot <- ggplot2::ggplot(Shannon_all_models_together, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Shannon))+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=Model))+
+    ggplot2::scale_colour_manual(values=c("#B2BEB5","black", "#54626F"))+
+    ggnewscale::new_scale("colour")+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Model), group=Model), alpha=0.6, dodge.width = 0.755)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(x = "Number of observed axes",
                   y = "Shannon diversity index")+
@@ -515,26 +585,27 @@ compare_models<-function(Seeds, nrep, nsp, ngen, nsite_side){
   ggplot2::ggsave(Shannon_one_plot, filename=here::here("outputs", "Comparison", "Shannon_boxplot.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
-  Shannon_arranged <- ggpubr::ggarrange(Shannon_B, Shannon_C, Shannon_A)
+  Shannon_arranged <- ggpubr::ggarrange(Shannon_B, Shannon_C, Shannon_A, nrow=1, ncol=3)
   
   ggplot2::ggsave(Shannon_arranged, filename=here::here("outputs", "Comparison", "Shannon_boxplot_arranged.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Spearman_A <- ggplot2::ggplot(data=Spearman_all_models[Spearman_all_models$Model=="Perf_know"&Spearman_all_models$Nb_obs_axes==1,], ggplot2::aes(x=factor(0), y=Spearman))+
     ggplot2::geom_boxplot()+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Perfect knowledge",
                   y = "Spearman pairwise correlation index")+
     ggplot2::theme(text=ggplot2::element_text(size = 16),
                    legend.position = "none",
                    axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank(),
                    axis.text.x=ggplot2::element_blank(),
                    axis.ticks.x=ggplot2::element_blank())
   
   Spearman_B <- ggplot2::ggplot(data=Spearman_all_models[Spearman_all_models$Model=="Part_know",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Spearman))+
     ggplot2::geom_boxplot()+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge",
                   x = "Number of axes",
@@ -545,26 +616,34 @@ compare_models<-function(Seeds, nrep, nsp, ngen, nsite_side){
   
   Spearman_C <- ggplot2::ggplot(data=Spearman_all_models[Spearman_all_models$Model=="Part_know_IV",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Spearman))+
     ggplot2::geom_boxplot()+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge + IV",
                   x = "Number of axes",
                   y = "Spearman pairwise correlation index")+
-    ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")+
+    ggplot2::theme(text = ggplot2::element_text(size = 16),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank(),
+                   axis.text.x=ggplot2::element_blank(),
+                   axis.ticks.x=ggplot2::element_blank())+
     ggplot2::ylim(range(c(Spearman_all_models[Spearman_all_models$Model=="Part_know",]$Spearman, Spearman_all_models[Spearman_all_models$Model=="Part_know_IV",]$Spearman)))
   
   Spearman_all_models_together <- Spearman_all_models[-which(Spearman_all_models$Model == "Perf_know" & Spearman_all_models$Nb_obs_axes != 1),]
   Spearman_all_models_together[Spearman_all_models_together$Model=="Perf_know",]$Nb_obs_axes <- "Perfect knowledge"
   
   Spearman_one_plot <- ggplot2::ggplot(Spearman_all_models_together, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Spearman))+
-    ggplot2::geom_boxplot(data=Spearman_all_models_together[Spearman_all_models_together$Model=="Part_know",], colour="#B2BEB5")+
-    ggplot2::geom_boxplot(data=Spearman_all_models_together[Spearman_all_models_together$Model=="Part_know_IV",], colour="black")+
-    ggplot2::geom_boxplot(data=Spearman_all_models_together[Spearman_all_models_together$Model=="Perf_know",], colour="#54626F", ggplot2::aes(x="Perfect knowledge", y=Spearman))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=Model))+
+    ggplot2::scale_colour_manual(values=c("#B2BEB5","black", "#54626F"))+
+    ggnewscale::new_scale("colour")+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Model), group=Model), alpha=0.6, dodge.width = 0.755)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(x = "Number of observed axes",
                   y = "Spearman pairwise correlation index")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
+  
+  ggplot2::ggsave(Spearman_one_plot, filename=here::here("outputs", "Comparison", "Spearman_boxplot.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Spearman_arranged <- ggpubr::ggarrange(Spearman_B, Spearman_C, Spearman_A)
   
@@ -573,26 +652,31 @@ compare_models<-function(Seeds, nrep, nsp, ngen, nsite_side){
 
   
   Jaccard_all_models_together <- Jaccard_all_models[-which(Jaccard_all_models$Combi_model == "1-1" & Jaccard_all_models$Nb_obs_axes != 1),]
-  Jaccard_all_models_together[Jaccard_all_models_together$Combi_model=="1-1",]$Nb_obs_axes <- 0
+  Jaccard_all_models_together[Jaccard_all_models_together$Combi_model=="1-1",]$Nb_obs_axes <- "Perfect knowledge"
   
-  Jaccard_one_plot <- ggplot2::ggplot(data=Jaccard_all_models_together, ggplot2::aes(x=as.factor(Combi_model), y=Jaccard))+
-    ggplot2::geom_boxplot(data=Jaccard_all_models_together[Jaccard_all_models_together$Nb_obs_axes==0,], colour="black")+
-    ggplot2::geom_boxplot(data=Jaccard_all_models_together[Jaccard_all_models_together$Nb_obs_axes==1,], colour=viridisLite::viridis(4)[1])+
-    ggplot2::geom_boxplot(data=Jaccard_all_models_together[Jaccard_all_models_together$Nb_obs_axes==3,], colour=viridisLite::viridis(4)[2])+
-    ggplot2::geom_boxplot(data=Jaccard_all_models_together[Jaccard_all_models_together$Nb_obs_axes==5,], colour=viridisLite::viridis(4)[3])+
-    ggplot2::geom_boxplot(data=Jaccard_all_models_together[Jaccard_all_models_together$Nb_obs_axes==7,], colour=viridisLite::viridis(4)[4])+
-    #ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.1)+
+  Jaccard_all_models_together_within <- Jaccard_all_models_together[Jaccard_all_models_together$Combi_model%in%c("1-1", "2-2", "3-3"),]
+  
+  Jaccard_one_plot_within <- ggplot2::ggplot(Jaccard_all_models_together_within, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=Combi_model))+
+    ggplot2::scale_colour_manual(values=c("#54626F", "#B2BEB5", "black"))+
+    ggnewscale::new_scale("colour")+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Combi_model), group=Combi_model),
+                         alpha=0.6,
+                         position=ggplot2::position_jitterdodge(jitter.width=1.6))+
     ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(x = "Model combination",
-                  y = "Jaccard index of the composition of the community")+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
+    ggplot2::scale_shape_manual(values=c(15, 16, 17))+
+    ggplot2::labs(x = "Number of observed axes",
+                  y = "Jaccard similarity index of the composition of the community")+
+    ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
   
-  ggplot2::ggsave(Jaccard_one_plot, filename=here::here("outputs", "Comparison", "Jaccard_boxplot.png"),
+  ggplot2::ggsave(Jaccard_one_plot_within, filename=here::here("outputs", "Comparison", "Jaccard_boxplot_within.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
-  Jaccard_A <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,], ggplot2::aes(x=factor(0), y=Jaccard))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
+  set.seed(0)
+  Jaccard_A <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                               ggplot2::aes(x=factor(0), y=Jaccard))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot(width=0.5)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Perfect knowledge",
                   y = "Jaccard similarity index")+
@@ -602,175 +686,261 @@ compare_models<-function(Seeds, nrep, nsp, ngen, nsite_side){
                    axis.title.x=ggplot2::element_blank(),
                    axis.text.x=ggplot2::element_blank(),
                    axis.ticks.x=ggplot2::element_blank())+
-    ggplot2::ylim(0,1)
+    ggplot2::ylim(range(Jaccard_all_models_together$Jaccard))
   
-  Jaccard_B <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-2",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Perfect knowledge - Partial knowledge",
-                  x = "Number of axes",
-                  y = "Jaccard similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
-  
-  Jaccard_C <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Perfect knowledge - Partial knowledge + IV",
-                  x = "Number of axes",
-                  y = "Jaccard similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
-  
-  Jaccard_D <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="2-2",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
+  Jaccard_B <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="2-2",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot(width=0.5)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge",
                   x = "Number of axes",
                   y = "Jaccard similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Jaccard_all_models_together$Jaccard))
   
-  Jaccard_E <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="2-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Partial knowledge - Partial knowledge + IV",
-                  x = "Number of axes",
-                  y = "Jaccard similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
-  
-  Jaccard_F <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="3-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
+  Jaccard_C <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="3-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot(width=0.5)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge + IV",
                   x = "Number of axes",
                   y = "Jaccard similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Jaccard_all_models_together$Jaccard))
   
-  Jaccard_arranged <- ggpubr::ggarrange(Jaccard_A, Jaccard_B, Jaccard_C, Jaccard_D, Jaccard_E, Jaccard_F)
+  Jaccard_D <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-2",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot(width=0.5)+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(title = "Perfect knowledge - Partial knowledge",
+                  x = "Number of axes",
+                  y = "Jaccard similarity index")+
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Jaccard_all_models_together$Jaccard))
   
-  ggplot2::ggsave(Jaccard_arranged, filename=here::here("outputs", "Comparison", "Jaccard_boxplot_arranged.png"),
+  Jaccard_E <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot(width=0.5)+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(title = "Perfect knowledge - Partial knowledge + IV",
+                  x = "Number of axes",
+                  y = "Jaccard similarity index")+
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Jaccard_all_models_together$Jaccard))
+  
+  Jaccard_F <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="2-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot(width=0.5)+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(title = "Partial knowledge - Partial knowledge + IV",
+                  x = "Number of axes",
+                  y = "Jaccard similarity index")+
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Jaccard_all_models_together$Jaccard))
+  
+  Jaccard_arranged_all <- ggpubr::ggarrange(Jaccard_A,
+                                            Jaccard_B,
+                                            Jaccard_C,
+                                            Jaccard_D,
+                                            Jaccard_E,
+                                            Jaccard_F)
+  
+  ggplot2::ggsave(Jaccard_arranged_all, filename=here::here("outputs", "Comparison", "Jaccard_boxplot_arranged_all.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+  Jaccard_arranged_between <- ggpubr::ggarrange(Jaccard_D,
+                                            Jaccard_E,
+                                            Jaccard_F,
+                                            nrow=1,
+                                            ncol=3)
+  
+  ggplot2::ggsave(Jaccard_arranged_between, filename=here::here("outputs", "Comparison", "Jaccard_boxplot_arranged_between.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Percentage_similarity_all_models_together <- Percentage_similarity_all_models[-which(Percentage_similarity_all_models$Combi_model == "1-1" & Percentage_similarity_all_models$Nb_obs_axes != 1),]
-  Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Combi_model=="1-1",]$Nb_obs_axes <- 0
+  Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Combi_model=="1-1",]$Nb_obs_axes <- "Perfect knowledge"
   
-  Percentage_similarity_one_plot <- ggplot2::ggplot(data=Percentage_similarity_all_models_together, ggplot2::aes(x=as.factor(Combi_model), y=Percentage_similarity))+
-    ggplot2::geom_boxplot(data=Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Nb_obs_axes==0,], colour="black")+
-    ggplot2::geom_boxplot(data=Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Nb_obs_axes==1,], colour=viridisLite::viridis(4)[1])+
-    ggplot2::geom_boxplot(data=Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Nb_obs_axes==3,], colour=viridisLite::viridis(4)[2])+
-    ggplot2::geom_boxplot(data=Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Nb_obs_axes==5,], colour=viridisLite::viridis(4)[3])+
-    ggplot2::geom_boxplot(data=Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Nb_obs_axes==7,], colour=viridisLite::viridis(4)[4])+
-    #ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.1)+
+  Percentage_similarity_all_models_together_within <- Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Combi_model%in%c("1-1", "2-2", "3-3"),]
+  
+  Percentage_similarity_one_plot_within <- ggplot2::ggplot(Percentage_similarity_all_models_together_within, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=Combi_model))+
+    ggplot2::scale_colour_manual(values=c("#54626F", "#B2BEB5", "black"))+
+    ggnewscale::new_scale("colour")+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Combi_model), group=Combi_model),
+                         alpha=0.6,
+                         position=ggplot2::position_jitterdodge(jitter.width=1.6))+
     ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(x = "Model combination",
-                  y = "Percentage_similarity index of the composition of the community")+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
+    ggplot2::scale_shape_manual(values=c(15, 16, 17))+
+    ggplot2::labs(x = "Number of observed axes",
+                  y = "Percentage similarity of the final species abundances")+
+    ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
   
-  ggplot2::ggsave(Percentage_similarity_one_plot, filename=here::here("outputs", "Comparison", "Percentage_similarity_boxplot.png"),
+  ggplot2::ggsave(Percentage_similarity_one_plot_within, filename=here::here("outputs", "Comparison", "Percentage_similarity_boxplot_within.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
-  Percentage_similarity_A <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,], ggplot2::aes(x=factor(0), y=Percentage_similarity))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+  Percentage_similarity_A <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                                             ggplot2::aes(x=factor(0), y=Percentage_similarity))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
     ggplot2::geom_boxplot()+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Perfect knowledge",
-                  y = "Percentage_similarity similarity index")+
+                  y = "Percentage similarity")+
     ggplot2::theme(plot.title = ggplot2::element_text(size=14),
                    text=ggplot2::element_text(size = 14),
                    legend.position = "none",
                    axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank(),
                    axis.text.x=ggplot2::element_blank(),
                    axis.ticks.x=ggplot2::element_blank())+
-    ggplot2::ylim(0,1)
+    ggplot2::ylim(range(Percentage_similarity_all_models_together$Percentage_similarity))
   
-  Percentage_similarity_B <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-2",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Perfect knowledge - Partial knowledge",
-                  x = "Number of axes",
-                  y = "Percentage_similarity similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
-  
-  Percentage_similarity_C <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Perfect knowledge - Partial knowledge + IV",
-                  x = "Number of axes",
-                  y = "Percentage_similarity similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
-  
-  Percentage_similarity_D <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="2-2",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+  Percentage_similarity_B <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="2-2",],
+                                             ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
     ggplot2::geom_boxplot()+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge",
                   x = "Number of axes",
-                  y = "Percentage_similarity similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
+                  y = "Percentage similarity")+
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Percentage_similarity_all_models_together$Percentage_similarity))
   
-  Percentage_similarity_E <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="2-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
-    ggplot2::geom_boxplot()+
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Partial knowledge - Partial knowledge + IV",
-                  x = "Number of axes",
-                  y = "Percentage_similarity similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
-  
-  Percentage_similarity_F <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="3-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+  Percentage_similarity_C <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="3-3",],
+                                             ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
     ggplot2::geom_boxplot()+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge + IV",
                   x = "Number of axes",
-                  y = "Percentage_similarity similarity index")+
-    ggplot2::theme(plot.title = ggplot2::element_text(size=14), text = ggplot2::element_text(size = 14), legend.position = "none")+
-    ggplot2::ylim(0,1)
+                  y = "Percentage similarity")+
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Percentage_similarity_all_models_together$Percentage_similarity))
   
-  Percentage_similarity_arranged <- ggpubr::ggarrange(Percentage_similarity_A, Percentage_similarity_B, Percentage_similarity_C, Percentage_similarity_D, Percentage_similarity_E, Percentage_similarity_F)
+  Percentage_similarity_D <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-2",],
+                                             ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot()+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(title = "Perfect knowledge - \n Partial knowledge",
+                  x = "Number of axes",
+                  y = "Percentage similarity")+
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Percentage_similarity_all_models_together$Percentage_similarity))
   
-  ggplot2::ggsave(Percentage_similarity_arranged, filename=here::here("outputs", "Comparison", "Percentage_similarity_boxplot_arranged.png"),
+  Percentage_similarity_E <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-3",],
+                                             ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot()+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(title = "Perfect knowledge - \n Partial knowledge + IV",
+                  x = "Number of axes",
+                  y = "Percentage similarity")+
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Percentage_similarity_all_models_together$Percentage_similarity))
+  
+  Percentage_similarity_F <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="2-3",],
+                                             ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
+    ggplot2::geom_boxplot()+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::labs(title = "Partial knowledge - \n Partial knowledge + IV",
+                  x = "Number of axes",
+                  y = "Percentage similarity")+
+    ggplot2::theme(plot.title = ggplot2::element_text(size=14),
+                   text = ggplot2::element_text(size = 14),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.title.y=ggplot2::element_blank())+
+    ggplot2::ylim(range(Percentage_similarity_all_models_together$Percentage_similarity))
+  
+  
+  
+  Percentage_similarity_arranged_all <- ggpubr::ggarrange(Percentage_similarity_A,
+                                                      Percentage_similarity_B,
+                                                      Percentage_similarity_C,
+                                                      Percentage_similarity_D,
+                                                      Percentage_similarity_E,
+                                                      Percentage_similarity_F)
+  
+  Percentage_similarity_arranged_all <- ggpubr::annotate_figure(Percentage_similarity_arranged_all,
+                  bottom = ggpubr::text_grob("Number of axes", face = "bold", size = 14),
+                  left = ggpubr::text_grob("Percentage similarity", face = "bold", size = 14, rot=90))
+  
+  ggplot2::ggsave(Percentage_similarity_arranged_all, filename=here::here("outputs", "Comparison", "Percentage_similarity_boxplot_arranged_all.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
-  seed <- Seeds[8]
+  Percentage_similarity_arranged_between <- ggpubr::ggarrange(Percentage_similarity_D,
+                                                      Percentage_similarity_E,
+                                                      Percentage_similarity_F,
+                                                      nrow=1,
+                                                      ncol=3)
   
-  colourCount = nsp
-  getPalette = colorRampPalette(RColorBrewer::brewer.pal(9, "Set1"))
+  Percentage_similarity_arranged_between <- ggpubr::annotate_figure(Percentage_similarity_arranged_between,
+                          bottom = ggpubr::text_grob("Number of axes", face = "bold", size = 14),
+                          left = ggpubr::text_grob("Percentage similarity", face = "bold", size = 14, rot=90))
   
-  png(file=here::here("outputs", "Comparison", "Final_communities.png"),
-      width=fig_width, height=fig_width, units="cm", res=300)
+  ggplot2::ggsave(Percentage_similarity_arranged_between, filename=here::here("outputs", "Comparison", "Percentage_similarity_boxplot_arranged_between.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
-  par(mfrow=c(2,2), bty = "n")
-  
-  load(here::here("outputs", glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}"), glue::glue("community_end_Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}.RData")))
-  raster::plot(raster::raster(community_end[[1]]), main="Species - End", zlim=c(0, nsp),
-               col=c("black", getPalette(colourCount)), legend=FALSE)
-  load(here::here("outputs", glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"), glue::glue("community_end_Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}.RData")))
-  raster::plot(raster::raster(community_end[[1]]), main="Species - End", 
-       zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=FALSE)
-  load(here::here("outputs", glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"), glue::glue("community_end_Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}.RData")))
-  raster::plot(raster::raster(community_end[[1]]), main="Species - End", 
-       zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=FALSE)
-  load(here::here("outputs", glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}"), "env_entrelac.RData"))
-  raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), main="Environment summary", col=viridisLite::viridis(255^3))
-  
-  dev.off()
-  
-  nb_obs_axes <- c(1, 3, 5, 7)
+  for (seed in Seeds) {
+    
+    colourCount = nsp
+    getPalette = colorRampPalette(RColorBrewer::brewer.pal(9, "Set1"))
+    
+    png(file=here::here("outputs", "Comparison", glue::glue("Final_communities_{seed}.png")),
+        width=fig_width, height=fig_width, units="cm", res=300)
+    
+    par(mfrow=c(2,2), bty = "n")
+    
+    load(here::here("outputs", glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}"), glue::glue("community_end.RData")))
+    raster::plot(raster::raster(community_end[[1]]), main="Species - Perfect knowledge", zlim=c(0, nsp),
+                 col=c("black", getPalette(colourCount)), legend=FALSE)
+    load(here::here("outputs", glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"), glue::glue("community_end.RData")))
+    raster::plot(raster::raster(community_end[[1]]), main="Species - Partial knowledge", 
+         zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=FALSE, yaxt = "n", xaxt = "n")
+    load(here::here("outputs", glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"), glue::glue("community_end.RData")))
+    raster::plot(raster::raster(community_end[[1]]), main="Species - Partial knowledge + IV", 
+         zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=FALSE, yaxt = "n", xaxt = "n")
+    load(here::here("outputs", glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}"), "env_entrelac.RData"))
+    raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), main="Environment summary", col=viridisLite::viridis(255^3), yaxt = "n", xaxt = "n")
+    
+    dev.off()
+  }
   
   Correlation_env_sp <- data.frame(Seed = rep(Seeds, each=length(nb_obs_axes)),
                                    Nb_obs_axes = rep(nb_obs_axes, length(Seeds)),
@@ -802,18 +972,15 @@ compare_models<-function(Seeds, nrep, nsp, ngen, nsite_side){
   Correlation_env_sp[Correlation_env_sp$Nb_obs_axes>1,]$Perf_know<-NA
   save(Correlation_env_sp, file=here::here("outputs", "Comparison", "Correlation_env_sp.RData"))
   
-  Summary_correlation_env_sp <- data.frame(Perf_know=c(mean(Correlation_env_sp$Perf_know, na.rm=TRUE), rep(NA, 3)),
-                                           Part_know=c(mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==1,]$Part_know),
-                                                       mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==3,]$Part_know),
-                                                       mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==5,]$Part_know),
-                                                       mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==7,]$Part_know)
-                                                       ),
-                                           Part_know_IV=c(mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==1,]$Part_know_IV),
-                                                          mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==3,]$Part_know_IV),
-                                                          mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==5,]$Part_know_IV),
-                                                          mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==7,]$Part_know_IV)
-                                                          )
-                                           )
-  save(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.RData"))
+  Summary_correlation_env_sp <- data.frame(Nb_obs_axes=nb_obs_axes,
+                                           Perf_know=c(mean(Correlation_env_sp$Perf_know, na.rm=TRUE), rep(NA, length(nb_obs_axes)-1)),
+                                           Part_know=numeric(length(nb_obs_axes)),
+                                           Part_know_IV=numeric(length(nb_obs_axes)))
+  for (n_observed_axes in nb_obs_axes){
+    Summary_correlation_env_sp$Part_know[n_observed_axes] <- mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==n_observed_axes,]$Part_know)
+    Summary_correlation_env_sp$Part_know_IV[n_observed_axes] <- mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==n_observed_axes,]$Part_know_IV)
+  }
   
+  save(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.RData"))
+  utils::write.table(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.csv"), sep = ',', row.names=FALSE)
 }
