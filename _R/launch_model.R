@@ -570,6 +570,8 @@ launch_model <- function(){
   save(Abundances, file = here::here("outputs", model, "Abundances.RData"))
   save(sp_rich, file=here::here("outputs", model, "sp_rich.RData"))
   save(rank_sp, file=here::here("outputs", model, "rank_sp.RData"))
+  save(env_filt, file = here::here("outputs", model, "env_filt.RData"))
+  save(theta_comm, file = here::here("outputs", model, "theta_comm.RData"))
   
   # =========================
   # Diversity analysis

@@ -150,19 +150,32 @@ dev.off()
 plot_species_richness <- function(nrep, sp_rich, model, fig_width){
   colnames_long <- paste0("X", 1:nrep)
   
-  sp_rich_long <- sp_rich %>%
-    dplyr::mutate(gen=1:(ngen)) %>%
-    tidyr::pivot_longer(cols=colnames_long, names_to="rep",
-                 names_prefix="X", values_to="sp_rich")
+  if (nrep > 1){
+    sp_rich_long <- sp_rich %>%
+      dplyr::mutate(gen=1:(ngen)) %>%
+      tidyr::pivot_longer(cols=colnames_long, names_to="rep",
+                   names_prefix="X", values_to="sp_rich")
+  }else{sp_rich_long<-data.frame(gen=1:ngen, rep=rep(nrep, ngen), sp_rich=sp_rich)}
+  
   #One curve per repetition
-  p <- ggplot2::ggplot(data=sp_rich_long, ggplot2::aes(x=gen, y=sp_rich, col=rep)) +
-    ggplot2::geom_line() +
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::xlab("Generations") + 
-    ggplot2::ylab("Species richness")+
-    ggplot2::theme(legend.position = "none",
-                   text = ggplot2::element_text(size = 20))+
-    ggplot2::ylim(0,nsp)
+  if(nrep > 1){
+    p <- ggplot2::ggplot(data=sp_rich_long, ggplot2::aes(x=gen, y=sp_rich, col=rep)) +
+      ggplot2::geom_line() +
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Species richness")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 20))+
+      ggplot2::ylim(0,nsp)
+  }else{
+    p <- ggplot2::ggplot(data=sp_rich_long, ggplot2::aes(x=gen, y=sp_rich)) +
+      ggplot2::geom_line() +
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Species richness")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 20))+
+      ggplot2::ylim(0,nsp)
+  }
   ggplot2::ggsave(p, filename=here::here("outputs", model, "species_richness_with_time.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
   
@@ -185,7 +198,7 @@ plot_species_richness <- function(nrep, sp_rich, model, fig_width){
   # Log_10 plot
   
   if(nrep==1){
-    sp_rich_log <- data.frame(Sp_rich=sp_rich, Gen=c(1:ngen))
+    sp_rich_log <- data.frame(Sp_rich=sp_rich$sp_rich, Gen=c(1:ngen))
     p <- ggplot2::ggplot(data=sp_rich_log, ggplot2::aes(x=as.numeric(Gen), y=Sp_rich)) +
       ggplot2::geom_line(col="#008071")+
       scale_x_continuous(trans='log10')+
@@ -235,19 +248,33 @@ plot_mean_rank_hab_freq <- function(sp_mean_rank, sp_hab_freq, model, fig_width)
 plot_env_filt<- function(nrep, env_filt, model, fig_width){
   colnames_long <- paste0("X", 1:nrep)
   
-  env_filt_long <- env_filt %>%
-    dplyr::mutate(gen=1:(ngen)) %>%
-    tidyr::pivot_longer(cols=colnames_long, names_to="rep",
-                 names_prefix="X", values_to="env_filt")
+  if(nrep>1){
+    env_filt_long <- env_filt %>%
+      dplyr::mutate(gen=1:(ngen)) %>%
+      tidyr::pivot_longer(cols=colnames_long, names_to="rep",
+                   names_prefix="X", values_to="env_filt")
+    
+    p <- ggplot2::ggplot(data=env_filt_long, ggplot2::aes(x=gen, y=env_filt, col=rep)) +
+      ggplot2::geom_line() +
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(title="Environmental filtering") +
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Mean env-species perf difference")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 16))
+  }else{
+    
+    env_filt_long <- data.frame(gen=1:ngen, rep=rep(nrep, ngen), env_filt=env_filt)
+    
+    p <- ggplot2::ggplot(data=env_filt_long, ggplot2::aes(x=gen, y=env_filt)) +
+      ggplot2::geom_line() +
+      ggplot2::labs(title="Environmental filtering") +
+      ggplot2::xlab("Generations") + 
+      ggplot2::ylab("Mean env-species perf difference")+
+      ggplot2::theme(legend.position = "none",
+                     text = ggplot2::element_text(size = 16))
+  }
   
-  p <- ggplot2::ggplot(data=env_filt_long, ggplot2::aes(x=gen, y=env_filt, col=rep)) +
-    ggplot2::geom_line() +
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title="Environmental filtering") +
-    ggplot2::xlab("Generations") + 
-    ggplot2::ylab("Mean env-species perf difference")+
-    ggplot2::theme(legend.position = "none",
-                   text = ggplot2::element_text(size = 18))
   ggplot2::ggsave(p, filename=here::here("outputs", model, "environmental_filtering.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
   
