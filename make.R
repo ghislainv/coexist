@@ -23,7 +23,7 @@ for(configuration in 1:length(Seeds)){
   # Launch perfect knowledge model
   # ========================================
   
-  #perf_know <- TRUE
+  perf_know <- TRUE
   IV <- FALSE
   
   source(file = here::here("_R", "Basic_parameters.R"))
