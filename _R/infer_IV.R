@@ -30,12 +30,8 @@ infer_IV <- function(model, n_observed_axis){
   plot_species_niche(seed, df_perf, model, fig_width)
   
   #Check that the model well fits the data if all environmental variables are included
-  
-  formula <- as.formula(paste0("Perf~-1+Species+Species:", paste0(colnames(df_perf)[1:(2*n_axis)], collapse= "+Species:")))
-  
-  lm_all_env <- lm(formula, data=df_perf)
-  
-  print(glue::glue("the r-squared with all environmental variables is {summary(lm_all_env)$adj.r.squared}"))
+  # formula <- as.formula(paste0("Perf~-1+Species+Species:", paste0(colnames(df_perf)[1:(2*n_axis)], collapse= "+Species:")))
+  # lm_all_env <- lm(formula, data=df_perf)
   
   # Observed intraspecific variability
   
@@ -46,8 +42,6 @@ infer_IV <- function(model, n_observed_axis){
   
   lm_fit <- lm(formula, data=df_perf)
   save(lm_fit, file = here::here("outputs", model, glue::glue("lm_fit_{n_observed_axis}_obs_axes.RData")))
-  
-  print(glue::glue("the r-squared with the first environmental variable is {summary(lm_fit)$adj.r.squared}"))
   
   #Histogram of the residuals to check normality
   hist(summary(lm_fit)$residuals)

@@ -46,10 +46,15 @@ generate_environment <- function(nsite_side, model){
   save(env, file = here::here("outputs", model, "env.RData"))
   
   #Look at the correlations between environmental variables
-  print(glue::glue("Variables 1 and 2 have a correlation of {cor(raster::values(raster::raster(env[[1]])), raster::values(raster::raster(env[[2]])))},
-                   variables 1 and 3 have a correlation of {cor(raster::values(raster::raster(env[[1]])), raster::values(raster::raster(env[[3]])))}
-                   and variables 2 and 3 have a correlation of {cor(raster::values(raster::raster(env[[2]])), raster::values(raster::raster(env[[3]])))}"))
+  Corr_env <- as.data.frame(as.matrix(t(combn(c(1:n_axis), 2))))
+  colnames(Corr_env) <- c("Var1", "Var2")
+  Corr_env$Corr <- numeric(nrow(Corr_env))
   
+  for(k in 1:nrow(Corr_env)){
+    Corr_env$Corr[k] <- cor(raster::values(raster::raster(env[[Corr_env$Var1[k]]])), raster::values(raster::raster(env[[Corr_env$Var2[k]]])))
+  }
+  
+  save(Corr_env, file = here::here("outputs", model, "Corr_env.RData"))
   
   # Plot the environment
   plot_environment(model=model, fig_width=fig_width, n_axis=n_axis, env=env, sites=sites)
