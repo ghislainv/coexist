@@ -343,60 +343,67 @@ plot_theta_community<-function(theta_comm, ngen, nrep, model, fig_width){
   }
 }
 
-plot_spatial_autocorr <- function(community_end, n_axis, sites, niche_optimum, niche_width, model, fig_width){
-  sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end[[1]])))
-  names(sp_XY) <- c("x", "y", "sp")
-  vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
+plot_spatial_autocorr <- function(nrep, community_end, n_axis, sites, niche_optimum, niche_width, model, fig_width){
   
-  if(randomOptSp==FALSE&n_axis==3){
-    # 3D voxel for each site
-    x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
-    y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
-    z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
-    n_niche <- 1/niche_width
-    # This is done to avoid having the same class for different combinations (the function is not continuous)
-    class_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
-    vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
-    plot(vario_sp)
-    plot(vario_env)
-    plot(vario_env$v, vario_sp$v)
-  }else{
+  semivar_multidim <- list()
+  
+  for(rep in 1:nrep){
+    sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end[[rep]])))
+    names(sp_XY) <- c("x", "y", "sp")
+    vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
     
-    semivar_multidim <- compute_semivar_multidim(sites, n_axis, niche_optimum, sp_XY, vario_sp, nsp, community_end)
-    semivar_multidim$Vario_sp_geoR <- vario_sp$u
-    semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
-    semivar_multidim$Sample_size <- vario_sp$n
-    save(semivar_multidim, file=here::here("outputs", model, "semivar_multidim.RData"))
-    
-    # Remove last point if the number of pairs is too low
-    if(semivar_multidim$Sample_size[nrow(semivar_multidim)]<500){
-      semivar_multidim <- semivar_multidim[1:(nrow(semivar_multidim)-1),]
+    if(randomOptSp==FALSE&n_axis==3){
+      # 3D voxel for each site
+      x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
+      y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
+      z_site <- pmin(floor(sites$V3_env/niche_width)+1, 4)
+      n_niche <- 1/niche_width
+      # This is done to avoid having the same class for different combinations (the function is not continuous)
+      class_site <- (z_site-1)*n_niche^2+(y_site-1)*n_niche+(x_site-1)+1
+      vario_env <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=class_site)
+      plot(vario_sp)
+      plot(vario_env)
+      plot(vario_env$v, vario_sp$v)
+    }else{
+      
+      semivar_multidim[[rep]] <- compute_semivar_multidim(sites, n_axis, niche_optimum, sp_XY, vario_sp, nsp, community_end[[rep]])
+      semivar_multidim[[rep]]$Vario_sp_geoR <- vario_sp$u
+      semivar_multidim[[rep]]$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
+      semivar_multidim[[rep]]$Sample_size <- vario_sp$n
+      
+      if(rep==1){
+        # Remove last point if the number of pairs is too low
+        if(semivar_multidim[[rep]]$Sample_size[nrow(semivar_multidim[[rep]])]<500){
+          semivar_multidim_plot <- semivar_multidim[[rep]][1:(nrow(semivar_multidim[[rep]])-1),]
+        }
+        # Plot with correlation
+        png(file=here::here("outputs", model, "sp_autocorrelation.png"),
+            width=fig_width, height=fig_width*0.8, units="cm", res=300)
+        par(mfrow=c(2,2), bty = "n")
+        #Species
+        plot(semivar_multidim_plot$Distance, semivar_multidim_plot$Vario_sp,
+             main="Species - end",
+             xlab="distance",
+             ylab="semivariance")
+        #Environment
+        plot(semivar_multidim_plot$Distance, semivar_multidim_plot$Vario_env,
+             main="Environment",
+             xlab="distance",
+             ylab="semivariance")
+        #Regression
+        plot(semivar_multidim_plot$Vario_env, semivar_multidim_plot$Vario_sp,
+             main = "Regression",
+             xlab="Semivariance for environment",
+             ylab="Semivariance for species")
+        m <- lm(semivar_multidim_plot$Vario_sp ~ semivar_multidim_plot$Vario_env)
+        abline(a=as.numeric(coef(m)[1]), b=as.numeric(coef(m)[2]), col="#008071")
+        text(semivar_multidim_plot$Vario_env[3], 0.95*max(semivar_multidim_plot$Vario_sp), paste("R =", round(sqrt(summary(m)$r.squared), digits = 2)))
+        dev.off()
+      }
     }
-    
-    # Plot with correlation
-    png(file=here::here("outputs", model, "sp_autocorrelation.png"),
-        width=fig_width, height=fig_width*0.8, units="cm", res=300)
-    par(mfrow=c(2,2), bty = "n")
-    #Species
-    plot(semivar_multidim$Distance, semivar_multidim$Vario_sp,
-         main="Species - end",
-         xlab="distance",
-         ylab="semivariance")
-    #Environment
-    plot(semivar_multidim$Distance, semivar_multidim$Vario_env,
-         main="Environment",
-         xlab="distance",
-         ylab="semivariance")
-    #Regression
-    plot(semivar_multidim$Vario_env, semivar_multidim$Vario_sp,
-         main = "Regression",
-         xlab="Semivariance for environment",
-         ylab="Semivariance for species")
-    m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
-    abline(a=as.numeric(coef(m)[1]), b=as.numeric(coef(m)[2]), col="#008071")
-    text(semivar_multidim$Vario_env[3], 0.95*max(semivar_multidim$Vario_sp), paste("R =", round(sqrt(summary(m)$r.squared), digits = 2)))
-    dev.off()
+    semivar_multidim[[rep]]$Rep <- rep(rep, nrow(semivar_multidim[[rep]]))
   }
+  save(semivar_multidim, file=here::here("outputs", model, "semivar_multidim.RData"))
 }
 
 plot_species_niche <- function(seed, df_perf, model, fig_width){

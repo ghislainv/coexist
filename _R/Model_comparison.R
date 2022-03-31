@@ -1,310 +1,5 @@
 source(file=here::here("_R", "Math_functions.R"))
 
-compare_models_per_seed_nb_obs<-function(n_observed_axis, seed){
-  dir.create(here::here("outputs", glue::glue("Comparison_{n_observed_axis}_obs_axes")))
-  
-  models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"),
-                      glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"),
-                      glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axis}_obs_seed_{seed}"))
-  
-  # 1: Compare the species diversity at the end of the simulations within a model (Shannon diversity index)
-  
-  Shannon_all_models <- data.frame(Shannon=numeric(), Model=factor())
-  
-  for (m in 1:length(models)) {
-    model <- models[m]
-    load(here::here("outputs", model, "Shannon.RData"))
-    Shannon_all_models <- rbind(Shannon_all_models, data.frame(Shannon=Shannon, Model=rep(m, length(Shannon))))
-  }
-  
-  p <- ggplot2::ggplot(data=Shannon_all_models, ggplot2::aes(x=as.factor(Model), y=Shannon))+
-    ggplot2::geom_boxplot()+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
-    ggplot2::scale_colour_manual(values=c("#80002D", "#008071", "#088000"))+
-    #ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
-    ggplot2::labs(title = "Beeswarmplot of the Shannon diversity index \n at the end of each simulation",
-                  x = "Model",
-                  y = "Shannon diversity index")+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Shannon_boxplot.png"),
-                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
-  
-  
-  # 2: Compare the species ranks in the end of the simulations within a model (Spearman pairwise correlation)
-  
-  Spearman_all_models <- data.frame(Spearman=numeric(), Model=factor())
-  
-  for (m in 1:length(models)) {
-    model <- models[m]
-    load(here::here("outputs", model, "Spearman.RData"))
-    Spearman_all_models <- rbind(Spearman_all_models, data.frame(Spearman=c(Spearman), Model=rep(m, length(Spearman))))
-  }
-  
-  p <- ggplot2::ggplot(data=Spearman_all_models, ggplot2::aes(x=as.factor(Model), y=Spearman))+
-    ggplot2::geom_boxplot()+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Model)), alpha=0.1)+
-    #ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Model)), alpha=0.6)+
-    ggplot2::scale_colour_manual(values=c("#80002D", "#008071", "#088000"))+
-    #ggplot2::scale_colour_manual(values=c("#80002D", "#BF0043", "#008071", "#00BFA9", "#088000", "#0DBF00"))+
-    # ggplot2::labs(title = "Beeswamplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation",
-    #               x = "Model",
-    #               y = "Spearman pairwise correlation")+
-    ggplot2::labs(title = "Jitterplot of the Spearman pairwise correlation \n of species ranks at the end of each simulation",
-                  x = "Model",
-                  y = "Spearman pairwise correlation")+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Spearman_boxplot.png"),
-                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
-  
-  # 3: Compare the composition of the community at the end of the simulations between models
-  # Jaccard index (similarity matrix)
-  # 4:  Percentage similarity of species abudances
-  
-  Jaccard_all_models <- data.frame(Jaccard=numeric(), Model=factor())
-  Percentage_similarity_all_models <- data.frame(Percentage_similarity=numeric(), Model=factor())
-  
-  combi_models <- gtools::combinations(n = length(c(1:length(models))), r = 2, v = c(1:length(models)), repeats.allowed = TRUE)
-  
-  combi_rep <- expand.grid(A=c(1:nrep), B=c(1:nrep))
-  
-  combi_rep_same_model <- t(combn(c(1:nrep), 2))
-  
-  for (m in 1:length(models)) {
-    model <- models[m]
-    load(here::here("outputs", model, "Abundances.RData"))
-    abund_end <- matrix(nrow=nrep, ncol=nsp)
-    species_end <- list()
-    for (r in 1:nrep) {
-      abund_end[r,] <- Abundances[[r]][ngen,]
-      species_end[[r]] <- unique(which(abund_end[r,]!=0))
-    }
-    assign(glue::glue("abund_end_{m}"), abund_end)
-    assign(glue::glue("species_end_{m}"), species_end)
-  }
-  
-  list_jaccard_matrix <- list()
-  mean_jaccard <- c()
-  
-  list_percentage_similarity_matrix <- list()
-  mean_percentage_similarity <- c()
-  
-  vec_jaccard <- c()
-  vec_combi_models_jaccard <- c()
-  vec_combi_rep_jaccard <- c()
-  
-  vec_percentage_similarity <- c()
-  vec_combi_models_percentage_similarity <- c()
-  vec_combi_rep_percentage_similarity <- c()
-  
-  for (l in 1:nrow(combi_models)){
-    mod1 <- combi_models[l, 1]
-    mod2 <- combi_models[l, 2]
-    if(mod1==mod2){
-      list_jaccard_matrix[[l]] <- matrix(nrow=nrow(combi_rep_same_model), ncol=1)
-      list_percentage_similarity_matrix[[l]] <- matrix(nrow=nrow(combi_rep_same_model), ncol=1)
-      for (c in 1:nrow(combi_rep_same_model)){
-        list_jaccard_matrix[[l]][c,1] <- jaccard(a=get(glue::glue("species_end_{mod1}"))[[combi_rep_same_model[c,1]]], b=get(glue::glue("species_end_{mod2}"))[[combi_rep_same_model[c,2]]])
-        list_percentage_similarity_matrix[[l]][c,1] <- percentage_similarity(a=get(glue::glue("abund_end_{mod1}"))[combi_rep_same_model[c,1],], b=get(glue::glue("abund_end_{mod2}"))[combi_rep_same_model[c,2],])
-      }
-      vec_percentage_similarity <- c(vec_percentage_similarity, c(list_percentage_similarity_matrix[[l]]))
-      vec_combi_models_percentage_similarity <- c(vec_combi_models_percentage_similarity, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep_same_model)))
-      vec_combi_rep_percentage_similarity <- c(vec_combi_rep_percentage_similarity, paste0(combi_rep_same_model[,1], "-", combi_rep_same_model[,2]))
-      vec_jaccard <- c(vec_jaccard, c(list_jaccard_matrix[[l]]))
-      vec_combi_models_jaccard <- c(vec_combi_models_jaccard, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep_same_model)))
-      vec_combi_rep_jaccard <- c(vec_combi_rep_jaccard, paste0(combi_rep_same_model[,1], "-", combi_rep_same_model[,2]))
-    }
-    else {
-      list_jaccard_matrix[[l]] <- matrix(nrow=nrep, ncol=nrep)
-      list_percentage_similarity_matrix[[l]] <- matrix(nrow=nrep, ncol=nrep)
-      for (c in 1:nrow(combi_rep)){
-        list_jaccard_matrix[[l]][combi_rep[c,1], combi_rep[c,2]] <- jaccard(a=get(glue::glue("species_end_{mod1}"))[[combi_rep[c,1]]], b=get(glue::glue("species_end_{mod2}"))[[combi_rep[c,2]]])
-        list_percentage_similarity_matrix[[l]][combi_rep[c,1], combi_rep[c,2]] <- percentage_similarity(a=get(glue::glue("abund_end_{mod1}"))[combi_rep[c,1],], b=get(glue::glue("abund_end_{mod2}"))[combi_rep[c,2],])
-      }
-      vec_percentage_similarity <- c(vec_percentage_similarity, c(list_percentage_similarity_matrix[[l]]))
-      vec_combi_models_percentage_similarity <- c(vec_combi_models_percentage_similarity, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep)))
-      vec_combi_rep_percentage_similarity <- c(vec_combi_rep_percentage_similarity, paste0(combi_rep[,1], "-", combi_rep[,2]))
-      vec_jaccard <- c(vec_jaccard, c(list_jaccard_matrix[[l]]))
-      vec_combi_models_jaccard <- c(vec_combi_models_jaccard, rep(paste0(combi_models[l,1], "-", combi_models[l,2]), nrow(combi_rep)))
-      vec_combi_rep_jaccard <- c(vec_combi_rep_jaccard, paste0(combi_rep[,1], "-", combi_rep[,2]))
-    }
-    mean_jaccard[l] <- mean(list_jaccard_matrix[[l]])
-    mean_percentage_similarity[l] <- mean(list_percentage_similarity_matrix[[l]])
-  }
-  
-  combi_models_jaccard <- as.data.frame(combi_models)
-  combi_models_jaccard$Jaccard <- mean_jaccard
-  colnames(combi_models_jaccard)[1:2] <- c("mod1", "mod2")
-  
-  combi_models_percentage_similarity <- as.data.frame(combi_models)
-  combi_models_percentage_similarity$Percentage_similarity <- mean_percentage_similarity
-  colnames(combi_models_percentage_similarity)[1:2] <- c("mod1", "mod2")
-  
-  p <- ggplot2::ggplot(data = combi_models_jaccard, ggplot2::aes(x=mod1, y=mod2, fill=Jaccard))+ 
-    ggplot2::geom_tile()+
-    ggplot2::scale_fill_viridis_c()+
-    ggplot2::coord_fixed()+
-    ggplot2::labs(title="Jaccard index of the composition of the final community \n (mean of all repetitions)",
-                  x="Model 1",
-                  y = "Model 2",
-                  fill="Jaccard index")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Jaccard_tileplot.png"),
-                  width=fig_width, height=fig_width, units="cm", dpi=300)
-  
-  p <- ggplot2::ggplot(data = combi_models_percentage_similarity, ggplot2::aes(x=mod1, y=mod2, fill=Percentage_similarity))+ 
-    ggplot2::geom_tile()+
-    ggplot2::scale_fill_viridis_c()+
-    ggplot2::coord_fixed()+
-    ggplot2::labs(title="Percentage similarity index of the species abundances \n of the final community (mean of all repetitions)",
-                  x="Model 1",
-                  y = "Model 2",
-                  fill="Percentage similarity")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Percentage_similarity_tileplot.png"),
-                  width=fig_width, height=fig_width, units="cm", dpi=300)
-  
-  Jaccard_all_models <- data.frame(jaccard=vec_jaccard,
-                                   combi_models=vec_combi_models_jaccard,
-                                   combi_rep=vec_combi_rep_jaccard)
-  
-  p <- ggplot2::ggplot(data=Jaccard_all_models, ggplot2::aes(x=as.factor(combi_models), y=jaccard))+
-    ggplot2::geom_boxplot()+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.1)+
-    #ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.6)+
-    ggplot2::scale_colour_viridis_d()+
-    # ggplot2::labs(title = "Beeswarmplot of the Jaccard index of the composition \n of the final community; \n each point is a comparison between two repetitions ",
-    #               x = "Model combination",
-    #               y = "Jaccard index of the composition of the community")+
-    ggplot2::labs(title = "Jitterplot of the Jaccard index of the composition \n of the final community; \n each point is a comparison between two repetitions ",
-                  x = "Model combination",
-                  y = "Jaccard index of the composition of the community")+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Jaccard_boxplot.png"),
-                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
-  
-  Percentage_similarity_all_models <- data.frame(percentage_similarity=vec_percentage_similarity,
-                                                 combi_models=vec_combi_models_percentage_similarity,
-                                                 combi_rep=vec_combi_rep_percentage_similarity)
-  
-  p <- ggplot2::ggplot(data=Percentage_similarity_all_models, ggplot2::aes(x=as.factor(combi_models), y=percentage_similarity))+
-    ggplot2::geom_boxplot()+
-    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.1)+
-    #ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(combi_models)), alpha=0.6)+
-    ggplot2::scale_colour_viridis_d()+
-    # ggplot2::labs(title = "Beeswarmplot of the percentage similarity of species abundance; \n each point is a comparison between two repetitions ",
-    #               x = "Model combination",
-    #               y = "Percentage similarity of species abundance")+
-    ggplot2::labs(title = "Jitterplot of the percentage similarity of species abundance; \n each point is a comparison between two repetitions ",
-                  x = "Model combination",
-                  y = "Percentage similarity of species abundance")+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}_{n_observed_axis}_obs"), "Percentage_similarity_boxplot.png"),
-                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
-  
-}
-
-Compare_IV_axis_nb_per_seed <- function(seed, nb_obs_axes){
-  dir.create(here::here("outputs", glue::glue("Comparison_seed_{seed}")))
-  
-  model <- glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}")
-  
-  IV_all_models <- data.frame(IV=numeric(), N_obs_axes=factor())
-  
-  for (n_observed_axes in nb_obs_axes) {
-    load(here::here("outputs", model, glue::glue("V_intra_{n_observed_axes}_obs_axes.RData")))
-    IV_all_models <- rbind(IV_all_models, data.frame(IV=V_intra$V, N_obs_axes=rep(n_observed_axes, nrow(V_intra))))
-  }
-  
-  # Compute % of inertia of each environmental axis
-  load(here::here("outputs", model, "sites.RData"))
-  sum_var <- 0
-  for(k in 1:ncol(sites)){sum_var <- sum_var + var(sites[,k])}
-  percentage_inertia <- c()
-  percentage_inertia_cum <- c()
-  for(k in 1:ncol(sites)){
-    percentage_inertia[k]<-(var(sites[k])/sum_var)*100
-    if(k == 1){percentage_inertia_cum[k]<-percentage_inertia[k]}
-    if(k > 1){percentage_inertia_cum[k]<-percentage_inertia_cum[k-1]+percentage_inertia[k]}
-  }
-  
-  p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(N_obs_axes), y=IV))+
-    ggplot2::geom_boxplot()+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(N_obs_axes)), alpha=0.6)+
-    ggplot2::scale_colour_viridis_d()+
-    ggplot2::labs(title = "Beeswarmplot of the intraspecific variability \n inferred with different levels of knowledge",
-                  x = "Number of observed axes",
-                  y = "IV")+
-    ggplot2::scale_x_discrete(labels=nb_obs_axes)+
-    ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")+
-    ggplot2::geom_text(ggplot2::aes(x=1, y=1), label=paste(round(percentage_inertia_cum[nb_obs_axes])[1], "%", "inertia")) +
-    ggplot2::geom_text(ggplot2::aes(x=2, y=1), label=paste(round(percentage_inertia_cum[nb_obs_axes])[2], "%"))+
-    ggplot2::geom_text(ggplot2::aes(x=3, y=1), label=paste(round(percentage_inertia_cum[nb_obs_axes])[3], "%"))+
-    ggplot2::geom_text(ggplot2::aes(x=4, y=1), label=paste(round(percentage_inertia_cum[nb_obs_axes])[4], "%"))
-  
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_seed_{seed}"), "IV_nb_axes.png"),
-                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
-  
-}
-
-Compare_spatial_structure_per_seed <- function(seed, nb_obs_axes){
-  models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
-              glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
-              glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_3_obs_seed_{seed}"),
-              glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_5_obs_seed_{seed}"),
-              glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_7_obs_seed_{seed}"),
-              glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"),
-              glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_3_obs_seed_{seed}"),
-              glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_5_obs_seed_{seed}"),
-              glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_7_obs_seed_{seed}"))
-  model_names <- c("Perfect knowledge",
-                   "Partial knowledge \n (1 observed axis)",
-                   "Partial knowledge \n (3 observed axis)",
-                   "Partial knowledge \n (5 observed axis)",
-                   "Partial knowledge \n (7 observed axis)",
-                   "Partial knowledge + IV \n (1 observed axis)",
-                   "Partial knowledge + IV \n (3 observed axis)",
-                   "Partial knowledge + IV \n (5 observed axis)",
-                   "Partial knowledge + IV \n (7 observed axis)")
-  
-  Correlation_env_sp <- data.frame(nb_obs_axes = nb_obs_axes,
-                                   perf_know=numeric(length(nb_obs_axes)),
-                                   part_know=numeric(length(nb_obs_axes)),
-                                   part_know_IV=numeric(length(nb_obs_axes)))
-  
-  png(file=here::here("outputs", glue::glue("Comparison_seed_{seed}"), "Semivar_nb_axes.png"),
-      width=fig_width, height=fig_width*0.8, units="cm", res=300)
-  par(mfrow=c(length(nb_obs_axes),3), bty = "n")
-  
-  for (mod in 1:length(models)) {
-    model <- models[mod]
-    load(here::here("outputs", model, glue::glue("semivar_multidim.RData")))
-    
-    plot(semivar_multidim$Vario_env, semivar_multidim$Vario_sp,
-         main=model_names[mod],
-         xlab="Semivariance for environment",
-         ylab="Semivariance for species")
-    m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
-    abline(a=as.numeric(coef(m)[1]), b=as.numeric(coef(m)[2]), col="#008071")
-    text(semivar_multidim$Vario_env[3],
-         max(semivar_multidim$Vario_sp)-0.1*max(semivar_multidim$Vario_sp),
-         paste("R =", round(sqrt(summary(m)$r.squared), digits = 2)))
-    
-    if(mod==1){Correlation_env_sp$perf_know[1] <- round(sqrt(summary(m)$r.squared), digits = 2)}
-    if(mod>=length(nb_obs_axes)+1 & mod<(2*length(nb_obs_axes))+1){Correlation_env_sp$part_know[mod-length(nb_obs_axes)] <- round(sqrt(summary(m)$r.squared), digits = 2)}
-    if(mod>=2*length(nb_obs_axes)+1){Correlation_env_sp$part_know_IV[mod-2*length(nb_obs_axes)] <- round(sqrt(summary(m)$r.squared), digits = 2)}
-  }
-  
-  dev.off()
-  
-  Correlation_env_sp$perf_know[2:length(nb_obs_axes)]<-NA
-  save(Correlation_env_sp, file=here::here("outputs", glue::glue("Comparison_seed_{seed}"), "Correlation_env_sp.RData"))
-  
-}
-
 Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
   
   dir.create(here::here("outputs", "Comparison"))
@@ -366,7 +61,7 @@ Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
     dplyr::select(-Seed, -R2)
   
   p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Nb_obs_axes), y=IV))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
     ggplot2::geom_boxplot(alpha=0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(x = "Number of observed axes",
@@ -375,7 +70,7 @@ Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
     ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")+
     ggplot2::geom_point(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
     ggplot2::geom_line(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ . * 1 / 1 , name = "R2 of the quadratic model"))
+    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ . * 1 / 1 , name = "Proportion of variance explained by the axes"))
   
   ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "IV_nb_axes.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
@@ -573,11 +268,11 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
   Shannon_all_models_together[Shannon_all_models_together$Model=="Perf_know",]$Nb_obs_axes <- "Perfect knowledge"
   
   Shannon_one_plot <- ggplot2::ggplot(Shannon_all_models_together, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Shannon))+
-    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Model), group=Model), alpha=0.6, dodge.width = 0.755)+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Model), group=Model), alpha=0.6, position=ggplot2::position_jitterdodge(jitter.width=0.5))+
     ggplot2::scale_colour_viridis_d()+
     ggnewscale::new_scale("colour")+
     ggplot2::geom_boxplot(ggplot2::aes(colour=Model), alpha=0.6)+
-    ggplot2::scale_colour_manual(values=c("#B2BEB5","black", "#54626F"))+
+    ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
     ggplot2::labs(x = "Number of observed axes",
                   y = "Shannon diversity index")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
@@ -942,45 +637,50 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
     dev.off()
   }
   
-  Correlation_env_sp <- data.frame(Seed = rep(Seeds, each=length(nb_obs_axes)),
-                                   Nb_obs_axes = rep(nb_obs_axes, length(Seeds)),
-                                   Perf_know=numeric(length(nb_obs_axes)*length(Seeds)),
-                                   Part_know=numeric(length(nb_obs_axes)*length(Seeds)),
-                                   Part_know_IV=numeric(length(nb_obs_axes)*length(Seeds)))
+  Correlation_env_sp <- data.frame(Model = c(rep("Perf_know", length(Seeds)*nrep), rep(c("Part_know", "Part_know_IV"), each=length(nb_obs_axes)*length(Seeds)*nrep)),
+                                   Seed = c(rep(Seeds, each=nrep), rep(rep(Seeds, each=length(nb_obs_axes)*nrep),2)),
+                                   Nb_obs_axes = c(rep("Perfect knowledge", length(Seeds)*nrep), rep(rep(rep(nb_obs_axes, each=nrep), length(Seeds)), 2)),
+                                   Rep = c(rep(1:nrep, length(Seeds)), rep(rep(1:nrep, length(Seeds)*length(nb_obs_axes)),2)),
+                                   Correlation = numeric((2*length(nb_obs_axes)+1)*length(Seeds)*nrep))
   
-  for(seed in Seeds){
-    
-    for(n_observed_axes in nb_obs_axes){
-    
-      models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}"),
-                  glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axes}_obs_seed_{seed}"),
-                  glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axes}_obs_seed_{seed}"))
-      
-      for (mod in 1:length(models)) {
-        model <- models[mod]
-        load(here::here("outputs", model, glue::glue("semivar_multidim.RData")))
-        if(semivar_multidim$Sample_size[nrow(semivar_multidim)]<500){
-          semivar_multidim <- semivar_multidim[1:(nrow(semivar_multidim)-1),]
-        }
-        m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
-        if(mod==1){Correlation_env_sp$Perf_know[Correlation_env_sp$Seed==seed&Correlation_env_sp$Nb_obs_axes==n_observed_axes] <- round(sqrt(summary(m)$r.squared), digits = 2)}
-        if(mod==2){Correlation_env_sp$Part_know[Correlation_env_sp$Seed==seed&Correlation_env_sp$Nb_obs_axes==n_observed_axes] <- round(sqrt(summary(m)$r.squared), digits = 2)}
-        if(mod==3){Correlation_env_sp$Part_know_IV[Correlation_env_sp$Seed==seed&Correlation_env_sp$Nb_obs_axes==n_observed_axes] <- round(sqrt(summary(m)$r.squared), digits = 2)}
-      }
+  for(k in 1:nrow(Correlation_env_sp)){
+    if(Correlation_env_sp$Model[k]=="Perf_know"){
+      model <- glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{Correlation_env_sp$Seed[k]}")
+    }else{
+      model <- glue::glue("{Correlation_env_sp$Model[k]}_start_10_mort_fixed_disp_abund_10_axes_{Correlation_env_sp$Nb_obs_axes[k]}_obs_seed_{Correlation_env_sp$Seed[k]}")
     }
+    
+    load(here::here("outputs", model, "semivar_multidim.RData"))
+    
+    semivar_multidim <- semivar_multidim[[Correlation_env_sp$Rep[k]]]
+    
+    semivar_multidim<-semivar_multidim%>%
+      filter(Sample_size>500)
+    
+    m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
+    Correlation_env_sp$Correlation[k] <- round(sqrt(summary(m)$r.squared), digits = 2)
   }
-  Correlation_env_sp[Correlation_env_sp$Nb_obs_axes>1,]$Perf_know<-NA
-  save(Correlation_env_sp, file=here::here("outputs", "Comparison", "Correlation_env_sp.RData"))
   
-  Summary_correlation_env_sp <- data.frame(Nb_obs_axes=nb_obs_axes,
-                                           Perf_know=c(mean(Correlation_env_sp$Perf_know, na.rm=TRUE), rep(NA, length(nb_obs_axes)-1)),
-                                           Part_know=numeric(length(nb_obs_axes)),
-                                           Part_know_IV=numeric(length(nb_obs_axes)))
-  for (n_observed_axes in nb_obs_axes){
-    Summary_correlation_env_sp$Part_know[n_observed_axes] <- mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==n_observed_axes,]$Part_know)
-    Summary_correlation_env_sp$Part_know_IV[n_observed_axes] <- mean(Correlation_env_sp[Correlation_env_sp$Nb_obs_axes==n_observed_axes,]$Part_know_IV)
-  }
+  Summary_correlation_env_sp<-Correlation_env_sp%>%
+    dplyr::group_by(Model, Nb_obs_axes)%>%
+    dplyr::mutate(Mean_corr=mean(Correlation, na.rm=TRUE), Sd=sd(Correlation, na.rm=TRUE))%>%
+    dplyr::slice(1)%>%
+    dplyr::ungroup()%>%
+    dplyr::select(-Correlation, -Seed, -Rep)
   
-  save(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.RData"))
-  utils::write.table(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.csv"), sep = ',', row.names=FALSE)
+  save(Summary_Correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.RData"))
+  
+  p <- ggplot2::ggplot(Correlation_env_sp, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Correlation))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Model), group=Model), alpha=0.6, position=ggplot2::position_jitterdodge(jitter.width=0.5))+
+    ggplot2::scale_colour_viridis_d()+
+    ggnewscale::new_scale("colour")+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=Model), alpha=0.6)+
+    ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+    ggplot2::labs(x = "Number of observed axes",
+                  y = "Correlation between environment and species semivariance")+
+    ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Corr_env_sp.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+    
 }

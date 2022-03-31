@@ -95,7 +95,7 @@ compute_semivar_multidim <- function(sites, n_axis, niche_optimum, sp_XY, vario_
   Dist_neighbours_cells <- data.frame(Neighbour=t(combn(1:nrow(sites), 2)), Dist_spatial=dist_spatial)
   
   # List of the species and the cells on which they are present
-  List_present_species <- data.frame(Cell=1:nrow(sites), Sp=as.vector(raster::raster(community_end[[1]])))
+  List_present_species <- data.frame(Cell=1:nrow(sites), Sp=as.vector(raster::raster(community_end)))
   
   # Associate the species that are present and their cells
   Dist_neighbours_cells <- Dist_neighbours_cells%>%
