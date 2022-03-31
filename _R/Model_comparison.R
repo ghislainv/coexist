@@ -48,14 +48,14 @@ Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
   
   Summary_percentage_inertia <- Percentage_inertia%>%
     dplyr::group_by(Nb_obs_axes)%>%
-    dplyr::mutate(Mean_PI_cum=mean(PI_cum))%>%
+    dplyr::mutate(Mean_PI_cum=mean(PI_cum), Sd_PI_cum=mean(PI_cum))%>%
     dplyr::slice(1)%>%
     dplyr::ungroup()%>%
     dplyr::select(-Seed, -PI, -PI_cum)
   
   Summary_level_explanation_axes_nb <- Level_explanation_axes_nb%>%
     dplyr::group_by(Nb_obs_axes)%>%
-    dplyr::mutate(Mean_explanation=mean(R2))%>%
+    dplyr::mutate(Mean_explanation=mean(R2), Sd=sd(R2))%>%
     dplyr::slice(1)%>%
     dplyr::ungroup()%>%
     dplyr::select(-Seed, -R2)
@@ -70,6 +70,7 @@ Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
     ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")+
     ggplot2::geom_point(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
     ggplot2::geom_line(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
+    ggplot2::geom_ribbon(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation, ymin=Mean_explanation-Sd, ymax=Mean_explanation+Sd), colour="deeppink3", fill="hotpink3", alpha = 0.3)+
     ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ . * 1 / 1 , name = "Proportion of variance explained by the axes"))
   
   ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "IV_nb_axes.png"),
@@ -682,5 +683,16 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
   
   ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Corr_env_sp.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+  #Correlation between environmental variables
+  Corr_env_all_configs <- data.frame()
     
+  for (seed in Seeds) {
+    model <- glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}")
+    load(here::here("outputs", model, "Corr_env.RData"))
+    Corr_env_all_configs <- rbind(Corr_env_all_configs, Corr_env)
+  }
+  
+  Corr_env_all_configs$Seed <- rep(Seeds, each=(n_axis^2-n_axis)/2)
+  save(Corr_env_all_configs, file=here::here("outputs", "Comparison", "Corr_env_all_configs.RData"))
 }
