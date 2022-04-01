@@ -8,17 +8,17 @@ Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
                               IV=numeric(nsp*length(nb_obs_axes)*length(Seeds)),
                               Seed=rep(Seeds, each=nsp*length(nb_obs_axes)),
                               Nb_obs_axes=rep(rep(nb_obs_axes, each=nsp), length(Seeds)))
-  Percentage_inertia <- data.frame(Seed=rep(Seeds, each=n_axis),
-                                   Nb_obs_axes=rep(1:n_axis, length(Seeds)),
-                                   PI=numeric(n_axis*length(Seeds)),
-                                   PI_cum=numeric(n_axis*length(Seeds)))
+  Percentage_inertia <- data.frame(Seed=rep(Seeds, each=n_axes),
+                                   Nb_obs_axes=rep(1:n_axes, length(Seeds)),
+                                   PI=numeric(n_axes*length(Seeds)),
+                                   PI_cum=numeric(n_axes*length(Seeds)))
   Level_explanation_axes_nb <- data.frame(Seed=rep(Seeds, each=length(nb_obs_axes)),
                                           Nb_obs_axes=rep(nb_obs_axes, length(Seeds)),
                                           R2=numeric(length(Seeds)*length(nb_obs_axes)))
   
   for(seed in Seeds){
   
-    model <- glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}")
+    model <- glue::glue("Perf_know_{start}_{mort}_{nb_seeds}_{n_axes}_axes_seed_{seed}")
     
     for (n_observed_axes in nb_obs_axes) {
       load(here::here("outputs", model, glue::glue("V_intra_{n_observed_axes}_obs_axes.RData")))
@@ -105,9 +105,9 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
     
     for(n_observed_axes in nb_obs_axes){
       
-      models <- c(glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}"),
-                  glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axes}_obs_seed_{seed}"),
-                  glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_{n_observed_axes}_obs_seed_{seed}"))
+      models <- c(glue::glue("Perf_know_{start}_{mort}_{nb_seeds}_{n_axes}_axes_seed_{seed}"),
+                  glue::glue("Part_know_{start}_{mort}_{nb_seeds}_{n_axes}_axes_{n_observed_axes}_obs_seed_{seed}"),
+                  glue::glue("Part_know_IV_{start}_{mort}_{nb_seeds}_{n_axes}_axes_{n_observed_axes}_obs_seed_{seed}"))
       
       Mod_type <- c("Perf_know", "Part_know", "Part_know_IV")
       
@@ -623,16 +623,16 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
     
     par(mfrow=c(2,2), bty = "n")
     
-    load(here::here("outputs", glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}"), glue::glue("community_end.RData")))
+    load(here::here("outputs", glue::glue("Perf_know_{start}_{mort}_{nb_seeds}_{n_axes}_axes_seed_{seed}"), glue::glue("community_end.RData")))
     raster::plot(raster::raster(community_end[[1]]), main="Species - Perfect knowledge", zlim=c(0, nsp),
                  col=c("black", getPalette(colourCount)), legend=FALSE)
-    load(here::here("outputs", glue::glue("Part_know_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"), glue::glue("community_end.RData")))
+    load(here::here("outputs", glue::glue("Part_know_{start}_{mort}_{nb_seeds}_{n_axes}_axes_1_obs_seed_{seed}"), glue::glue("community_end.RData")))
     raster::plot(raster::raster(community_end[[1]]), main="Species - Partial knowledge", 
          zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=FALSE, yaxt = "n", xaxt = "n")
-    load(here::here("outputs", glue::glue("Part_know_IV_start_10_mort_fixed_disp_abund_10_axes_1_obs_seed_{seed}"), glue::glue("community_end.RData")))
+    load(here::here("outputs", glue::glue("Part_know_IV_{start}_{mort}_{nb_seeds}_{n_axes}_axes_1_obs_seed_{seed}"), glue::glue("community_end.RData")))
     raster::plot(raster::raster(community_end[[1]]), main="Species - Partial knowledge + IV", 
          zlim=c(0, nsp), col=c("black", getPalette(colourCount)), legend=FALSE, yaxt = "n", xaxt = "n")
-    load(here::here("outputs", glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}"), "env_entrelac.RData"))
+    load(here::here("outputs", glue::glue("Perf_know_{start}_{mort}_{nb_seeds}_{n_axes}_axes_seed_{seed}"), "env_entrelac.RData"))
     raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), main="Environment summary", col=viridisLite::viridis(255^3), yaxt = "n", xaxt = "n")
     
     dev.off()
@@ -646,9 +646,9 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
   
   for(k in 1:nrow(Correlation_env_sp)){
     if(Correlation_env_sp$Model[k]=="Perf_know"){
-      model <- glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{Correlation_env_sp$Seed[k]}")
+      model <- glue::glue("Perf_know_{start}_{mort}_{nb_seeds}_{n_axes}_axes_seed_{Correlation_env_sp$Seed[k]}")
     }else{
-      model <- glue::glue("{Correlation_env_sp$Model[k]}_start_10_mort_fixed_disp_abund_10_axes_{Correlation_env_sp$Nb_obs_axes[k]}_obs_seed_{Correlation_env_sp$Seed[k]}")
+      model <- glue::glue("{Correlation_env_sp$Model[k]}_{start}_{mort}_{nb_seeds}_{n_axes}_axes_{Correlation_env_sp$Nb_obs_axes[k]}_obs_seed_{Correlation_env_sp$Seed[k]}")
     }
     
     load(here::here("outputs", model, "semivar_multidim.RData"))
@@ -669,7 +669,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
     dplyr::ungroup()%>%
     dplyr::select(-Correlation, -Seed, -Rep)
   
-  save(Summary_Correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.RData"))
+  save(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.RData"))
   
   p <- ggplot2::ggplot(Correlation_env_sp, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Correlation))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Model), group=Model), alpha=0.6, position=ggplot2::position_jitterdodge(jitter.width=0.5))+
@@ -688,11 +688,11 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
   Corr_env_all_configs <- data.frame()
     
   for (seed in Seeds) {
-    model <- glue::glue("Perf_know_start_10_mort_fixed_disp_abund_10_axes_seed_{seed}")
+    model <- glue::glue("Perf_know_{start}_{mort}_{nb_seeds}_{n_axes}_axes_seed_{seed}")
     load(here::here("outputs", model, "Corr_env.RData"))
     Corr_env_all_configs <- rbind(Corr_env_all_configs, Corr_env)
   }
   
-  Corr_env_all_configs$Seed <- rep(Seeds, each=(n_axis^2-n_axis)/2)
+  Corr_env_all_configs$Seed <- rep(Seeds, each=(n_axes^2-n_axes)/2)
   save(Corr_env_all_configs, file=here::here("outputs", "Comparison", "Corr_env_all_configs.RData"))
 }

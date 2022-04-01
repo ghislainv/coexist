@@ -28,10 +28,10 @@ generate_environment <- function(nsite_side, model){
   covrho <- Vrho.target*solve(Q) # Covariance of rhos
   
   # Environment on each site
-  sites <- data.frame(matrix(ncol=n_axis, nrow=nsite))
-  colnames(sites) <- c(sprintf("V%d_env", 1:n_axis))
+  sites <- data.frame(matrix(ncol=n_axes, nrow=nsite))
+  colnames(sites) <- c(sprintf("V%d_env", 1:n_axes))
   env <- list()
-  for (i in 1:n_axis) {
+  for (i in 1:n_axes) {
     seed_env <- seed + i - 1
     rho <- c(rmvn(1, mu=rep(0, nsite), V=covrho, seed=seed_env)) # Spatial Random Effects
     rho <- rho-mean(rho) # Centering rhos on zero
@@ -46,7 +46,7 @@ generate_environment <- function(nsite_side, model){
   save(env, file = here::here("outputs", model, "env.RData"))
   
   #Look at the correlations between environmental variables
-  Corr_env <- as.data.frame(as.matrix(t(combn(c(1:n_axis), 2))))
+  Corr_env <- as.data.frame(as.matrix(t(combn(c(1:n_axes), 2))))
   colnames(Corr_env) <- c("Var1", "Var2")
   Corr_env$Corr <- numeric(nrow(Corr_env))
   
@@ -57,8 +57,8 @@ generate_environment <- function(nsite_side, model){
   save(Corr_env, file = here::here("outputs", model, "Corr_env.RData"))
   
   # Plot the environment
-  plot_environment(model=model, fig_width=fig_width, n_axis=n_axis, env=env, sites=sites)
+  plot_environment(model=model, fig_width=fig_width, n_axes=n_axes, env=env, sites=sites)
   
   # Plot the habitat frequency
-  plot_hab_freq(n_axis=n_axis, model=model, fig_width=fig_width, env=env)
+  plot_hab_freq(n_axes=n_axes, model=model, fig_width=fig_width, env=env)
 }

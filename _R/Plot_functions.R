@@ -1,18 +1,18 @@
 colourCount = nsp
 getPalette = colorRampPalette(RColorBrewer::brewer.pal(9, "Set1"))
 
-plot_environment <- function(model, fig_width, n_axis, env, sites){
+plot_environment <- function(model, fig_width, n_axes, env, sites){
   
   png(file=here::here("outputs", model, "environment.png"),
       width=fig_width, height=fig_width, units="cm", res=300)
   
-  par(mfrow=c(4,ceiling(n_axis/4)), bty = "n")
+  par(mfrow=c(4,ceiling(n_axes/4)), bty = "n")
   
-  for(k in 1:n_axis){
+  for(k in 1:n_axes){
     raster::plot(raster::raster(env[[k]]), main=glue::glue("Environment var {k}"), col=topo.colors(255), cex.main=1.2)
   }
   #Summary of environment
-  if(n_axis==3){
+  if(n_axes==3){
     env_stack <- raster::stack(
       raster::raster(matrix(range_0_255(env$x[,1]), nrow=nsite_side, ncol=nsite_side, byrow=TRUE)),
       raster::raster(matrix(range_0_255(env$x[,2]), nrow=nsite_side, ncol=nsite_side, byrow=TRUE)),
@@ -64,9 +64,9 @@ plot_environment <- function(model, fig_width, n_axis, env, sites){
   }
 }
 
-plot_hab_freq <- function(n_axis, model, fig_width, env){
+plot_hab_freq <- function(n_axes, model, fig_width, env){
   
-  for(k in 1:n_axis){
+  for(k in 1:n_axes){
     png(file=here::here("outputs", model, glue::glue("hab_freq_{k}.png")),
         width=fig_width, height=fig_width, units="cm", res=300)
     hist(env[[k]], main="", xlab=glue::glue("Environment var{k}")) 
@@ -343,7 +343,7 @@ plot_theta_community<-function(theta_comm, ngen, nrep, model, fig_width){
   }
 }
 
-plot_spatial_autocorr <- function(nrep, community_end, n_axis, sites, niche_optimum, niche_width, model, fig_width){
+plot_spatial_autocorr <- function(nrep, community_end, n_axes, sites, niche_optimum, niche_width, model, fig_width){
   
   semivar_multidim <- list()
   
@@ -352,7 +352,7 @@ plot_spatial_autocorr <- function(nrep, community_end, n_axis, sites, niche_opti
     names(sp_XY) <- c("x", "y", "sp")
     vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
     
-    if(randomOptSp==FALSE&n_axis==3){
+    if(randomOptSp==FALSE&n_axes==3){
       # 3D voxel for each site
       x_site <- pmin(floor(sites$V1_env/niche_width)+1, 4)
       y_site <- pmin(floor(sites$V2_env/niche_width)+1, 4)
@@ -366,7 +366,7 @@ plot_spatial_autocorr <- function(nrep, community_end, n_axis, sites, niche_opti
       plot(vario_env$v, vario_sp$v)
     }else{
       
-      semivar_multidim[[rep]] <- compute_semivar_multidim(sites, n_axis, niche_optimum, sp_XY, vario_sp, nsp, community_end[[rep]])
+      semivar_multidim[[rep]] <- compute_semivar_multidim(sites, n_axes, niche_optimum, sp_XY, vario_sp, nsp, community_end[[rep]])
       semivar_multidim[[rep]]$Vario_sp_geoR <- vario_sp$u
       semivar_multidim[[rep]]$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
       semivar_multidim[[rep]]$Sample_size <- vario_sp$n
@@ -425,9 +425,20 @@ plot_species_niche <- function(seed, df_perf, model, fig_width){
     ggplot2::geom_vline(ggplot2::aes(xintercept=optimum), col="#80002D")+
     ggplot2::facet_wrap(ggplot2::vars(Species), nrow=3) +
     ggplot2::xlab("Environment (first axis)") +
-    ggplot2::ylab("Performance")
+    ggplot2::ylab("Performance")+
+    ggplot2::theme(axis.title = ggplot2::element_text(size = 20))
   ggplot2::ggsave(p, filename=here::here("outputs", model, "infering_species_niche.png"),
          width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+  p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE, col="#008071") +
+    ggplot2::facet_wrap(ggplot2::vars(Species), nrow=3) +
+    ggplot2::xlab("Environment (first axis)") +
+    ggplot2::ylab("Performance")+
+    ggplot2::theme(axis.title = ggplot2::element_text(size = 20))
+  ggplot2::ggsave(p, filename=here::here("outputs", model, "infering_species_niche_simple.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
 }
 
 plot_IV <- function(V_intra, model, fig_width){
@@ -442,12 +453,12 @@ plot_IV <- function(V_intra, model, fig_width){
                    plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                    legend.position=c(1.1, 0.4)) +
     ggplot2::ylab("Intraspecific variance")
-  ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("IV_{n_observed_axis}_obs_axes.png")),
+  ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("IV_{n_observed_axes}_obs_axes.png")),
          width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
 plot_relationship_IV_inferred_optima <- function(V_intra,
-                                                 n_observed_axis,
+                                                 n_observed_axes,
                                                  Inferred_species_parameters,
                                                  community_end,
                                                  sp_hab_freq,
@@ -466,7 +477,7 @@ plot_relationship_IV_inferred_optima <- function(V_intra,
                                 Winner=character(nrow(V_intra)))
   
   for(sp in 1:nrow(V_intra)){
-    for(axis in 1:n_observed_axis){
+    for(axis in 1:n_observed_axes){
       IV_opt_sp_estim$Opt_estim[sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
     }
     if(sp%in%unlist(community_end)){
@@ -489,7 +500,7 @@ plot_relationship_IV_inferred_optima <- function(V_intra,
   }
   
   for(sp in 1:nrow(V_intra)){
-    for(axis in 1:n_observed_axis){
+    for(axis in 1:n_observed_axes){
       IV_opt_sp_estim$Perf_opt[sp] <- Inferred_species_parameters[sp,axis] + Inferred_species_parameters[sp,axis+1]*IV_opt_sp_estim$Opt_estim[sp] + Inferred_species_parameters[sp,2*axis+1]*(IV_opt_sp_estim$Opt_estim[sp])^2
     }
   }
@@ -522,13 +533,13 @@ plot_relationship_IV_inferred_optima <- function(V_intra,
                    legend.text =  ggplot2::element_text(size=14))
 }
 
-plot_optima_real_estim <- function(nsp, n_observed_axis, niche_optimum, Inferred_species_parameters, model, fig_width){
+plot_optima_real_estim <- function(nsp, n_observed_axes, niche_optimum, Inferred_species_parameters, model, fig_width){
   
   opt_sp_estim_vs_real <- data.frame(Species = 1:nsp, Real=numeric(nsp), Estim=numeric(nsp))
   
   for(sp in 1:nsp){
 
-    for(axis in 1:n_observed_axis){
+    for(axis in 1:n_observed_axes){
       opt_sp_estim_vs_real$Real[sp] <- niche_optimum[sp, axis]
       opt_sp_estim_vs_real$Estim[sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
     }
@@ -577,9 +588,9 @@ plot_optima_real_estim <- function(nsp, n_observed_axis, niche_optimum, Inferred
 
 plot_inferred_perf_environment <- function(E_seq, Mat_perf_inferred, nsp, model, fig_width){
 
-  if(n_observed_axis>1){
+  if(n_observed_axes>1){
     
-    for(k in 1:n_observed_axis){
+    for(k in 1:n_observed_axes){
   
       Mat_perf_inferred_plot <- as.data.frame(cbind(E_seq[,k], Mat_perf_inferred))
       
@@ -637,26 +648,26 @@ plot_inferred_perf_environment <- function(E_seq, Mat_perf_inferred, nsp, model,
       }
 }
 
-plot_inferred_perf_IV <- function(n_observed_axis, Obs_env, nsp, Inferred_species_parameters, V_intra, model, fig_width){
+plot_inferred_perf_IV <- function(n_observed_axes, Obs_env, nsp, Inferred_species_parameters, V_intra, model, fig_width){
 
   x <- seq(-3, 3, 0.01)
   n_ind_simul <- length(x)
   
-  for(k in 1:n_observed_axis){
+  for(k in 1:n_observed_axes){
     
-    if(n_observed_axis>1){
+    if(n_observed_axes>1){
       mean_env <- mean(Obs_env[,k])
     } else{
       mean_env <- mean(c(Obs_env))
     }
     
-    Env_mat <- matrix(nrow=nsp, ncol=2*n_observed_axis+1)
+    Env_mat <- matrix(nrow=nsp, ncol=2*n_observed_axes+1)
     
     Env_mat[,1] <- rep(1, nsp)
     
-    for (l in 1:n_observed_axis){
+    for (l in 1:n_observed_axes){
       Env_mat[,l+1] <- rep(mean_env, nsp)
-      Env_mat[,l+1+n_observed_axis] <- rep(mean_env^2, nsp)
+      Env_mat[,l+1+n_observed_axes] <- rep(mean_env^2, nsp)
     }
     
     perf_mean_env <- rowSums(Env_mat * Inferred_species_parameters)
@@ -681,7 +692,7 @@ plot_inferred_perf_IV <- function(n_observed_axis, Obs_env, nsp, Inferred_specie
                      plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                      legend.position=c(1.1, 0.4))
     
-    ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("Perf_overlap_IV_variable_{k}_{n_observed_axis}_obs_axes.png")),
+    ggplot2::ggsave(p, filename=here::here("outputs", model, glue::glue("Perf_overlap_IV_variable_{k}_{n_observed_axes}_obs_axes.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
     
   }
@@ -763,7 +774,7 @@ plot_perf_suitable_habitat <- function(perf_Sp_mean, sites, fig_width){
 
 
 plot_perf_opt_clandestine <- function(
-                              n_observed_axis,
+                              n_observed_axes,
                               Inferred_species_parameters,
                               community_end,
                               sp_hab_freq,
@@ -781,7 +792,7 @@ plot_perf_opt_clandestine <- function(
                              Winner=character(nrow(Inferred_species_parameters)))
   
   for(sp in 1:nrow(Inferred_species_parameters)){
-    for(axis in 1:n_observed_axis){
+    for(axis in 1:n_observed_axes){
       opt_estim_winner$Opt_estim[sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
     }
     if(sp%in%unlist(community_end)){
@@ -804,7 +815,7 @@ plot_perf_opt_clandestine <- function(
   }
   
   for(sp in 1:nrow(Inferred_species_parameters)){
-    for(axis in 1:n_observed_axis){
+    for(axis in 1:n_observed_axes){
       opt_estim_winner$Perf_opt[sp] <- Inferred_species_parameters[sp,axis] + Inferred_species_parameters[sp,axis+1]*opt_estim_winner$Opt_estim[sp] + Inferred_species_parameters[sp,2*axis+1]*(opt_estim_winner$Opt_estim[sp])^2
     }
   }

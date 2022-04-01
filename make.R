@@ -35,11 +35,11 @@ for(configuration in 1:length(Seeds)){
   # Infer observed intraspecific variability
   # ========================================
 
-  for(n_observed_axis in nb_obs_axes){
+  for(n_observed_axes in nb_obs_axes){
 
     if(perf_know==TRUE){
       source(here::here("_R", "infer_IV.R"))
-      infer_IV(model, n_observed_axis)
+      infer_IV(model, n_observed_axes)
     }
   }
   
@@ -49,7 +49,7 @@ for(configuration in 1:length(Seeds)){
     
   perf_know <- FALSE
   
-  for(n_observed_axis in nb_obs_axes){
+  for(n_observed_axes in nb_obs_axes){
     
     # Without IV
     IV <- FALSE

@@ -65,19 +65,19 @@ f_sp <- function(x) {
 }
 
 # Function to compute a multidimensional semivariance
-compute_semivar_multidim <- function(sites, n_axis, niche_optimum, sp_XY, vario_sp, nsp, community_end){
+compute_semivar_multidim <- function(sites, n_axes, niche_optimum, sp_XY, vario_sp, nsp, community_end){
   
   ## COMPUTE DISTANCES
   
   # Compute the sum of squared differences of environmental conditions
   dist_env <- as.vector(dist(sites[, 1]))^2
-  for (k in 2:n_axis){
+  for (k in 2:n_axes){
     dist_env <- dist_env + as.vector(dist(sites[, k]))^2
   }
   
   # Compute the sum of squared differences of species optima
   dist_sp <- as.vector(dist(niche_optimum[,1]))^2
-  for (k in 2:n_axis){
+  for (k in 2:n_axes){
     dist_sp <- dist_sp + as.vector(dist(niche_optimum[, k]))^2
   }
   

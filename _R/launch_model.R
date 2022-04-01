@@ -24,7 +24,7 @@ launch_model <- function(){
     load(here::here("outputs", model, "env.RData"))
     load(here::here("outputs", model, "env_entrelac.RData"))
   } else {
-    Obs_env <- sites[,1:n_observed_axis]
+    Obs_env <- sites[,1:n_observed_axes]
   }
   
   # =========================================
@@ -154,7 +154,7 @@ launch_model <- function(){
     print(paste0("Repetition ", r, "/", nrep))
     
     abund <- matrix(NA, ncol=nsp, nrow=ngen)
-    #used if disp_dep_abund==TRUE 
+    #used if nb_seeds_dep_abund==TRUE 
     abund_after_mortality <- NULL
     
     # -----------------------------------------
@@ -341,7 +341,7 @@ launch_model <- function(){
           perf_ind_pot <- perf_Sp_mean + epsilon
         }
         
-        if(disp_dep_abund==FALSE){
+        if(nb_seeds_dep_abund==FALSE){
           
           if(perf_know==TRUE&&IV==FALSE){
             
@@ -389,7 +389,7 @@ launch_model <- function(){
           
         } # end condition no abundance dependence
         
-        if (disp_dep_abund==TRUE){
+        if (nb_seeds_dep_abund==TRUE){
           
           abund_after_mortality <- as.data.frame(table(factor(as.vector(community), levels=1:nsp)))$Freq
           nb_seeds_sp <- round(abund_after_mortality*fecundity)
@@ -437,7 +437,7 @@ launch_model <- function(){
             }
           }
           
-        } # end condition on abundance dependence of dispersion
+        } # end condition on abundance dependence of number of seeds
         
       }  # end condition on n_mort (contains all cases)
       
@@ -463,9 +463,9 @@ launch_model <- function(){
         
         E_seq_mat <- list()
         
-        if(n_observed_axis>1){
+        if(n_observed_axes>1){
           
-          E_seq <- matrix(nrow=100, ncol=n_observed_axis)
+          E_seq <- matrix(nrow=100, ncol=n_observed_axes)
           
           for(k in 1:ncol(Obs_env)){
             E_seq[,k] <- seq(min(Obs_env[,k]), max(Obs_env[,k]), length.out=nrow(E_seq))
@@ -481,7 +481,7 @@ launch_model <- function(){
         
         Inferred_parameters_mat_E_seq <-list()
         
-        if(n_observed_axis>1){
+        if(n_observed_axes>1){
           for(k in 1:ncol(Inferred_species_parameters)){
             Inferred_parameters_mat_E_seq[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=nrow(E_seq)), ncol=nsp)
           }
@@ -501,10 +501,10 @@ launch_model <- function(){
           plot_inferred_perf_environment(E_seq, Mat_perf_inferred, nsp, model, fig_width)
         }
         
-        if(n_observed_axis>1){
-          Optimum_Sp_inferred <- matrix(nrow=n_observed_axis, ncol=nsp)
+        if(n_observed_axes>1){
+          Optimum_Sp_inferred <- matrix(nrow=n_observed_axes, ncol=nsp)
           for(sp in 1:nsp){
-            for(axis in 1:n_observed_axis){
+            for(axis in 1:n_observed_axes){
               Optimum_Sp_inferred[axis,sp] <- (-Inferred_species_parameters[sp,axis+1])/(2*Inferred_species_parameters[sp,2*axis+1])
             }
           }
@@ -633,7 +633,7 @@ launch_model <- function(){
   # ----------------------------------
   # Spatial autocorrelation of species
   # ----------------------------------
-  plot_spatial_autocorr(community_end, n_axis, sites, niche_optimum, niche_width, model, fig_width)
+  plot_spatial_autocorr(community_end, n_axes, sites, niche_optimum, niche_width, model, fig_width)
 
   # ------------------------------------------------------
   # Performance of species that *should* win vs. *do* win
