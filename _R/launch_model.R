@@ -633,7 +633,7 @@ launch_model <- function(){
   # ----------------------------------
   # Spatial autocorrelation of species
   # ----------------------------------
-  plot_spatial_autocorr(community_end, n_axes, sites, niche_optimum, niche_width, model, fig_width)
+  plot_spatial_autocorr(nrep, community_end, n_axes, sites, niche_optimum, niche_width, model, fig_width)
 
   # ------------------------------------------------------
   # Performance of species that *should* win vs. *do* win

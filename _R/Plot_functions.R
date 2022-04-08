@@ -322,7 +322,7 @@ plot_theta_community<-function(theta_comm, ngen, nrep, model, fig_width){
     ggplot2::xlab("Generations") + 
     ggplot2::ylab("Mean mortality rate in the community")+
     ggplot2::theme(legend.position = "none",
-                   text = ggplot2::element_text(size = 20))
+                   text = ggplot2::element_text(size = 18))
   ggplot2::ggsave(p, filename=here::here("outputs", model, "mortality_rate_community.png"),
          width=fig_width, height=fig_width/2, units="cm", dpi=300)
   
@@ -334,9 +334,9 @@ plot_theta_community<-function(theta_comm, ngen, nrep, model, fig_width){
       ggplot2::geom_line(col="#008071") +
       ggplot2::geom_ribbon(aes(ymin=Low, ymax=High), col="#008071", fill="#008071", alpha=0.5)+
       ggplot2::xlab("Generations") + 
-      ggplot2::ylab("Species richness")+
+      ggplot2::ylab("Mean mortality")+
       ggplot2::theme(legend.position = "none",
-                     text = ggplot2::element_text(size = 20))
+                     text = ggplot2::element_text(size = 18))
     
     ggplot2::ggsave(p, filename=here::here("outputs", model, "mortality_rate_community_mean.png"),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
@@ -418,27 +418,37 @@ plot_species_niche <- function(seed, df_perf, model, fig_width){
   df_perf_sp_niche$dist <- sqrt((df_perf_sp_niche$Env_1-df_perf_sp_niche$optimum)^2)
   df_perf_sp_niche$dist <- df_perf_sp_niche$dist - mean(df_perf_sp_niche$dist) / sd(df_perf_sp_niche$dist)
 
-  p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf)) +
-    ggplot2::geom_point() +
-    ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE, col="#008071") +
+  p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf))+
+    ggplot2::geom_point(size=0.5, alpha=0.5) +
+    ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE, col="#008071")+
+    ggplot2::scale_x_continuous(labels = function(x) ifelse(x == 0, "0", sub("^0+", "", x)))+
     ggplot2::geom_line(ggplot2::aes(x=Env_1, y=-dist), col="#088000")+
     ggplot2::geom_vline(ggplot2::aes(xintercept=optimum), col="#80002D")+
-    ggplot2::facet_wrap(ggplot2::vars(Species), nrow=3) +
+    ggplot2::facet_wrap(ggplot2::vars(Species), nrow=4)+
     ggplot2::xlab("Environment (first axis)") +
     ggplot2::ylab("Performance")+
-    ggplot2::theme(axis.title = ggplot2::element_text(size = 20))
+    ggplot2::theme(axis.title = ggplot2::element_text(size = 20),
+                   axis.text = ggplot2::element_text(size=14),
+                   strip.text = element_text(size = 16))+
+    ggplot2::coord_fixed(ratio = round((max(df_perf_sp_niche$Env_1)-min(df_perf_sp_niche$Env_1))/(max(df_perf_sp_niche$Perf)-min(df_perf_sp_niche$Perf)), digits=2))
+  
   ggplot2::ggsave(p, filename=here::here("outputs", model, "infering_species_niche.png"),
          width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
-  p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf)) +
-    ggplot2::geom_point() +
-    ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE, col="#008071") +
-    ggplot2::facet_wrap(ggplot2::vars(Species), nrow=3) +
-    ggplot2::xlab("Environment (first axis)") +
+  p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf))+
+    ggplot2::geom_point(size=0.5, alpha=0.5)+
+    ggplot2::geom_smooth(method="lm", formula=y~poly(x,2), se=TRUE, col="#008071")+
+    ggplot2::scale_x_continuous(labels = function(x) ifelse(x == 0, "0", sub("^0+", "", x)))+
+    ggplot2::facet_wrap(ggplot2::vars(Species), nrow=4)+
+    ggplot2::xlab("Environment (first axis)")+
     ggplot2::ylab("Performance")+
-    ggplot2::theme(axis.title = ggplot2::element_text(size = 20))
+    ggplot2::theme(axis.title = ggplot2::element_text(size = 20),
+                   axis.text = ggplot2::element_text(size=14),
+                   strip.text = element_text(size = 16))+
+    ggplot2::coord_fixed(ratio = round((max(df_perf_sp_niche$Env_1)-min(df_perf_sp_niche$Env_1))/(max(df_perf_sp_niche$Perf)-min(df_perf_sp_niche$Perf)), digits=2))
+  
   ggplot2::ggsave(p, filename=here::here("outputs", model, "infering_species_niche_simple.png"),
-                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+                  width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
 plot_IV <- function(V_intra, model, fig_width){

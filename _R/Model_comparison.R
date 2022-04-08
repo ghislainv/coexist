@@ -2,7 +2,7 @@ source(file=here::here("_R", "Math_functions.R"))
 
 Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
   
-  dir.create(here::here("outputs", "Comparison"))
+  dir.create(here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}")))
   
   IV_all_models <- data.frame(Sp=(rep(1:nsp, length(Seeds)*length(nb_obs_axes))),
                               IV=numeric(nsp*length(nb_obs_axes)*length(Seeds)),
@@ -73,15 +73,15 @@ Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
     ggplot2::geom_ribbon(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation, ymin=Mean_explanation-Sd, ymax=Mean_explanation+Sd), colour="deeppink3", fill="hotpink3", alpha = 0.3)+
     ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ . * 1 / 1 , name = "Proportion of variance explained by the axes"))
   
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "IV_nb_axes.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "IV_nb_axes.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
 }
 
 
-compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
+compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes){
   
-  dir.create(here::here("outputs", "Comparison"))
+  dir.create(here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}")))
   
   # 1: Compare the species diversity at the end of the simulations within a model (Shannon diversity index)
   Shannon_all_models <- data.frame(Shannon=numeric(), Model=factor(), Nb_obs_axes=factor(), Seed=factor())
@@ -278,12 +278,12 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                   y = "Shannon diversity index")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
   
-  ggplot2::ggsave(Shannon_one_plot, filename=here::here("outputs", "Comparison", "Shannon_boxplot.png"),
+  ggplot2::ggsave(Shannon_one_plot, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Shannon_boxplot.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Shannon_arranged <- ggpubr::ggarrange(Shannon_B, Shannon_C, Shannon_A, nrow=1, ncol=3)
   
-  ggplot2::ggsave(Shannon_arranged, filename=here::here("outputs", "Comparison", "Shannon_boxplot_arranged.png"),
+  ggplot2::ggsave(Shannon_arranged, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Shannon_boxplot_arranged.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Spearman_A <- ggplot2::ggplot(data=Spearman_all_models[Spearman_all_models$Model=="Perf_know"&Spearman_all_models$Nb_obs_axes==1,], ggplot2::aes(x=factor(0), y=Spearman))+
@@ -338,12 +338,12 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                   y = "Spearman pairwise correlation index")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
   
-  ggplot2::ggsave(Spearman_one_plot, filename=here::here("outputs", "Comparison", "Spearman_boxplot.png"),
+  ggplot2::ggsave(Spearman_one_plot, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Spearman_boxplot.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Spearman_arranged <- ggpubr::ggarrange(Spearman_B, Spearman_C, Spearman_A)
   
-  ggplot2::ggsave(Spearman_arranged, filename=here::here("outputs", "Comparison", "Spearman_boxplot_arranged.png"),
+  ggplot2::ggsave(Spearman_arranged, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Spearman_boxplot_arranged.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
 
   
@@ -365,7 +365,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                   y = "Jaccard similarity index of the composition of the community")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
   
-  ggplot2::ggsave(Jaccard_one_plot_within, filename=here::here("outputs", "Comparison", "Jaccard_boxplot_within.png"),
+  ggplot2::ggsave(Jaccard_one_plot_within, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Jaccard_boxplot_within.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   set.seed(0)
@@ -460,7 +460,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                                             Jaccard_E,
                                             Jaccard_F)
   
-  ggplot2::ggsave(Jaccard_arranged_all, filename=here::here("outputs", "Comparison", "Jaccard_boxplot_arranged_all.png"),
+  ggplot2::ggsave(Jaccard_arranged_all, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Jaccard_boxplot_arranged_all.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Jaccard_arranged_between <- ggpubr::ggarrange(Jaccard_D,
@@ -469,7 +469,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                                             nrow=1,
                                             ncol=3)
   
-  ggplot2::ggsave(Jaccard_arranged_between, filename=here::here("outputs", "Comparison", "Jaccard_boxplot_arranged_between.png"),
+  ggplot2::ggsave(Jaccard_arranged_between, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Jaccard_boxplot_arranged_between.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Percentage_similarity_all_models_together <- Percentage_similarity_all_models[-which(Percentage_similarity_all_models$Combi_model == "1-1" & Percentage_similarity_all_models$Nb_obs_axes != 1),]
@@ -490,7 +490,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                   y = "Percentage similarity of the final species abundances")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
   
-  ggplot2::ggsave(Percentage_similarity_one_plot_within, filename=here::here("outputs", "Comparison", "Percentage_similarity_boxplot_within.png"),
+  ggplot2::ggsave(Percentage_similarity_one_plot_within, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Percentage_similarity_boxplot_within.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Percentage_similarity_A <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
@@ -597,7 +597,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                   bottom = ggpubr::text_grob("Number of axes", face = "bold", size = 14),
                   left = ggpubr::text_grob("Percentage similarity", face = "bold", size = 14, rot=90))
   
-  ggplot2::ggsave(Percentage_similarity_arranged_all, filename=here::here("outputs", "Comparison", "Percentage_similarity_boxplot_arranged_all.png"),
+  ggplot2::ggsave(Percentage_similarity_arranged_all, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Percentage_similarity_boxplot_arranged_all.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Percentage_similarity_arranged_between <- ggpubr::ggarrange(Percentage_similarity_D,
@@ -610,7 +610,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                           bottom = ggpubr::text_grob("Number of axes", face = "bold", size = 14),
                           left = ggpubr::text_grob("Percentage similarity", face = "bold", size = 14, rot=90))
   
-  ggplot2::ggsave(Percentage_similarity_arranged_between, filename=here::here("outputs", "Comparison", "Percentage_similarity_boxplot_arranged_between.png"),
+  ggplot2::ggsave(Percentage_similarity_arranged_between, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Percentage_similarity_boxplot_arranged_between.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   for (seed in Seeds) {
@@ -618,7 +618,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
     colourCount = nsp
     getPalette = colorRampPalette(RColorBrewer::brewer.pal(9, "Set1"))
     
-    png(file=here::here("outputs", "Comparison", glue::glue("Final_communities_{seed}.png")),
+    png(file=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), glue::glue("Final_communities_{seed}.png")),
         width=fig_width, height=fig_width, units="cm", res=300)
     
     par(mfrow=c(2,2), bty = "n")
@@ -669,7 +669,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
     dplyr::ungroup()%>%
     dplyr::select(-Correlation, -Seed, -Rep)
   
-  save(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", "Mean_correlation_env_sp.RData"))
+  save(Summary_correlation_env_sp, file=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Mean_correlation_env_sp.RData"))
   
   p <- ggplot2::ggplot(Correlation_env_sp, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Correlation))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Model), group=Model), alpha=0.6, position=ggplot2::position_jitterdodge(jitter.width=0.5))+
@@ -681,7 +681,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
                   y = "Correlation between environment and species semivariance")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", "Corr_env_sp.png"),
+  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Corr_env_sp.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   #Correlation between environmental variables
@@ -694,5 +694,5 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side){
   }
   
   Corr_env_all_configs$Seed <- rep(Seeds, each=(n_axes^2-n_axes)/2)
-  save(Corr_env_all_configs, file=here::here("outputs", "Comparison", "Corr_env_all_configs.RData"))
+  save(Corr_env_all_configs, file=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Corr_env_all_configs.RData"))
 }

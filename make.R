@@ -71,7 +71,7 @@ for(configuration in 1:length(Seeds)){
 # ===============
 
 source(here::here("_R", "Model_comparison.R"))
-compare_models(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side)
+compare_models(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes)
 Compare_IV_axis_nb(Seeds, nsp, nb_obs_axes)
 
 # =========================

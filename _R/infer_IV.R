@@ -12,7 +12,7 @@ infer_IV <- function(model, n_observed_axes){
   
   # Data-set
   df <- data.frame(perf_E_Sp)
-  names(df) <- c(sprintf("Sp_%02d", 1:nsp))
+  names(df) <- c(sprintf("Sp %02d", 1:nsp))
   
   df_perf <- data.frame(matrix(nrow=nrow(df), ncol=ncol(df)+2*n_axes))
   df_perf[,1:ncol(df)] <- df
@@ -21,10 +21,10 @@ infer_IV <- function(model, n_observed_axes){
     df_perf[,ncol(df)+(k+n_axes)] <- (df_perf[,ncol(df)+k])^2
   }
   
-  colnames(df_perf) <- c(sprintf("Sp_%02d", 1:nsp), sprintf("Env_%d", 1:n_axes), sprintf("Env_%d_sq", 1:n_axes))
+  colnames(df_perf) <- c(sprintf("Sp %02d", 1:nsp), sprintf("Env_%d", 1:n_axes), sprintf("Env_%d_sq", 1:n_axes))
   
   df_perf <- df_perf %>%
-    tidyr::pivot_longer(cols=c(Sp_01:glue::glue("Sp_{nsp}")), names_to="Species", values_to="Perf")
+    tidyr::pivot_longer(cols=c("Sp 01":glue::glue("Sp {nsp}")), names_to="Species", values_to="Perf")
   
   # Observed niche
   plot_species_niche(seed, df_perf, model, fig_width)
