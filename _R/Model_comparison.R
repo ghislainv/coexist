@@ -61,16 +61,16 @@ Compare_IV_axis_nb <- function(Seeds, nsp, nb_obs_axes){
     dplyr::select(-Seed, -R2)
   
   p <- ggplot2::ggplot(data=IV_all_models, ggplot2::aes(x=as.factor(Nb_obs_axes), y=IV))+
+    ggplot2::geom_ribbon(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation, ymin=Mean_explanation-Sd, ymax=Mean_explanation+Sd), colour="deeppink3", fill="hotpink3", alpha = 0.3)+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
     ggplot2::geom_boxplot(alpha=0.6)+
+    ggplot2::geom_point(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
+    ggplot2::geom_line(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(x = "Number of observed axes",
                   y = "IV")+
     ggplot2::scale_x_discrete(labels=nb_obs_axes)+
     ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")+
-    ggplot2::geom_point(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
-    ggplot2::geom_line(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation), colour="deeppink3")+
-    ggplot2::geom_ribbon(data=Summary_level_explanation_axes_nb, ggplot2::aes(x=Nb_obs_axes, y=Mean_explanation, ymin=Mean_explanation-Sd, ymax=Mean_explanation+Sd), colour="deeppink3", fill="hotpink3", alpha = 0.3)+
     ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ . * 1 / 1 , name = "Proportion of variance explained by the axes"))
   
   ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "IV_nb_axes.png"),
