@@ -360,7 +360,7 @@ launch_model <- function(){
             
             # Identify the present species with the highest performance on vacant sites
             #sp_high_perf <- sp_present[apply(matrix(perf_Sp_mean[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
-            sp_high_perf <- apply(-matrix(perf_Sp_mean[sites_vacant, sp_present], ncol=nsp_present), 1, high_perf_sp, sp_pres=sp_present)
+            sp_high_perf <- apply(-matrix(perf_Sp_mean[sites_vacant, ], ncol=nsp), 1, high_perf_sp, sp_pres=sp_present)
             
             # Recruitment
             community_rast[sites_vacant] <- sp_high_perf
@@ -371,7 +371,7 @@ launch_model <- function(){
             
             # Identify the present species with the highest performance on vacant sites (maximum in each line)
             #sp_high_perf <- sp_present[apply(matrix(perf_ind_pot[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
-            sp_high_perf <- apply(-matrix(perf_ind_pot[sites_vacant, sp_present], ncol=nsp_present), 1, high_perf_sp, sp_pres=sp_present)
+            sp_high_perf <- apply(-matrix(perf_ind_pot[sites_vacant, ], ncol=nsp), 1, high_perf_sp, sp_pres=sp_present)
             
             # Recruitment
             community_rast[sites_vacant] <- sp_high_perf
