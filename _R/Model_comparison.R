@@ -83,7 +83,8 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   
   dir.create(here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}")))
   
-  # 1: Compare the species diversity at the end of the simulations within a model (Shannon diversity index)
+  # 1: Compare species richness and diversity at the end of the simulations within a model (Shannon diversity index)
+  Species_richness_all_models <- data.frame(Species_richness=numeric(), Model=factor(), Nb_obs_axes=factor(), Seed=factor())
   Shannon_all_models <- data.frame(Shannon=numeric(), Model=factor(), Nb_obs_axes=factor(), Seed=factor())
   # 2: Compare the species ranks in the end of the simulations within a model (Spearman pairwise correlation)
   Spearman_all_models <- data.frame(Spearman=numeric(), Model=factor(), Nb_obs_axes=factor(), Seed=factor())
@@ -117,6 +118,15 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
       
       for (m in 1:length(models)) {
         model <- models[m]
+        load(here::here("outputs", model, "Species_richness.RData"))
+        sp_rich_final <- unlist(unname(sp_rich_final))
+        Species_richness_all_models <- rbind(Species_richness_all_models,
+                                    data.frame(Species_richness=sp_rich_final,
+                                               Model=rep(Mod_type[m], length(sp_rich_final)),
+                                               Nb_obs_axes=rep(n_observed_axes, length(sp_rich_final)),
+                                               Seed=rep(seed, length(sp_rich_final))
+                                    )
+        )
         load(here::here("outputs", model, "Shannon.RData"))
         Shannon_all_models <- rbind(Shannon_all_models,
                                     data.frame(Shannon=Shannon,
@@ -231,6 +241,60 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
     } #loop n_observed_axes
     
   } #loop seeds
+  
+  Species_richness_A <- ggplot2::ggplot(data=Species_richness_all_models[Species_richness_all_models$Model=="Perf_know"&Species_richness_all_models$Nb_obs_axes==1,], ggplot2::aes(x=factor(0), y=Species_richness))+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::geom_boxplot(alpha=0.6)+
+    ggplot2::labs(title = "Perfect knowledge",
+                  y = "Species richness")+
+    ggplot2::theme(text=ggplot2::element_text(size = 16),
+                   legend.position = "none",
+                   axis.title.x=ggplot2::element_blank(),
+                   axis.text.x=ggplot2::element_blank(),
+                   axis.ticks.x=ggplot2::element_blank())
+  
+  Species_richness_B <- ggplot2::ggplot(data=Species_richness_all_models[Species_richness_all_models$Model=="Part_know",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Species_richness))+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::geom_boxplot(alpha=0.6)+
+    ggplot2::labs(title = "Partial knowledge",
+                  x = "Number of axes",
+                  y = "Species richness")+
+    ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")+
+    ggplot2::ylim(range(c(Species_richness_all_models[Species_richness_all_models$Model=="Part_know",]$Species_richness, Species_richness_all_models[Species_richness_all_models$Model=="Part_know_IV",]$Species_richness)))
+  
+  
+  Species_richness_C <- ggplot2::ggplot(data=Species_richness_all_models[Species_richness_all_models$Model=="Part_know_IV",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Species_richness))+
+    ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::geom_boxplot(alpha=0.6)+
+    ggplot2::labs(title = "Partial knowledge + IV",
+                  x = "Number of axes",
+                  y = "Species richness")+
+    ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")+
+    ggplot2::ylim(range(c(Species_richness_all_models[Species_richness_all_models$Model=="Part_know",]$Species_richness, Species_richness_all_models[Species_richness_all_models$Model=="Part_know_IV",]$Species_richness)))
+  
+  Species_richness_all_models_together <- Species_richness_all_models[-which(Species_richness_all_models$Model == "Perf_know" & Species_richness_all_models$Nb_obs_axes != 1),]
+  Species_richness_all_models_together[Species_richness_all_models_together$Model=="Perf_know",]$Nb_obs_axes <- "Perfect knowledge"
+  
+  Species_richness_one_plot <- ggplot2::ggplot(Species_richness_all_models_together, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Species_richness))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Model), group=Model), alpha=0.6, position=ggplot2::position_jitterdodge(jitter.width=0.5))+
+    ggplot2::scale_colour_viridis_d()+
+    ggnewscale::new_scale("colour")+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=Model), alpha=0.6)+
+    ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+    ggplot2::labs(x = "Number of observed axes",
+                  y = "Species richness")+
+    ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
+  
+  ggplot2::ggsave(Species_richness_one_plot, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Species_richness_boxplot.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+  Species_richness_arranged <- ggpubr::ggarrange(Species_richness_B, Species_richness_C, Species_richness_A, nrow=1, ncol=3)
+  
+  ggplot2::ggsave(Species_richness_arranged, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Species_richness_boxplot_arranged.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Shannon_A <- ggplot2::ggplot(data=Shannon_all_models[Shannon_all_models$Model=="Perf_know"&Shannon_all_models$Nb_obs_axes==1,], ggplot2::aes(x=factor(0), y=Shannon))+
     ggbeeswarm::geom_beeswarm(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
