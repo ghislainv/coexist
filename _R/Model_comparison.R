@@ -350,6 +350,11 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   ggplot2::ggsave(Shannon_arranged, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Shannon_boxplot_arranged.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
+  Richness_Shannon <- ggpubr::ggarrange(Species_richness_one_plot, Shannon_one_plot, nrow=2, ncol=1, labels = c("A", "B"))
+  ggplot2::ggsave(Richness_Shannon, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Richness_Shannon.png"),
+                  width=fig_width*2, height=fig_width*2, units="cm", dpi=300)
+  
+  
   Spearman_A <- ggplot2::ggplot(data=Spearman_all_models[Spearman_all_models$Model=="Perf_know"&Spearman_all_models$Nb_obs_axes==1,], ggplot2::aes(x=factor(0), y=Spearman))+
     ggplot2::geom_boxplot()+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.5)+
