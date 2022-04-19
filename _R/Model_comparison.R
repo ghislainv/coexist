@@ -456,6 +456,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   Jaccard_B <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="2-2",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha=0.6)+
+    ggplot2::geom_jitter(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Jaccard, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Jaccard), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge",
                   x = "Number of axes",
@@ -469,6 +473,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   Jaccard_C <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="3-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha=0.6)+
+    ggplot2::geom_jitter(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Jaccard, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Jaccard), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge + IV",
                   x = "Number of axes",
@@ -483,6 +491,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   Jaccard_D <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-2",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha=0.6)+
+    ggplot2::geom_jitter(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Jaccard, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Jaccard), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Perfect knowledge - Partial knowledge",
                   x = "Number of axes",
@@ -497,6 +509,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   Jaccard_E <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha = 0.6)+
+    ggplot2::geom_jitter(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Jaccard, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Jaccard), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Perfect knowledge - Partial knowledge + IV",
                   x = "Number of axes",
@@ -511,6 +527,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   Jaccard_F <- ggplot2::ggplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="2-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Jaccard))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha = 0.6)+
+    ggplot2::geom_jitter(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Jaccard, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Jaccard_all_models[Jaccard_all_models$Combi_model=="1-1"&Jaccard_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Jaccard), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge - Partial knowledge + IV",
                   x = "Number of axes",
@@ -521,6 +541,9 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
                    axis.title.x=ggplot2::element_blank(),
                    axis.title.y=ggplot2::element_blank())+
     ggplot2::ylim(range(Jaccard_all_models_together$Jaccard))
+  
+  ggplot2::ggsave(Jaccard_F, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Jaccard_boxplot_between_Partials.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Jaccard_arranged_all <- ggpubr::ggarrange(Jaccard_A,
                                             Jaccard_B,
@@ -533,10 +556,9 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Jaccard_arranged_between <- ggpubr::ggarrange(Jaccard_D,
-                                            Jaccard_E,
-                                            Jaccard_F,
-                                            nrow=1,
-                                            ncol=3)
+                                                Jaccard_E,
+                                                nrow=1,
+                                                ncol=2)
   
   ggplot2::ggsave(Jaccard_arranged_between, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Jaccard_boxplot_arranged_between.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
@@ -582,6 +604,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
                                              ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha = 0.6)+
+    ggplot2::geom_jitter(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge",
                   x = "Number of axes",
@@ -597,6 +623,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
                                              ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha = 0.6)+
+    ggplot2::geom_jitter(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge + IV",
                   x = "Number of axes",
@@ -612,6 +642,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
                                              ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha = 0.6)+
+    ggplot2::geom_jitter(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Perfect knowledge - \n Partial knowledge",
                   x = "Number of axes",
@@ -627,6 +661,10 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
                                              ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha = 0.6)+
+    ggplot2::geom_jitter(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Perfect knowledge - \n Partial knowledge + IV",
                   x = "Number of axes",
@@ -642,18 +680,21 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
                                              ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
     ggplot2::geom_boxplot(alpha = 0.6)+
+    ggplot2::geom_jitter(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity, colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+    ggplot2::geom_boxplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity), alpha = 0.6)+
     ggplot2::scale_colour_viridis_d()+
     ggplot2::labs(title = "Partial knowledge - \n Partial knowledge + IV",
                   x = "Number of axes",
                   y = "Percentage similarity")+
     ggplot2::theme(plot.title = ggplot2::element_text(size=14),
                    text = ggplot2::element_text(size = 14),
-                   legend.position = "none",
-                   axis.title.x=ggplot2::element_blank(),
-                   axis.title.y=ggplot2::element_blank())+
+                   legend.position = "none")+
     ggplot2::ylim(range(Percentage_similarity_all_models_together$Percentage_similarity))
   
-  
+  ggplot2::ggsave(Percentage_similarity_F, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Percentage_similarity_boxplot_between_Partials.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Percentage_similarity_arranged_all <- ggpubr::ggarrange(Percentage_similarity_A,
                                                       Percentage_similarity_B,
@@ -671,9 +712,8 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   
   Percentage_similarity_arranged_between <- ggpubr::ggarrange(Percentage_similarity_D,
                                                       Percentage_similarity_E,
-                                                      Percentage_similarity_F,
                                                       nrow=1,
-                                                      ncol=3)
+                                                      ncol=2)
   
   Percentage_similarity_arranged_between <- ggpubr::annotate_figure(Percentage_similarity_arranged_between,
                           bottom = ggpubr::text_grob("Number of axes", face = "bold", size = 14),

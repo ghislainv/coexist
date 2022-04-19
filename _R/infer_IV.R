@@ -26,9 +26,6 @@ infer_IV <- function(model, n_observed_axes){
   df_perf <- df_perf %>%
     tidyr::pivot_longer(cols=c("Sp 01":glue::glue("Sp {nsp}")), names_to="Species", values_to="Perf")
   
-  # Observed niche
-  plot_species_niche(seed, df_perf, model, fig_width)
-  
   #Check that the model well fits the data if all environmental variables are included
   # formula <- as.formula(paste0("Perf~-1+Species+Species:", paste0(colnames(df_perf)[1:(2*n_axes)], collapse= "+Species:")))
   # lm_all_env <- lm(formula, data=df_perf)
@@ -80,6 +77,10 @@ infer_IV <- function(model, n_observed_axes){
   
   plot_inferred_perf_IV(n_observed_axes, Obs_env=sites[,1:n_observed_axes], nsp, Inferred_species_parameters, V_intra, model, fig_width)
   
-  return(V_intra)
+  # Observed niche
+  if(n_observed_axes==1){
+    plot_species_niche(seed, df_perf, Inferred_species_parameters, V_intra, sites, model, fig_width)
+  }
   
+  return(V_intra)
 }

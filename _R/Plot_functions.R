@@ -406,7 +406,7 @@ plot_spatial_autocorr <- function(nrep, community_end, n_axes, sites, niche_opti
   save(semivar_multidim, file=here::here("outputs", model, "semivar_multidim.RData"))
 }
 
-plot_species_niche <- function(seed, df_perf, model, fig_width){
+plot_species_niche <- function(seed, df_perf, Inferred_species_parameters, V_intra, sites, model, fig_width){
   # Select 8 species at random
   #set.seed(seed)
   #sp_sel <- sample(unique(df_perf$Species), 9, replace=FALSE)
@@ -449,6 +449,51 @@ plot_species_niche <- function(seed, df_perf, model, fig_width){
   
   ggplot2::ggsave(p, filename=here::here("outputs", model, "infering_species_niche_simple.png"),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
+  
+  
+  X1_mat <- list()
+  X1_mat[[1]] <- matrix(rep(sites[,1], nrow(Inferred_species_parameters)), ncol=nrow(Inferred_species_parameters))
+  X1_mat[[2]] <- X1_mat[[1]]^2
+  
+  Inferred_parameters_mat_X1 <-list()
+  
+  for(k in 1:ncol(Inferred_species_parameters)){
+    Inferred_parameters_mat_X1[[k]] <- matrix(rep(Inferred_species_parameters[,k],each=length(sites[,1])), ncol=nrow(Inferred_species_parameters))
+  }
+  
+  Mat_perf_inferred <- Inferred_parameters_mat_X1[[1]]
+  
+  for(k in 1:length(X1_mat)){
+    Mat_perf_inferred <- Mat_perf_inferred + Inferred_parameters_mat_X1[[k+1]]*X1_mat[[k]]
+  }
+  
+  Mat_perf_inferred_X1 <- as.data.frame(cbind(sites[,1], Mat_perf_inferred))
+  
+  colnames(Mat_perf_inferred_X1) <- c("Env_1", sprintf("Sp %02d", 1:nrow(Inferred_species_parameters)))
+  
+  Mat_perf_inferred_X1 <- Mat_perf_inferred_X1 %>%
+    tidyr::pivot_longer(cols=2:(nrow(Inferred_species_parameters)+1), names_to="Species",
+                        names_prefix="Species", values_to="Perf")
+  
+  Mat_perf_inferred_X1 <- Mat_perf_inferred_X1%>%
+    dplyr::mutate(sd=rep(sqrt(V_intra$V), nrow(sites)))
+  
+  p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf))+
+    ggplot2::geom_point(size=0.5, alpha=0.5)+
+    ggplot2::geom_line(data=Mat_perf_inferred_X1, ggplot2::aes(x=Env_1, y=Perf), col="#008071", size = 1.2)+
+    ggplot2::geom_ribbon(data=Mat_perf_inferred_X1, aes(ymin=Perf-sd, ymax=Perf+sd), col="#008071", fill="#008071", alpha=0.2)+
+    ggplot2::scale_x_continuous(labels = function(x) ifelse(x == 0, "0", sub("^0+", "", x)))+
+    ggplot2::facet_wrap(ggplot2::vars(Species), nrow=4)+
+    ggplot2::xlab("Environment (first axis)")+
+    ggplot2::ylab("Performance")+
+    ggplot2::theme(axis.title = ggplot2::element_text(size = 20),
+                   axis.text = ggplot2::element_text(size=14),
+                   strip.text = element_text(size = 16))+
+    ggplot2::coord_fixed(ratio = round((max(df_perf_sp_niche$Env_1)-min(df_perf_sp_niche$Env_1))/(max(df_perf_sp_niche$Perf)-min(df_perf_sp_niche$Perf)), digits=2))
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", model, "infering_species_niche_real_params.png"),
+                  width=fig_width, height=fig_width, units="cm", dpi=300)
+  
 }
 
 plot_IV <- function(V_intra, model, fig_width){
