@@ -567,6 +567,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Combi_model=="1-1",]$Nb_obs_axes <- "Perfect knowledge"
   
   Percentage_similarity_all_models_together_within <- Percentage_similarity_all_models_together[Percentage_similarity_all_models_together$Combi_model%in%c("1-1", "2-2", "3-3"),]
+  Percentage_similarity_all_models_together_between <- Percentage_similarity_all_models_together[!(Percentage_similarity_all_models_together$Combi_model%in%c("1-1", "2-2", "3-3")),]
   
   Percentage_similarity_one_plot_within <- ggplot2::ggplot(Percentage_similarity_all_models_together_within, ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
     ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Combi_model), group=Combi_model),
@@ -576,12 +577,32 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
     ggplot2::scale_shape_manual(values=c(15, 16, 17))+
     ggnewscale::new_scale("colour")+
     ggplot2::geom_boxplot(ggplot2::aes(colour=Combi_model), alpha = 0.6)+
-    ggplot2::scale_colour_manual(values=c("#54626F", "#B2BEB5", "black"))+
+    ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
     ggplot2::labs(x = "Number of observed axes",
                   y = "Percentage similarity of the final species abundances")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
   
   ggplot2::ggsave(Percentage_similarity_one_plot_within, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Percentage_similarity_boxplot_within.png"),
+                  width=fig_width*2, height=fig_width, units="cm", dpi=300)
+  
+  Percentage_similarity_one_plot_between <- ggplot2::ggplot(Percentage_similarity_all_models_together_between[Percentage_similarity_all_models_together_between$Combi_model!="2-3",], ggplot2::aes(x=as.factor(Nb_obs_axes), y=Percentage_similarity))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed), shape=as.factor(Combi_model), group=Combi_model),
+                         alpha=0.6,
+                         position=ggplot2::position_jitterdodge(jitter.width=0.5))+
+    ggplot2::geom_jitter(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                         ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity, colour=as.factor(Seed), shape=as.factor(Combi_model)), alpha=0.6)+
+    ggplot2::scale_colour_viridis_d()+
+    ggplot2::scale_shape_manual(values=c(15, 16, 17))+
+    ggnewscale::new_scale("colour")+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=as.factor(Combi_model)), alpha = 0.6)+
+    ggplot2::geom_boxplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
+                          ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity, colour=as.factor(Combi_model)), alpha = 0.6)+
+    ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+    ggplot2::labs(x = "Number of observed axes",
+                  y = "Percentage similarity of the final species abundances")+
+    ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
+  
+  ggplot2::ggsave(Percentage_similarity_one_plot_between, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Percentage_similarity_boxplot_between.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   Percentage_similarity_A <- ggplot2::ggplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
@@ -696,6 +717,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   ggplot2::ggsave(Percentage_similarity_F, filename=here::here("outputs", glue::glue("Comparison_{mort}_{nb_seeds}"), "Percentage_similarity_boxplot_between_Partials.png"),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
+  
   Percentage_similarity_arranged_all <- ggpubr::ggarrange(Percentage_similarity_A,
                                                       Percentage_similarity_B,
                                                       Percentage_similarity_C,
@@ -712,8 +734,9 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
   
   Percentage_similarity_arranged_between <- ggpubr::ggarrange(Percentage_similarity_D,
                                                       Percentage_similarity_E,
+                                                      Percentage_similarity_F,
                                                       nrow=1,
-                                                      ncol=2)
+                                                      ncol=3)
   
   Percentage_similarity_arranged_between <- ggpubr::annotate_figure(Percentage_similarity_arranged_between,
                           bottom = ggpubr::text_grob("Number of axes", face = "bold", size = 14),

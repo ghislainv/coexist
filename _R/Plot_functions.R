@@ -480,8 +480,8 @@ plot_species_niche <- function(seed, df_perf, Inferred_species_parameters, V_int
   
   p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf))+
     ggplot2::geom_point(size=0.5, alpha=0.5)+
-    ggplot2::geom_line(data=Mat_perf_inferred_X1, ggplot2::aes(x=Env_1, y=Perf), col="#008071", size = 1.2)+
-    ggplot2::geom_ribbon(data=Mat_perf_inferred_X1, aes(ymin=Perf-sd, ymax=Perf+sd), col="#008071", fill="#008071", alpha=0.2)+
+    ggplot2::geom_line(data=Mat_perf_inferred_X1, ggplot2::aes(x=Env_1, y=Perf), col="#008071")+
+    ggplot2::geom_ribbon(data=Mat_perf_inferred_X1, aes(ymin=Perf-sd, ymax=Perf+sd), col="#008071", fill="#008071", alpha=0.2, linetype="dotted")+
     ggplot2::scale_x_continuous(labels = function(x) ifelse(x == 0, "0", sub("^0+", "", x)))+
     ggplot2::facet_wrap(ggplot2::vars(Species), nrow=4)+
     ggplot2::xlab("Environment (first axis)")+
