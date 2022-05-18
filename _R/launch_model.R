@@ -88,14 +88,19 @@ launch_model <- function(){
   print("Computing species ranks...")
   
   if(perf_know==TRUE){
-    if(mortality_fixed==FALSE){
+    if(mortality_stocha==TRUE){
       # Probability of dying of each species on each site
-      mortality_E_Sp <- inv_logit(logit(theta) + b * perf_E_Sp)
+      if(mortality_stocha_basal==TRUE){
+        mortality_E_Sp <- inv_logit(logit(theta) + b * perf_E_Sp)
+      }
+      if(mortality_stocha_basal==FALSE){
+        mortality_E_Sp <- inv_logit(b*perf_E_Sp)
+      }
       # Mortality rate distribution
       plot_histogram_mortality(model=model, fig_width=fig_width, mortality_E_Sp=mortality_E_Sp)
       # Mortality probability function
       plot_function_mort_proba(model=model, fig_width=fig_width, perf_E_Sp=perf_E_Sp, mortality_E_Sp=mortality_E_Sp)
-    }
+    }#end condition on stochastic mortality
     
     # Habitat frequency for each species
     # Identify the rank of the performance of species
@@ -105,7 +110,7 @@ launch_model <- function(){
     sp_hab_freq <- as.table(sp_hab_freq)
     names(sp_hab_freq) <- 1:nsp
     save(sp_hab_freq, file = here::here("outputs", model, "sp_hab_freq.RData"))
-  }
+  }#end condition on perfect knowledge
   
   if(perf_know==FALSE){
     rank_dist_E <- t(apply(-perf_Sp_mean, 1, rank, ties.method="max"))
@@ -113,8 +118,15 @@ launch_model <- function(){
     sp_hab_freq <- as.table(sp_hab_freq)
     names(sp_hab_freq) <- 1:nsp
     save(sp_hab_freq, file = here::here("outputs", model=model, "sp_hab_freq.RData"))
-    mortality_Sp_mean <- inv_logit(logit(theta) + b * (perf_Sp_mean))
-  }
+    if(mortality_stocha==TRUE){
+      if(mortality_stocha_basal==TRUE){
+        mortality_Sp_mean <- inv_logit(logit(theta) + b * (perf_Sp_mean))
+      }
+      if(mortality_stocha_basal==FALSE){
+        mortality_Sp_mean <- inv_logit(b*perf_Sp_mean)
+      }
+    }#end condition on stochastic mortality
+  }#end condition on partial knowledge
   
   plot_species_habitat_freq(model=model, fig_width=fig_width, sp_hab_freq=sp_hab_freq)
   
@@ -162,16 +174,17 @@ launch_model <- function(){
     # -----------------------------------------
     print("Initialising the landscape...")
     
-    set.seed(NULL)
-    
     if(start_full_landscape==TRUE){
       # Draw species at random in the landscape (one individual per site)
+      set.seed(Seeds[r])
       sp <- sample(1:nsp, size=nsite, replace=TRUE)
       community <- matrix(sp, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
     }
     if(start_one_ind_per_species==TRUE){
       # One individual per species distributed randomly over the grid
+      set.seed(Seeds[r])
       sites_start <- sample(1:nsite, size=nsp, replace=FALSE)
+      set.seed(Seeds[r])
       sp_start<- sample(1:nsp, size=nsp, replace=FALSE)
       community <- matrix(0, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
       community_rast <- raster::raster(community)
@@ -180,6 +193,7 @@ launch_model <- function(){
     }
     if(start_ten_ind_per_species==TRUE){
       # Ten individuals per species distributed randomly over the grid
+      set.seed(Seeds[r])
       sites_start <- sample(1:nsite, size=nsp*10, replace=FALSE)
       sp_start<- rep(1:nsp, each=10)
       community <- matrix(0, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
@@ -221,20 +235,29 @@ launch_model <- function(){
       
       #print("Computing mortality...")
       
-      if(mortality_fixed==FALSE){
+      #Total abundance in the community, used for mortality rate as a proportion of abundance
+      abund_tot <- length(community[community!=0])
+      
+      if(mortality_stocha==TRUE){
         
         if(perf_know==FALSE&&IV==TRUE){
           
-          # Probability of dying of each species on each site
-          mortality_ind <- inv_logit(logit(theta) + b * (perf_ind))
+          if(mortality_stocha_basal==TRUE){
+            # Probability of dying of each species on each site
+            mortality_ind <- inv_logit(logit(theta) + b * (perf_ind))
+            
+            # Mean mortality correction
+            epsilon_mat <- matrix(epsilon, ncol=nsp)
+            theta_var <- inv_logit(logit(theta) + b * epsilon_mat)
+            diff <- mean(theta_var)-theta
+            mortality_ind <- mortality_ind - diff
+            # /!\ can modify mean!
+            mortality_ind[mortality_ind<0] <- 0
+          }#end condition on basal mortality
           
-          # Mean mortality correction
-          epsilon_mat <- matrix(epsilon, ncol=nsp)
-          theta_var <- inv_logit(logit(theta) + b * epsilon_mat)
-          diff <- mean(theta_var)-theta
-          mortality_ind <- mortality_ind - diff
-          # /!\ can modify mean!!
-          mortality_ind[mortality_ind<0] <- 0
+          if(mortality_stocha_basal==FALSE){
+            mortality_ind <- inv_logit(b*perf_ind)
+          }
           
         } # end condition on IV
         
@@ -272,13 +295,18 @@ launch_model <- function(){
         }
         
         # Mortality events
-        mort_ev <- rbinom(nsite, size=1, prob=theta_site)
+        if(mortality_stocha_basal==TRUE){
+          mort_ev <- rbinom(nsite, size=1, prob=theta_site)
+        }
+        if(mortality_stocha_basal==FALSE){
+          mort_ev <- rmultinom(1, size=round(0.01*abund_tot), prob=theta_site)
+        }
         mortality <- matrix(mort_ev, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
         
-      }
+      }#end condition on mortality not stochastic
       
-      if(mortality_fixed==TRUE){
-        # No stocasticity: the 10 less performant individuals of the community die each generation
+      if(mortality_stocha==FALSE){
+        # No stochasticity: the 10 less performing individuals of the community OR a fixed proportion of the total abundance die each generation
         
         perf_present <- rep(NA, nsite)
         w0 <- (as.vector(t(community))==0)
@@ -300,9 +328,15 @@ launch_model <- function(){
           perf_present[!w0] <- diag(perf_ind[!w0, as.vector(t(community))[!w0]])
         }
         
-        #identify the 10 less performant present individuals and kill them
         mort_ev <- rep(0, length(perf_present))
-        mort_ev[which(perf_present<=sort(perf_present)[10])] <- 1 #sort ignores NA
+        #identify the 10 less performant present individuals and kill them
+        if(mortality_fixed==TRUE){
+          mort_ev[which(perf_present<=sort(perf_present)[10])] <- 1 #sort ignores NA
+        }
+        #identify the 0.01*total abudance less performant present individuals and kill them
+        if(mortality_proportion==TRUE){
+          mort_ev[which(perf_present<=sort(perf_present)[round(abund_tot*0.01)])] <- 1 #sort ignores NA
+        }
         mortality <- matrix(mort_ev, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
       }
       
@@ -525,7 +559,7 @@ launch_model <- function(){
       
       # Mean mortality rate in the community
       #/!\ do we want this mortality rate to take empty sites into account?
-      if(mortality_fixed==FALSE){
+      if(mortality_stocha==TRUE){
         if (IV==FALSE&&perf_know==TRUE){
           theta_site <- diag(mortality_E_Sp[, as.vector(t(community))])
         }
@@ -626,14 +660,14 @@ launch_model <- function(){
   # Theta community
   # ---------------------------------------------
   
-  if(mortality_fixed==FALSE){
+  if(mortality_stocha==TRUE){
     plot_theta_community(theta_comm, ngen, nrep, model, fig_width)
   }
   
   # ----------------------------------
   # Spatial autocorrelation of species
   # ----------------------------------
-  plot_spatial_autocorr(nrep, community_end, n_axes, sites, niche_optimum, niche_width, model, fig_width)
+  #plot_spatial_autocorr(nrep, community_end, n_axes, sites, niche_optimum, niche_width, model, fig_width)
 
   # ------------------------------------------------------
   # Performance of species that *should* win vs. *do* win

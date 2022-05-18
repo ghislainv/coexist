@@ -6,7 +6,7 @@
 ## ==============================================================================
 
 # Number of observed axes in partial models
-nb_obs_axes <- c(1, 2, 3, 4, 5, 6, 7, 8, 9)
+nb_obs_axes <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 
 # Seeds for reproducibility: it controls the environment × species parameters configuration.
 # Seeds <- sample(1:10^6, 10)
@@ -23,13 +23,13 @@ for(configuration in 1:length(Seeds)){
   # Launch perfect knowledge model
   # ========================================
   
-  perf_know <- TRUE
-  IV <- FALSE
+   perf_know <- TRUE
+   IV <- FALSE
+   
+   source(file = here::here("_R", "Basic_parameters.R"))
+   source(file = here::here("_R", "launch_model.R"))
   
-  source(file = here::here("_R", "Basic_parameters.R"))
-  source(file = here::here("_R", "launch_model.R"))
-  
-  launch_model()
+   launch_model()
   
   # ========================================
   # Infer observed intraspecific variability
@@ -66,14 +66,14 @@ for(configuration in 1:length(Seeds)){
   }
 }
 
-# ===============
-# Compare models
-# ===============
-
-source(here::here("_R", "Model_comparison.R"))
-compare_models(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes)
-Compare_IV_axis_nb(Seeds, nsp, nb_obs_axes)
-
-# =========================
-# End of file
-# =========================
+# # ===============
+# # Compare models
+# # ===============
+# 
+# source(here::here("_R", "Model_comparison.R"))
+# compare_models(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes)
+# Compare_IV_axis_nb(Seeds, nsp, nb_obs_axes)
+# 
+# # =========================
+# # End of file
+# # =========================
