@@ -5,8 +5,22 @@
 ## license         :GPLv3
 ## ==============================================================================
 
+source(file = here::here("_R", "call_libraries.R"))
+
+# Create output directories
+#dir.create(here::here("outputs", model), recursive=TRUE)
+
+source(file=here::here("_R", "Math_functions.R"))
+
+source(file=here::here("_R", "Plot_functions.R"))
+
+source(file=here::here("_R", "Generate_environment.R"))
+
+source(file=here::here("_R", "Species_parameters.R"))
+
+
 # Number of observed axes in partial models
-nb_obs_axes <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+nb_obs_axes <- c(1:10)
 
 # Seeds for reproducibility: it controls the environment × species parameters configuration.
 # Seeds <- sample(1:10^6, 10)
@@ -62,6 +76,7 @@ for(configuration in 1:length(Seeds)){
     source(file = here::here("_R", "Basic_parameters.R"))
     
     launch_model()
+    
     
   }
 }

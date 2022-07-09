@@ -1,4 +1,4 @@
-generate_environment <- function(nsite_side, seed_env){
+generate_environment <- function(n_axes, nsite_side, seed_env, mod, n_observed_axes, mortality, fecundity, seed, seed_r){
   # Landscape
   mat <- matrix(0, nrow=nsite_side, ncol=nsite_side)
   r <- raster::raster(mat, crs="+proj=utm +zone=1")
@@ -42,8 +42,8 @@ generate_environment <- function(nsite_side, seed_env){
   }
   
   #save the environmental data to avoid simulating them again in the next model
-  save(sites, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
-  save(env, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env.RData")))
+  save(sites, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
+  save(env, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env.RData")))
   
   #Look at the correlations between environmental variables
   Corr_env <- as.data.frame(as.matrix(t(combn(c(1:n_axes), 2))))
@@ -54,7 +54,7 @@ generate_environment <- function(nsite_side, seed_env){
     Corr_env$Corr[k] <- cor(raster::values(raster::raster(env[[Corr_env$Var1[k]]])), raster::values(raster::raster(env[[Corr_env$Var2[k]]])))
   }
   
-  save(Corr_env, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Corr_env.RData")))
+  save(Corr_env, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Corr_env.RData")))
   
   # Plot the environment
   #plot_environment(fig_width=fig_width, n_axes=n_axes, env=env, sites=sites)

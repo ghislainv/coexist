@@ -1,4 +1,4 @@
-generate_species_optima <- function(randomOptSp, niche_width, nsp, env, seed_sp){
+generate_species_optima <- function(randomOptSp, niche_width, nsp, env, n_axes, seed_sp, mod, n_observed_axes, mortality, fecundity, seed, seed_r){
   if (!randomOptSp){
     
     # Niches per axis
@@ -23,7 +23,7 @@ generate_species_optima <- function(randomOptSp, niche_width, nsp, env, seed_sp)
   }
   
   rownames(niche_optimum)<-1:nrow(niche_optimum)
-  save(niche_optimum, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
+  save(niche_optimum, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
   
 #   # Plot the species niche
 #   if(n_axes==3){

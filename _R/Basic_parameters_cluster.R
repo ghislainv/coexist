@@ -1,8 +1,8 @@
 # Figure width
-fig_width <- 16.6 # in cm
+#fig_width <- 16.6 # in cm
 
 # Number of niche/environmental axes
-n_axes <- 10
+n_axes <- 15
 
 # Perfect of partial knowledge
 if(perf_know==FALSE){part_know<-TRUE} else{part_know<-FALSE}
@@ -28,10 +28,10 @@ b <- -0.5
 fec <- 0.5
 
 # Number of repetitions
-nrep <- 1
+#nrep <- 10
 
 # Number of generations
-ngen <-10
+ngen <-10000
 
 ############
 #Model name#
@@ -90,22 +90,21 @@ if(part_know==TRUE){
 if(part_know==TRUE){
   # Charge files from the model without IV
   # Use model run just before
-  load(file=here::here("outputs", glue::glue("lm_fit_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
-  load(here::here("outputs", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
-  load(here::here("outputs", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_env.RData")))
-  load(file=here::here("outputs", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
-  load(file=here::here("outputs", glue::glue("Inferred_species_parameters_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
-  #load(file=here::here("outputs", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_env_entrelac.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_env.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("Inferred_species_parameters_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
+  #load(paste0(directory_writing, "/outputs/", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_env_entrelac.RData")))
 }
 
 #Number of species
 if(part_know==TRUE){
-  nsp <- length(unique(model.frame(lm_fit)$Species))
+  nsp <- nrow(Inferred_species_parameters)
 } else {nsp <- 20}
 
 #Load IV
 if(IV==TRUE){
-  load(here::here("outputs", glue::glue("V_intra_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("V_intra_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
 }
 
 #Size of the side of the environmental matrix

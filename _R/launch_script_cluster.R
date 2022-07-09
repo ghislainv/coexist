@@ -24,7 +24,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
   if (mortality =="stocha_basal"){
     mortality_fixed<-FALSE
     mortality_proportion<-FALSE
-    mortality_stocha<-FALSE
+    mortality_stocha<-TRUE
     mortality_stocha_basal<-TRUE
   }
   
@@ -38,7 +38,8 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
     nb_seeds_indep_abund<-FALSE
   }
   
-  source(file = here::here("_R", "Basic_parameters_cluster.R"))
+  source(file = here::here("_R", "Basic_parameters_cluster.R"), local=TRUE)
+  
   
   # =========================
   # Landscape and environment
@@ -46,10 +47,10 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
   #print("Generating or loading the environment...")
   
   if(perf_know==TRUE){
-    generate_environment(nsite_side=nsite_side, seed_env=Seeds[seed])
-    load(here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
-    load(here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env.RData")))
-    #load(here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_entrelac.RData")))
+    generate_environment(n_axes=n_axes, nsite_side=nsite_side, seed_env=Seeds[seed], mod=mod, n_observed_axes=n_observed_axes, mortality=mortality, fecundity=fecundity, seed=seed, seed_r=seed_r)
+    load(paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
+    load(paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env.RData")))
+    #load(paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_entrelac.RData")))
   } else {
     if(n_observed_axes>0){
       Obs_env <- sites[,1:n_observed_axes]
@@ -63,8 +64,8 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
   
   if(perf_know==TRUE){
     niche_optimum <- NULL
-    niche_optimum <- generate_species_optima(randomOptSp=randomOptSp, niche_width=niche_width, nsp=nsp, env=env, seed_sp=Seeds[seed])
-    load(here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
+    niche_optimum <- generate_species_optima(randomOptSp=randomOptSp, niche_width=niche_width, nsp=nsp, env=env, n_axes=n_axes, seed_sp=Seeds[seed], mod=mod, n_observed_axes=n_observed_axes, mortality=mortality, fecundity=fecundity, seed=seed, seed_r=seed_r)
+    load(paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
   } else {
     
     Inferred_species_parameters_mat <-list()
@@ -103,7 +104,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
     dist_E_Sp <- dist_Site_Sp(as.matrix(sites), as.matrix(niche_optimum))
     dprim_E_Sp <- (dist_E_Sp-mean(dist_E_Sp))/sd(dist_E_Sp)
     perf_E_Sp <- -dprim_E_Sp
-    save(perf_E_Sp, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_perf_E_Sp.RData")))
+    save(perf_E_Sp, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_perf_E_Sp.RData")))
   } else {
     
     perf_Sp_mean <- Inferred_species_parameters_mat[[1]]
@@ -114,7 +115,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
         perf_Sp_mean <- perf_Sp_mean + Inferred_species_parameters_mat[[k+1]]*Obs_env_mat[[k]]
       }
     }
-    save(perf_Sp_mean, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_perf_Sp_mean.RData")))
+    save(perf_Sp_mean, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_perf_Sp_mean.RData")))
   }
   
   # =========================================
@@ -132,7 +133,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
         mortality_E_Sp <- inv_logit(b*perf_E_Sp)
       }
       
-      save(mortality_E_Sp, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_E_Sp.RData")))
+      save(mortality_E_Sp, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_E_Sp.RData")))
       
       # Mortality rate distribution
       #plot_histogram_mortality(fig_width=fig_width, mortality_E_Sp=mortality_E_Sp)
@@ -147,7 +148,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
     sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
     sp_hab_freq <- as.table(sp_hab_freq)
     names(sp_hab_freq) <- 1:nsp
-    save(sp_hab_freq, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_hab_freq.RData")))
+    save(sp_hab_freq, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_hab_freq.RData")))
   }#end condition on perfect knowledge
   
   if(perf_know==FALSE){
@@ -155,7 +156,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
     sp_hab_freq <- apply(rank_dist_E, 2, function(x){sum(x==1)})
     sp_hab_freq <- as.table(sp_hab_freq)
     names(sp_hab_freq) <- 1:nsp
-    save(sp_hab_freq, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_hab_freq.RData")))
+    save(sp_hab_freq, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_hab_freq.RData")))
     if(mortality_stocha==TRUE){
       if(mortality_stocha_basal==TRUE){
         mortality_Sp_mean <- inv_logit(logit(theta) + b * (perf_Sp_mean))
@@ -228,7 +229,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
       community <- matrix(0, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
       community_rast <- raster::raster(community)
       community_rast[sites_start] <- sp_start
-      community <- as.matrix(community_rast)
+      community <- raster::as.matrix(community_rast)
     }
     if(start_ten_ind_per_species==TRUE){
       # Ten individuals per species distributed randomly over the grid
@@ -238,13 +239,13 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
       community <- matrix(0, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
       community_rast <- raster::raster(community)
       community_rast[sites_start] <- sp_start
-      community <- as.matrix(community_rast)
+      community <- raster::as.matrix(community_rast)
     }
     #community_start[[r]] <- community
     
     # Plot the community at the start of the first repetition
     if (seed_r==1) {
-      save(community, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_start.RData")))
+      save(community, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_start.RData")))
       #plot_community_start(fig_width=fig_width, community=community, nsp=nsp)
     }
     
@@ -263,7 +264,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
     # Simulating generation
     for (g in 1:ngen) {
       
-      #print(paste0("Generation ", g, "/", ngen, " of repetition ", r, "/", nrep))
+      #print(paste0("Generation ", g, "/", ngen))
       
       # Species richness
       sp_rich[g] <- length(unique(as.vector(community[community!=0])))
@@ -314,7 +315,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
           if(length(c(theta_site[!w0]))==1){
             theta_site[!w0] <- mortality_E_Sp[!w0, as.vector(t(community))[!w0]]
           }
-        }
+        }# end condition perf_know TRUE
         
         if(perf_know==FALSE&&IV==FALSE){
           if(length(c(theta_site[!w0]))>1){
@@ -323,7 +324,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
           if(length(c(theta_site[!w0]))==1){
             theta_site[!w0] <- mortality_Sp_mean[!w0, as.vector(t(community))[!w0]]
           }
-        }
+        }# end condition IV FALSE
         
         if(perf_know==FALSE&&IV==TRUE){
           if(length(c(theta_site[!w0]))>1){
@@ -332,18 +333,20 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
           if(length(c(theta_site[!w0]))==1){
             theta_site[!w0] <- mortality_ind[!w0, as.vector(t(community))[!w0]]
           }
-        }
+        }# end condition IV TRUE
         
         # Mortality events
         if(mortality_stocha_basal==TRUE){
           mort_ev <- rbinom(nsite, size=1, prob=theta_site)
         }
         if(mortality_stocha_basal==FALSE){
-          mort_ev <- rmultinom(1, size=round(0.01*abund_tot), prob=theta_site)
+          ind_dead <- sample(x=1:nsite, size=round(0.01*abund_tot), replace=FALSE, prob=theta_site)
+          mort_ev <- rep(0, nsite)
+          mort_ev[ind_dead] <- 1
         }
         mortality_matrix <- matrix(mort_ev, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
         
-      }#end condition on mortality not stochastic
+      }#end condition on mortality stochastic
       
       if(mortality_stocha==FALSE){
         # No stochasticity: the 10 less performing individuals of the community OR a fixed proportion of the total abundance die each generation
@@ -371,11 +374,23 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
         mort_ev <- rep(0, length(perf_present))
         #identify the 10 less performant present individuals and kill them
         if(mortality_fixed==TRUE){
-          mort_ev[which(perf_present<=sort(perf_present)[10])] <- 1 #sort ignores NA
+          if(length(which(perf_present<=sort(perf_present)[10]))<=10){
+            mort_ev[which(perf_present<=sort(perf_present)[10])] <- 1 #sort ignores NA
+          }else{
+            keep_sp <- which(perf_present<sort(perf_present)[10])
+            sample_sp <- sample(which(perf_present==sort(perf_present)[10]), 10-length(keep_sp))
+            mort_ev[c(keep_sp, sample_sp)] <- 1
+          }
         }
-        #identify the 0.01*total abudance less performant present individuals and kill them
+        #identify the 0.01*total abundance less performing present individuals and kill them
         if(mortality_proportion==TRUE){
-          mort_ev[which(perf_present<=sort(perf_present)[round(abund_tot*0.01)])] <- 1 #sort ignores NA
+          if(length(which(perf_present<=sort(perf_present)[round(abund_tot*0.01)]))<=round(abund_tot*0.01)){
+            mort_ev[which(perf_present<=sort(perf_present)[round(abund_tot*0.01)])] <- 1 #sort ignores NA
+          }else{
+            keep_sp <- which(perf_present<sort(perf_present)[round(abund_tot*0.01)])
+            sample_sp <- sample(which(perf_present==sort(perf_present)[round(abund_tot*0.01)]), round(abund_tot*0.01)-length(keep_sp))
+            mort_ev[c(keep_sp, sample_sp)] <- 1
+          }
         }
         mortality_matrix <- matrix(mort_ev, nrow=nsite_side, ncol=nsite_side, byrow=TRUE)
       }
@@ -387,9 +402,9 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
       if(n_mort!=0){
         
         # Plot once
-        if (seed_r==1 & g==1) {
+        #if (seed_r==1 & g==1) {
           #plot_mortality_events(fig_width, community, mortality_matrix, nsp)
-        }
+        #}
         
         # Update community
         community[mortality_matrix==1] <- 0
@@ -424,7 +439,9 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
             dist_E_Sp_vacant <- dist_E_Sp[sites_vacant, ]
             
             # Identify the present species with the highest performance on vacant sites
-            new_ind <- apply(dist_E_Sp_vacant, 1, high_perf_sp, sp_pres=sp_present)
+            if(!is.null(nrow(dist_E_Sp_vacant))){
+              new_ind <- apply(dist_E_Sp_vacant, 1, high_perf_sp, sp_pres=sp_present)
+            }else{new_ind <- high_perf_sp(dist=dist_E_Sp_vacant, sp_pres=sp_present)}
             
             # Recruitment
             community_rast[sites_vacant] <- new_ind
@@ -435,7 +452,10 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
             
             # Identify the present species with the highest performance on vacant sites
             #sp_high_perf <- sp_present[apply(matrix(perf_Sp_mean[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
-            sp_high_perf <- apply(-matrix(perf_Sp_mean[sites_vacant, ], ncol=nsp), 1, high_perf_sp, sp_pres=sp_present)
+            if(!is.null(nrow(-matrix(perf_Sp_mean[sites_vacant, ], ncol=nsp)))){
+              sp_high_perf <- apply(-matrix(perf_Sp_mean[sites_vacant, ], ncol=nsp), 1, high_perf_sp, sp_pres=sp_present)
+            }else{sp_high_perf <- high_perf_sp(dist=-matrix(perf_Sp_mean[sites_vacant, ], ncol=nsp), sp_pres=sp_present)}
+            
             
             # Recruitment
             community_rast[sites_vacant] <- sp_high_perf
@@ -446,7 +466,10 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
             
             # Identify the present species with the highest performance on vacant sites (maximum in each line)
             #sp_high_perf <- sp_present[apply(matrix(perf_ind_pot[sites_vacant, sp_present], ncol=nsp_present), 1, which.max)]
-            sp_high_perf <- apply(-matrix(perf_ind_pot[sites_vacant, ], ncol=nsp), 1, high_perf_sp, sp_pres=sp_present)
+            if(!is.null(nrow(-matrix(perf_ind_pot[sites_vacant, ], ncol=nsp)))){
+              sp_high_perf <- apply(-matrix(perf_ind_pot[sites_vacant, ], ncol=nsp), 1, high_perf_sp, sp_pres=sp_present)
+            }else{sp_high_perf <- high_perf_sp(dist=-matrix(perf_ind_pot[sites_vacant, ], ncol=nsp), sp_pres=sp_present)}
+            
             
             # Recruitment
             community_rast[sites_vacant] <- sp_high_perf
@@ -471,6 +494,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
           nb_seeds_tot <- sum(nb_seeds_sp)
           
           # Each seed is dispersed to a random vacant site; several seeds can land on the same site.
+          
           sites_of_seeds <- sample(sites_vacant, nb_seeds_tot, replace=TRUE)
           
           # Performance on vacant sites of species which have seeds
@@ -517,7 +541,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
       }  # end condition on n_mort (contains all cases)
       
       # update community
-      community <- as.matrix(community_rast)
+      community <- raster::as.matrix(community_rast)
       
       # *********************
       # Diversity
@@ -605,12 +629,16 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
           }
         }
         
-        dist_site <- dist_Site_Sp(as.matrix(Obs_env), as.matrix(Optimum_Sp_inferred))
-        dist_site <- diag(dist_site[, as.vector(t(community))])
+        if(n_observed_axes>0){
+          dist_site <- dist_Site_Sp(as.matrix(Obs_env), as.matrix(Optimum_Sp_inferred))
+          dist_site <- diag(dist_site[, as.vector(t(community))])
+        }
         
       }#end condition perf_know==FALSE
       
-      env_filt[g] <- mean(dist_site)
+      if(perf_know==TRUE | (perf_know==FALSE & n_observed_axes>0)){
+        env_filt[g] <- mean(dist_site)
+      }
       
       # Mean mortality rate in the community
       #/!\ do we want this mortality rate to take empty sites into account?
@@ -647,22 +675,22 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
     #To keep the abundance matrixes in order to infer alpha matrix
     Abundances <- abund
     
-    save(mortality_rate, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_rate.RData")))
+    save(mortality_rate, file=paste0(directory_writing ,"/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_rate.RData")))
     
   #} # End nrep
   
-  #save(community_start, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_start.RData")))
-  save(community_end, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+  #save(community_start, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_start.RData")))
+  save(community_end, file=paste0(directory_writing,"/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
   
   #sp_rich <- data.frame(sp_rich)
   #env_filt <- data.frame(env_filt)
   #theta_comm <- data.frame(theta_comm)
   
-  save(Abundances, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
-  save(sp_rich, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_rich.RData")))
-  save(rank_sp, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_rank_sp.RData")))
-  save(env_filt, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_filt.RData")))
-  save(theta_comm, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_theta_comm.RData")))
+  save(Abundances, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
+  save(sp_rich, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_rich.RData")))
+  save(rank_sp, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_rank_sp.RData")))
+  save(env_filt, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_filt.RData")))
+  save(theta_comm, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_theta_comm.RData")))
   
   # =========================
   # Diversity analysis
@@ -681,21 +709,21 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
   #plot_species_richness(nrep=nrep, sp_rich=sp_rich, fig_width=fig_width)
   
   sp_rich_final <- sp_rich[ngen]
-  save(sp_rich_final, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Species_richness.RData")))
+  save(sp_rich_final, file=paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Species_richness.RData")))
   
   # ---------------------------------------------
   # Shannon index and Shannon equitability index
   # ---------------------------------------------
-  save(Shannon, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Shannon.RData")))
+  save(Shannon, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Shannon.RData")))
   Equitability <- Shannon/log(as.numeric(sp_rich[ngen]))
-  save(Equitability, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Equitability.RData")))
+  save(Equitability, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Equitability.RData")))
   
   # ---------------------------------------------------------------------------------
   # pairwise Spearman correlation on the species ranks at the end of each simulation
   # ---------------------------------------------------------------------------------
   
   Spearman <- as.dist(round(cor(t(rank_sp), method="spearman"),2))
-  save(Spearman, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Spearman.RData")))
+  save(Spearman, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Spearman.RData")))
   
   # ---------------------------------------------
   # Link between final rank and habitat frequency
@@ -703,7 +731,7 @@ launch_model <- function(mortality, fecundity, seed, seed_r){
   
   # Mean final rank
   #sp_mean_rank <- mean(rank_sp)
-  #save(sp_mean_rank, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_mean_rank.RData")))
+  #save(sp_mean_rank, file = paste0(directory_writing, "/outputs/", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_mean_rank.RData")))
   
   # Plot
   #plot_mean_rank_hab_freq(sp_mean_rank=sp_mean_rank, sp_hab_freq=sp_hab_freq, fig_width=fig_width)

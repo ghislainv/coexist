@@ -1,4 +1,4 @@
-generate_environment <- function(nsite_side, model){
+generate_environment <- function(nsite_side, model, seed){
   # Landscape
   mat <- matrix(0, nrow=nsite_side, ncol=nsite_side)
   r <- raster::raster(mat, crs="+proj=utm +zone=1")

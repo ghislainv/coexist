@@ -3,7 +3,7 @@ getPalette = colorRampPalette(RColorBrewer::brewer.pal(9, "Set1"))
 
 plot_environment <- function( fig_width, n_axes, env, sites){
   
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_environment.png")),
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_environment.png")),
       width=fig_width, height=fig_width, units="cm", res=300)
   
   par(mfrow=c(4,ceiling(n_axes/4)), bty = "n")
@@ -24,7 +24,7 @@ plot_environment <- function( fig_width, n_axes, env, sites){
       raster::values(env_stack@layers[[2]]),
       raster::values(env_stack@layers[[3]])
     )
-    save(class_site, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_entrelac.RData")))
+    save(class_site, file = paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_entrelac.RData")))
     raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), main="Environment summary", col=viridisLite::viridis(255^3))
     dev.off()
   }
@@ -43,11 +43,11 @@ plot_environment <- function( fig_width, n_axes, env, sites){
       raster::values(env_stack@layers[[2]]),
       raster::values(env_stack@layers[[3]])
     )
-    save(class_site, file = here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_entrelac.RData")))
+    save(class_site, file = paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_entrelac.RData")))
     raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), main="Environment summary", col=viridisLite::viridis(255^3))
     dev.off()
     
-    png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_pca.png")),
+    png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_env_pca.png")),
         width=fig_width, height=fig_width*0.8, units="cm", res=300)
     raster::plot(raster::raster(matrix(class_site, ncol=nsite_side, nrow=nsite_side, byrow=TRUE)), main="Environment summary", col=viridisLite::viridis(255^3))
     dev.off()
@@ -59,7 +59,7 @@ plot_environment <- function( fig_width, n_axes, env, sites){
       ggplot2::geom_col()+
       ggplot2::labs(x="Principal component",
                     y="Cumulative proportion \n of explained variance")
-    ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_pca_prop_var.png")),
+    ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_pca_prop_var.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
   }
 }
@@ -67,7 +67,7 @@ plot_environment <- function( fig_width, n_axes, env, sites){
 plot_hab_freq <- function(n_axes, fig_width, env){
   
   for(k in 1:n_axes){
-    png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_hab_freq_{k}.png")),
+    png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_hab_freq_{k}.png")),
         width=fig_width, height=fig_width, units="cm", res=300)
     hist(env[[k]], main="", xlab=glue::glue("Environment var{k}")) 
     dev.off()
@@ -75,7 +75,7 @@ plot_hab_freq <- function(n_axes, fig_width, env){
 }
 
 plot_species_optima <- function( fig_width, niche_optimum){
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_niche.png")),
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_niche.png")),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(mar=c(1,1,2,2))
   scatter3D(niche_optimum[,1], niche_optimum[,2], niche_optimum[,3],
@@ -87,14 +87,14 @@ plot_species_optima <- function( fig_width, niche_optimum){
 }
 
 plot_histogram_mortality <- function( fig_width, mortality_E_Sp){
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_hist_mortality.png")),
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_hist_mortality.png")),
       width=fig_width, height=fig_width, units="cm", res=300)
   hist(mortality_E_Sp)
   dev.off()
 }
 
 plot_function_mort_proba <- function( fig_width, perf_E_Sp, mortality_E_Sp){
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_function_mort_proba.png")),
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_function_mort_proba.png")),
       width=fig_width, height=fig_width/1.5, units="cm", res=300)
   plot(x=c(perf_E_Sp),
        y=c(mortality_E_Sp),
@@ -107,7 +107,7 @@ plot_function_mort_proba <- function( fig_width, perf_E_Sp, mortality_E_Sp){
 }
 
 plot_species_habitat_freq <- function( fig_width, sp_hab_freq){
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_habitat_freq.png")),
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_habitat_freq.png")),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(cex.lab=1.5)
   plot(sp_hab_freq, xlab="Species", ylab="Habitat frequency", col=getPalette(colourCount))
@@ -115,7 +115,7 @@ plot_species_habitat_freq <- function( fig_width, sp_hab_freq){
 }
 
 plot_community_start <- function( fig_width, community, nsp){
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_start.png")),
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_start.png")),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(bty = "n")
   # raster::plot(raster::raster(community), main="Species - Start", zlim=c(0, nsp),
@@ -126,7 +126,7 @@ plot_community_start <- function( fig_width, community, nsp){
 }
 
 plot_mortality_events <- function( fig_width, community, mortality, nsp){
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_events.png")),
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_events.png")),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(bty = "n")
   community_mortality <- community
@@ -137,7 +137,7 @@ plot_mortality_events <- function( fig_width, community, mortality, nsp){
 }
 
 plot_community_end <- function( fig_width, community, nsp){
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.png")),
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.png")),
       width=fig_width, height=fig_width, units="cm", res=300)
   par(bty = "n")
   # raster::plot(raster::raster(community), main=glue::glue("Species - End (ngen={ngen})"),
@@ -176,7 +176,7 @@ plot_species_richness <- function(nrep, sp_rich, fig_width){
                      text = ggplot2::element_text(size = 20))+
       ggplot2::ylim(0,nsp)
   }
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_richness_with_time.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_richness_with_time.png")),
                   width=fig_width, height=fig_width/2, units="cm", dpi=300)
   
   #Mean and 95% interval
@@ -191,7 +191,7 @@ plot_species_richness <- function(nrep, sp_rich, fig_width){
       ggplot2::theme(legend.position = "none",
                      text = ggplot2::element_text(size = 20))+
       ggplot2::ylim(0,nsp)
-    ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_richness_with_time_mean.png")),
+    ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_richness_with_time_mean.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
   }
   
@@ -208,7 +208,7 @@ plot_species_richness <- function(nrep, sp_rich, fig_width){
                      text = ggplot2::element_text(size = 20))+
       ggplot2::ylim(0,nsp)
     
-    ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_richness_log_10.png")),
+    ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_richness_log_10.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
   }
   
@@ -223,7 +223,7 @@ plot_species_richness <- function(nrep, sp_rich, fig_width){
                      text = ggplot2::element_text(size = 20))+
       ggplot2::ylim(0,nsp)
     
-    ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_richness_log_10.png")),
+    ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_species_richness_log_10.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
     
   }
@@ -241,7 +241,7 @@ plot_mean_rank_hab_freq <- function(sp_mean_rank, sp_hab_freq, fig_width){
     #ggplot2::scale_colour_viridis_d()+
     ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mean_rank-habitat_freq.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mean_rank-habitat_freq.png")),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
@@ -275,7 +275,7 @@ plot_env_filt<- function(nrep, env_filt, fig_width){
                      text = ggplot2::element_text(size = 16))
   }
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_environmental_filtering.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_environmental_filtering.png")),
                   width=fig_width, height=fig_width/2, units="cm", dpi=300)
   
   #Mean and 95% interval
@@ -290,13 +290,13 @@ plot_env_filt<- function(nrep, env_filt, fig_width){
       ggplot2::theme(legend.position = "none",
                      text = ggplot2::element_text(size = 20))
     
-    ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_environmental_filtering_mean.png")),
+    ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_environmental_filtering_mean.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
   }
 }
 
 plot_env_species <- function( fig_width, community_start, community_end, class_site){
-  png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_spatial_comp_env_sp.png")), 
+  png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_spatial_comp_env_sp.png")), 
       width=fig_width, height=fig_width, units="cm", res=300)
   par(mfrow=c(2,2), bty = "n")
   raster::plot(raster::raster(community_start), main="Species - Start", zlim=c(0, nsp),
@@ -323,7 +323,7 @@ plot_theta_community<-function(theta_comm, ngen, nrep, fig_width){
     ggplot2::ylab("Mean mortality rate in the community")+
     ggplot2::theme(legend.position = "none",
                    text = ggplot2::element_text(size = 18))
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_rate_community.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_rate_community.png")),
                   width=fig_width, height=fig_width/2, units="cm", dpi=300)
   
   #Mean and 95% interval
@@ -338,7 +338,7 @@ plot_theta_community<-function(theta_comm, ngen, nrep, fig_width){
       ggplot2::theme(legend.position = "none",
                      text = ggplot2::element_text(size = 18))
     
-    ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_rate_community_mean.png")),
+    ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_mortality_rate_community_mean.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
   }
 }
@@ -351,6 +351,7 @@ plot_spatial_autocorr <- function(nrep, community_end, n_axes, sites, niche_opti
     sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end[[rep]])))
     names(sp_XY) <- c("x", "y", "sp")
     vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
+    
     
     if(randomOptSp==FALSE&n_axes==3){
       # 3D voxel for each site
@@ -377,7 +378,7 @@ plot_spatial_autocorr <- function(nrep, community_end, n_axes, sites, niche_opti
           semivar_multidim_plot <- semivar_multidim[[rep]][1:(nrow(semivar_multidim[[rep]])-1),]
         }
         # Plot with correlation
-        png(file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_autocorrelation.png")),
+        png(file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_sp_autocorrelation.png")),
             width=fig_width, height=fig_width*0.8, units="cm", res=300)
         par(mfrow=c(2,2), bty = "n")
         #Species
@@ -403,7 +404,7 @@ plot_spatial_autocorr <- function(nrep, community_end, n_axes, sites, niche_opti
     }
     semivar_multidim[[rep]]$Rep <- rep(rep, nrow(semivar_multidim[[rep]]))
   }
-  save(semivar_multidim, file=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_semivar_multidim.RData")))
+  save(semivar_multidim, file=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_semivar_multidim.RData")))
 }
 
 plot_species_niche <- function(seed, df_perf, Inferred_species_parameters, V_intra, sites, fig_width){
@@ -413,7 +414,7 @@ plot_species_niche <- function(seed, df_perf, Inferred_species_parameters, V_int
   #df_sp_sel <- df_perf %>% filter(Species %in% sp_sel)
   
   df_perf_sp_niche <- df_perf
-  load(here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
+  load(paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
   df_perf_sp_niche$optimum <- rep(niche_optimum$X1, nsite)
   df_perf_sp_niche$dist <- sqrt((df_perf_sp_niche$Env_1-df_perf_sp_niche$optimum)^2)
   df_perf_sp_niche$dist <- df_perf_sp_niche$dist - mean(df_perf_sp_niche$dist) / sd(df_perf_sp_niche$dist)
@@ -432,7 +433,7 @@ plot_species_niche <- function(seed, df_perf, Inferred_species_parameters, V_int
                    strip.text = element_text(size = 16))+
     ggplot2::coord_fixed(ratio = round((max(df_perf_sp_niche$Env_1)-min(df_perf_sp_niche$Env_1))/(max(df_perf_sp_niche$Perf)-min(df_perf_sp_niche$Perf)), digits=2))
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_infering_species_niche.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_infering_species_niche.png")),
                   width=fig_width*2, height=fig_width, units="cm", dpi=300)
   
   p <- ggplot2::ggplot(data=df_perf_sp_niche, ggplot2::aes(x=Env_1, y=Perf))+
@@ -447,7 +448,7 @@ plot_species_niche <- function(seed, df_perf, Inferred_species_parameters, V_int
                    strip.text = element_text(size = 16))+
     ggplot2::coord_fixed(ratio = round((max(df_perf_sp_niche$Env_1)-min(df_perf_sp_niche$Env_1))/(max(df_perf_sp_niche$Perf)-min(df_perf_sp_niche$Perf)), digits=2))
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_infering_species_niche_simple.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_infering_species_niche_simple.png")),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
   
   
@@ -491,7 +492,7 @@ plot_species_niche <- function(seed, df_perf, Inferred_species_parameters, V_int
                    strip.text = element_text(size = 16))+
     ggplot2::coord_fixed(ratio = round((max(df_perf_sp_niche$Env_1)-min(df_perf_sp_niche$Env_1))/(max(df_perf_sp_niche$Perf)-min(df_perf_sp_niche$Perf)), digits=2))
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_infering_species_niche_real_params.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_infering_species_niche_real_params.png")),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
   
 }
@@ -508,7 +509,7 @@ plot_IV <- function(V_intra, fig_width){
                    plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                    legend.position=c(1.1, 0.4)) +
     ggplot2::ylab("Intraspecific variance")
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_IV.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_IV.png")),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
@@ -607,7 +608,7 @@ plot_optima_real_estim <- function(nsp, n_observed_axes, niche_optimum, Inferred
     ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount))+
     ggplot2::labs(x="Real species optima on axis X1", y="Estimated species optima")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_optima_real_estim.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_optima_real_estim.png")),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
   
   opt_sp_estim_vs_real$Horizontal <- rep(0, nrow(opt_sp_estim_vs_real))
@@ -620,7 +621,7 @@ plot_optima_real_estim <- function(nsp, n_observed_axes, niche_optimum, Inferred
                    axis.title.y = element_blank(),
                    axis.ticks.y = element_blank())
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_optima_estim.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_optima_estim.png")),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
   
   if(length(opt_sp_estim_vs_real[opt_sp_estim_vs_real$Estim>1,]$Estim)!=0){
@@ -637,7 +638,7 @@ plot_optima_real_estim <- function(nsp, n_observed_axes, niche_optimum, Inferred
                    axis.title.y = element_blank(),
                    axis.ticks.y = element_blank())
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_optima_estim_0_1.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_optima_estim_0_1.png")),
                   width=fig_width, height=fig_width, units="cm", dpi=300)
 }
 
@@ -670,7 +671,7 @@ plot_inferred_perf_environment <- function(E_seq, Mat_perf_inferred, nsp, fig_wi
                        plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                        legend.position=c(1.1, 0.4))
       
-      ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_inferred_perf_environment_{k}.png")),
+      ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_inferred_perf_environment_{k}.png")),
                       width=fig_width, height=fig_width/2, units="cm", dpi=300)
       
     }
@@ -698,7 +699,7 @@ plot_inferred_perf_environment <- function(E_seq, Mat_perf_inferred, nsp, fig_wi
                      legend.key.size = unit(0.3, 'cm'),
                      plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                      legend.position=c(1.1, 0.4))
-    ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_inferred_perf_environment.png")),
+    ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_inferred_perf_environment.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
   }
 }
@@ -747,7 +748,7 @@ plot_inferred_perf_IV <- function(n_observed_axes, Obs_env, nsp, Inferred_specie
                      plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                      legend.position=c(1.1, 0.4))
     
-    ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Perf_overlap_IV_variable_{k}_{n_observed_axes}_obs_axes.png")),
+    ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Perf_overlap_IV_variable_{k}_{n_observed_axes}_obs_axes.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
     
   }
@@ -785,7 +786,7 @@ plot_abundance_species <- function(Abundances, fig_width){
                    plot.margin=unit(c(1, 5, 1, 1), 'lines'),
                    legend.position=c(1.1, 0.4))
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.png")),
                   width=fig_width, height=fig_width/2, units="cm", dpi=300)
 }
 
@@ -807,7 +808,7 @@ plot_perf_community_end <- function(community_end, perf_Sp_mean, sites, fig_widt
     ggplot2::scale_colour_manual(name="Species", values = getPalette(colourCount)[sort(unique(df_perf_sp_present_x1$Species))])+
     ggplot2::labs(x="Environment (first axis)", y="Performance of final community")
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_perf_community_end_{seed_r}.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_perf_community_end_{seed_r}.png")),
                   width=fig_width, height=fig_width/2, units="cm", dpi=300)
   # }
 }
@@ -823,7 +824,7 @@ plot_perf_suitable_habitat <- function(perf_Sp_mean, sites, fig_width){
     ggplot2::labs(x="Environment (first axis)", y="Performance of the theoretical winner")
   
   
-  ggplot2::ggsave(p, filename=here::here("outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_perf_suitable_habitat.png")),
+  ggplot2::ggsave(p, filename=paste0(directory_writing, "outputs", glue::glue("{mod}_{n_observed_axes}_{mortality}_{fecundity}_{seed}_{seed_r}_perf_suitable_habitat.png")),
                   width=fig_width, height=fig_width/2, units="cm", dpi=300)
 }
 
@@ -891,4 +892,568 @@ plot_perf_opt_clandestine <- function(
     ggplot2::theme(text = ggplot2::element_text(size = 20),
                    legend.title = ggplot2::element_text(size=16),
                    legend.text =  ggplot2::element_text(size=14))
+}
+
+###########################################################################
+
+source("~/Code/coexist/_R/call_libraries.R")
+source("~/Code/coexist/_R/Math_functions.R")
+
+fig_width <- 16.6 # in cm
+
+load(here::here("Array_simulations.RData"))
+ngen = 10000
+nsp = 20
+n_axes = 15
+dir.create(here::here("outputs", glue::glue("Comparison")))
+
+# Build dataset
+
+Abundances_all <- data.frame(Mortality = numeric(),
+                             Fecundity = numeric(),
+                             Seed = numeric(),
+                             Seed_r = numeric(),
+                             Mod = character(),
+                             Nb_obs = numeric(),
+                             Species = numeric(),
+                             Abundance = numeric())
+
+Species_all <- data.frame(Mortality = numeric(),
+                          Fecundity = numeric(),
+                          Seed = numeric(),
+                          Seed_r = numeric(),
+                          Mod = character(),
+                          Nb_obs = numeric(),
+                          N_sp = numeric(),
+                          Shannon = numeric())
+
+for (simu in c(1:nrow(Simulations))){
+  print(paste("Simu", simu))
+  
+  mortality <- Simulations[simu,1]
+  fecundity <- Simulations[simu,2]
+  seed <- Simulations[simu,3]
+  seed_r <- Simulations[simu,4]
+  
+  for (mod in c("Perf_know", "Part_know", "Part_know_IV")){
+    
+    if(mod == "Perf_know"){
+      
+      load(here::here("outputs_cluster", glue::glue("{mod}_0_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
+      
+      Abundances_tmp <- data.frame(Mortality=rep(mortality, 20),
+                                   Fecundity=rep(fecundity, 20),
+                                   Mod=rep(mod, 20),
+                                   Nb_obs=rep(0, 20),
+                                   Seed=rep(seed, 20),
+                                   Seed_r=rep(seed_r, 20),
+                                   Species=c(1:20),
+                                   Abundance=Abundances[ngen,])
+      Abundances_all <- rbind(Abundances_all, Abundances_tmp)
+      
+      nsp_final <- length(which(Abundances[ngen,]!=0))
+      
+      df_shannon <- data.frame(Species = 1:nsp,
+                               Abundance = Abundances[ngen,])%>%
+        dplyr::mutate(Proportion = Abundance / sum(Abundance))%>%
+        dplyr::filter(Abundance > 0)%>%
+        dplyr::mutate(ln_prop = log(Proportion), prop_times_ln_prop = ln_prop*Proportion)
+      
+      shannon <- -sum(df_shannon$prop_times_ln_prop)
+      
+      Species_tmp <- data.frame(Mortality=mortality,
+                                Fecundity=fecundity,
+                                Mod=mod,
+                                Nb_obs=0,
+                                Seed=seed,
+                                Seed_r=seed_r,
+                                N_sp=nsp_final,
+                                Shannon=shannon)
+                          
+      Species_all <- rbind(Species_all, Species_tmp)
+      
+    }else{
+      
+      for (nb_obs in c(0:15)){
+        
+        load(here::here("outputs_cluster", glue::glue("{mod}_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
+        Abundances_tmp <- data.frame(Mortality=rep(mortality, 20),
+                                     Fecundity=rep(fecundity, 20),
+                                     Mod=rep(mod, 20),
+                                     Nb_obs=rep(nb_obs, 20),
+                                     Seed=rep(seed, 20),
+                                     Seed_r=rep(seed_r, 20),
+                                     Species=c(1:20),
+                                     Abundance=Abundances[ngen,])
+        Abundances_all <- rbind(Abundances_all, Abundances_tmp)
+        
+        nsp_final <- length(which(Abundances[ngen,]!=0))
+        
+        df_shannon <- data.frame(Species = 1:nsp,
+                                 Abundance = Abundances[ngen,])%>%
+          dplyr::mutate(Proportion = Abundance / sum(Abundance))%>%
+          dplyr::filter(Abundance > 0)%>%
+          dplyr::mutate(ln_prop = log(Proportion), prop_times_ln_prop = ln_prop*Proportion)
+        
+        shannon <- -sum(df_shannon$prop_times_ln_prop)
+        
+        Species_tmp <- data.frame(Mortality=mortality,
+                                  Fecundity=fecundity,
+                                  Mod=mod,
+                                  Nb_obs=nb_obs,
+                                  Seed=seed,
+                                  Seed_r=seed_r,
+                                  N_sp=nsp_final,
+                                  Shannon=shannon)
+        
+        Species_all <- rbind(Species_all, Species_tmp)
+      }
+    }
+  }
+}
+
+save(Abundances_all, file = here::here("outputs", "Comparison", "Abundances_all.RData"))
+save(Species_all, file = here::here("outputs", "Comparison", "Species_all.RData"))
+
+load(here::here("outputs", "Comparison", "Species_all.RData"))
+#Species_all[Species_all$Mod=="Perf_know",]$Nb_obs <- "Perfect knowledge"
+#Species_all$Nb_obs <- as.factor(Species_all$Nb_obs)
+
+#Plot species richness and Shannon index
+
+#One plot per Mortality * Fecundity option
+for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
+  for (fecundity in c("abund", "fixed")) {
+    
+    data_figure <- Species_all[which(Species_all$Mortality==mortality&Species_all$Fecundity==fecundity),]
+    
+    #X axis = ratio structured/unstructured IV i.e. 1-->15/15 axes
+    #Y axis = delta unstructured-structured IV i.e. Part know with IV - Part know without IV
+    #Colors = repetition
+    
+    data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+    
+    #data_figure <- Species_all[Species_all$Nb_obs!=n_axes,]
+    
+    #Compute delta between with and without
+    data_figure <- data_figure%>%
+      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+      dplyr::mutate(Delta_SR = N_sp - dplyr::lag(N_sp),
+                    Delta_Shannon = Shannon - dplyr::lag(Shannon),
+                    ID_delta=Nb_obs)%>%
+      dplyr::filter(is.na(Delta_SR)==FALSE)%>%
+      dplyr::ungroup()%>%
+      dplyr::select(Seed, Seed_r, ID_delta, Delta_SR, Delta_Shannon)
+    
+    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta_SR))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(frac(sIV,uIV)),
+                    y = expression(paste(Delta, " species richness")))+
+      ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Species_richness_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta_Shannon))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(frac(sIV,uIV)),
+                    y = expression(paste(Delta, " Shannon index")))+
+      ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Shannon_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
+}
+
+
+Percentage_similarity <- data.frame(
+  Mortality = numeric(),
+  Fecundity = numeric(),
+  Seed = numeric(),
+  Seed_r = numeric(),
+  Mod_comp = character(),
+  Nb_obs = numeric(),
+  PS = numeric())
+
+for (simu in c(1:nrow(Simulations))){
+  
+  print(paste("Simu", simu))
+  
+  mortality <- Simulations[simu,1]
+  fecundity <- Simulations[simu,2]
+  seed <- Simulations[simu,3]
+  seed_r <- Simulations[simu,4]
+  
+  load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
+  Abundances_perf <- Abundances[ngen,]
+  
+  for(nb_obs in 0:15){
+    
+    load(here::here("outputs_cluster", glue::glue("Part_know_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
+    Abundances_part <- Abundances[ngen,]
+    
+    load(here::here("outputs_cluster", glue::glue("Part_know_IV_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
+    Abundances_part_IV <- Abundances[ngen,]
+    
+    Percentage_similarity <- rbind(Percentage_similarity,
+                                       data.frame(
+                                         Mortality = rep(mortality,2),
+                                         Fecundity = rep(fecundity,2),
+                                         Seed = rep(seed,2),
+                                         Seed_r = rep(seed_r,2),
+                                         Mod_comp = c("Part_know", "Part_know_IV"),
+                                         Nb_obs = rep(nb_obs,2),
+                                         PS = c(percentage_similarity(Abundances_perf, Abundances_part), percentage_similarity(Abundances_perf, Abundances_part_IV))
+                                       ))
+  }
+}
+
+save(Percentage_similarity, file = here::here("outputs", "Comparison", "Percentage_similarity.RData"))
+
+load(here::here("outputs", "Comparison", "Percentage_similarity.RData"))
+
+#One plot per Mortality * Fecundity option
+for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
+  for (fecundity in c("abund", "fixed")) {
+    
+    data_figure <- Percentage_similarity[which(Percentage_similarity$Mortality==mortality&Percentage_similarity$Fecundity==fecundity),]
+
+    data_figure <- data_figure%>%
+      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+      dplyr::mutate(Delta= PS - lag(PS), ID_delta=Nb_obs)%>%
+      dplyr::filter(is.na(Delta)==FALSE)%>%
+      dplyr::select(Nb_obs, Seed, Seed_r, ID_delta, Delta)
+    
+    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(frac(sIV,uIV)),
+                    y = expression(paste(Delta, " Similarity with perfect knowledge")))+
+      ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                     axis.text = ggplot2::element_text(size=7),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Percentage_similarity_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
+}
+
+# Compute multidimensional semivariance
+
+Correlation_env_sp <- data.frame(
+  Mortality = numeric(),
+  Fecundity = numeric(),
+  Seed = numeric(),
+  Seed_r = numeric(),
+  Mod = character(),
+  Nb_obs = numeric(),
+  Correlation = numeric()
+  )
+
+for (simu in c(1:nrow(Simulations))){
+  print(paste("Simu", simu))
+  
+  mortality <- Simulations[simu,1]
+  fecundity <- Simulations[simu,2]
+  seed <- Simulations[simu,3]
+  seed_r <- Simulations[simu,4]
+  
+  #Load the environment and species optima once per configuration (seed)
+  if(seed_r==1){
+    load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
+    load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
+  }
+  
+  for (mod in c("Perf_know", "Part_know", "Part_know_IV")){
+    
+    if(mod == "Perf_know"){
+      
+      load(here::here("outputs_cluster", glue::glue("{mod}_0_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+      sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
+      names(sp_XY) <- c("x", "y", "sp")
+      vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
+      
+      semivar_multidim <- compute_semivar_multidim(sites, n_axes, niche_optimum, sp_XY, vario_sp, nsp, community_end)
+      semivar_multidim$Vario_sp_geoR <- vario_sp$u
+      semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
+      semivar_multidim$Sample_size <- vario_sp$n
+      
+      semivar_multidim<-semivar_multidim%>%
+        filter(Sample_size>500)
+      
+      m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
+      
+      Correlation_env_sp_temp <- data.frame(
+        Mortality = mortality,
+        Fecundity = fecundity,
+        Seed = seed,
+        Seed_r = seed_r,
+        Mod = mod,
+        Nb_obs = NA,
+        Correlation = round(sqrt(summary(m)$r.squared), digits = 2)
+      )
+      
+      Correlation_env_sp <- rbind(Correlation_env_sp, Correlation_env_sp_temp)
+      
+    }else{
+      
+      for (nb_obs in c(0:15)){
+        
+        load(here::here("outputs_cluster", glue::glue("{mod}_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+        sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
+        names(sp_XY) <- c("x", "y", "sp")
+        vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
+        
+        semivar_multidim <- compute_semivar_multidim(sites, n_axes, niche_optimum, sp_XY, vario_sp, nsp, community_end)
+        semivar_multidim$Vario_sp_geoR <- vario_sp$u
+        semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
+        semivar_multidim$Sample_size <- vario_sp$n
+        
+        semivar_multidim<-semivar_multidim%>%
+          filter(Sample_size>500)
+        
+        m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
+        
+        Correlation_env_sp_temp <- data.frame(
+          Mortality = mortality,
+          Fecundity = fecundity,
+          Seed = seed,
+          Seed_r = seed_r,
+          Mod = mod,
+          Nb_obs = nb_obs,
+          Correlation = round(sqrt(summary(m)$r.squared), digits = 2)
+        )
+        
+        Correlation_env_sp <- rbind(Correlation_env_sp, Correlation_env_sp_temp)
+        
+      }#for n_obs
+    }#else Part_know
+  }#for mod
+}#for simu
+
+save(Correlation_env_sp, file=here::here("outputs", "Comparison", "Correlation_env_sp.RData"))
+
+load(file=here::here("outputs", "Comparison", "Correlation_env_sp.RData"))
+
+#One plot per Mortality * Fecundity option
+for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
+  for (fecundity in c("abund", "fixed")){
+    
+    data_figure <- Correlation_env_sp[which(Correlation_env_sp$Mortality==mortality&Correlation_env_sp$Fecundity==fecundity),]
+
+    Summary_correlation_env_sp<-data_figure%>%
+      dplyr::group_by(Mod, Nb_obs)%>%
+      dplyr::mutate(Mean_corr=mean(Correlation, na.rm=TRUE), Sd=sd(Correlation, na.rm=TRUE))%>%
+      dplyr::slice(1)%>%
+      dplyr::ungroup()%>%
+      dplyr::select(-Correlation, -Seed, -Seed_r)
+    
+    save(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", glue::glue("Mean_correlation_env_sp_{mortality}_{fecundity}.RData")))
+    
+    data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+    
+    #Compute delta between with and without
+    data_figure <- data_figure%>%
+      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+      dplyr::mutate(Delta = Correlation - dplyr::lag(Correlation) , ID_delta=Nb_obs)%>%
+      dplyr::filter(is.na(Delta)==FALSE)%>%
+      dplyr::ungroup()%>%
+      dplyr::select(Seed, Seed_r, ID_delta, Delta)
+    
+    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(frac(sIV,uIV)),
+                    y = expression(paste(Delta, " environment-species correlation")))+
+      ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                     axis.text = ggplot2::element_text(size=7),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Corr_env_sp_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
+}
+
+# ##### Moran's analysis #####
+# 
+# Moran <- data.frame(
+#   Mortality = numeric(),
+#   Fecundity = numeric(),
+#   Seed = numeric(),
+#   Seed_r = numeric(),
+#   Mod = character(),
+#   Nb_obs = numeric(),
+#   Moran = numeric()
+# )
+# 
+# for (simu in c(1:nrow(Simulations))){
+#   print(paste("Simu", simu))
+#   
+#   mortality <- Simulations[simu,1]
+#   fecundity <- Simulations[simu,2]
+#   seed <- Simulations[simu,3]
+#   seed_r <- Simulations[simu,4]
+#   
+#   for (mod in c("Perf_know", "Part_know", "Part_know_IV")){
+#     
+#     if(mod == "Perf_know"){
+#       
+#       load(here::here("outputs_cluster", glue::glue("{mod}_0_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+#       sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
+#       names(sp_XY) <- c("x", "y", "sp")
+#       distance_inv <- 1/as.matrix(dist(cbind(sp_XY$x, sp_XY$y)))
+#       diag(distance_inv) <- 0
+#       mor <- ape::Moran.I(x = sp_XY$sp, weight = distance_inv)
+#       
+#       
+#       Moran_temp <- data.frame(
+#         Mortality = mortality,
+#         Fecundity = fecundity,
+#         Seed = seed,
+#         Seed_r = seed_r,
+#         Mod = mod,
+#         Nb_obs = NA,
+#         Moran = round(as.numeric(mor[1]), digits = 2)
+#       )
+#       
+#       Moran <- rbind(Moran, Moran_temp)
+#       
+#     }else{
+#       
+#       for (nb_obs in c(0:15)){
+#         
+#         load(here::here("outputs_cluster", glue::glue("{mod}_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+#         sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
+#         names(sp_XY) <- c("x", "y", "sp")
+#         distance_inv <- 1/as.matrix(dist(cbind(sp_XY$x, sp_XY$y)))
+#         diag(distance_inv) <- 0
+#         mor <- ape::Moran.I(x = sp_XY$sp, weight = distance_inv)
+#         
+#         Moran_temp <- data.frame(
+#           Mortality = mortality,
+#           Fecundity = fecundity,
+#           Seed = seed,
+#           Seed_r = seed_r,
+#           Mod = mod,
+#           Nb_obs = nb_obs,
+#           Moran = round(as.numeric(mor[1]), digits = 2)
+#         )
+#         
+#         Moran <- rbind(Moran, Moran_temp)
+#         
+#       }#for n_obs
+#     }#else Part_know
+#   }#for mod
+# }#for simu
+
+#### Performance on sites where the species is present in the final community ####
+
+Perf_on_sites <- data.frame(
+  Mortality = numeric(),
+  Fecundity = numeric(),
+  Seed = numeric(),
+  Seed_r = numeric(),
+  Mod = character(),
+  Nb_obs = numeric(),
+  Perf = numeric()
+)
+
+for (simu in c(1:nrow(Simulations))){
+  print(paste("Simu", simu))
+  
+  mortality <- Simulations[simu,1]
+  fecundity <- Simulations[simu,2]
+  seed <- Simulations[simu,3]
+  seed_r <- Simulations[simu,4]
+  
+  #Load the species performance once per configuration
+  if(seed_r==1){
+    load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_perf_E_Sp.RData")))
+  }
+  
+  for (mod in c("Perf_know", "Part_know", "Part_know_IV")){
+    
+    if(mod == "Perf_know"){
+      
+      load(here::here("outputs_cluster", glue::glue("{mod}_0_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+      
+      perf_present <- rep(NA, length(community_end))
+      w0 <- (as.vector(t(community_end))==0)
+      perf_present[w0] <- NA
+      perf_present[!w0] <- diag(perf_E_Sp[!w0, as.vector(t(community_end))[!w0]])
+      
+      Perf_on_sites_temp <- data.frame(
+        Mortality = mortality,
+        Fecundity = fecundity,
+        Seed = seed,
+        Seed_r = seed_r,
+        Mod = mod,
+        Nb_obs = NA,
+        Perf = round(mean(perf_present, na.rm = TRUE), digits = 2)
+      )
+      
+      Perf_on_sites <- rbind(Perf_on_sites, Perf_on_sites_temp)
+      
+    }else{
+      
+      for (nb_obs in c(0:15)){
+        
+        load(here::here("outputs_cluster", glue::glue("{mod}_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+        
+        perf_present <- rep(NA, length(community_end))
+        w0 <- (as.vector(t(community_end))==0)
+        perf_present[w0] <- NA
+        perf_present[!w0] <- diag(perf_E_Sp[!w0, as.vector(t(community_end))[!w0]])
+        
+        Perf_on_sites_temp <- data.frame(
+          Mortality = mortality,
+          Fecundity = fecundity,
+          Seed = seed,
+          Seed_r = seed_r,
+          Mod = mod,
+          Nb_obs = nb_obs,
+          Perf = round(mean(perf_present, na.rm = TRUE), digits = 2)
+        )
+        
+        Perf_on_sites <- rbind(Perf_on_sites, Perf_on_sites_temp)
+        
+      }#for n_obs
+    }#else Part_know
+  }#for mod
+}#for simu
+
+for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
+  for (fecundity in c("abund", "fixed")){
+    
+    data_figure <- Perf_on_sites[which(Perf_on_sites$Mortality==mortality&Perf_on_sites$Fecundity==fecundity),]
+    
+    data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+    
+    #Compute delta between with and without
+    data_figure <- data_figure%>%
+      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+      dplyr::mutate(Delta = Perf - dplyr::lag(Perf) , ID_delta=Nb_obs)%>%
+      dplyr::filter(is.na(Delta)==FALSE)%>%
+      dplyr::ungroup()%>%
+      dplyr::select(Seed, Seed_r, ID_delta, Delta)
+    
+    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(frac(sIV,uIV)),
+                    y = expression(paste(Delta, " performance")))+
+      ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                     axis.text = ggplot2::element_text(size=7),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Performance_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+  }
 }

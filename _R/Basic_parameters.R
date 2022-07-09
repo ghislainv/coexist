@@ -15,17 +15,11 @@ start_full_landscape<-FALSE
 start_one_ind_per_species<-FALSE
 start_ten_ind_per_species<-TRUE
 
-#Dependence between the number of seeds and the abundance of species
-nb_seeds_dep_abund<-TRUE
-
-#Probability of mortality as a function of species performance
-mortality_fixed<-TRUE
-
 # Niche width (used only if randomOptSp == FALSE)
 niche_width <- 0.25
 
 # Basal mortality
-theta <- 0.1
+theta <- 0.01
 
 # Strength of unsuitability for mortality
 b <- -0.5
@@ -34,10 +28,10 @@ b <- -0.5
 fecundity <- 0.5
 
 # Number of repetitions
-nrep <- 10
+nrep <- 2
 
 # Number of generations
-ngen <-10000
+ngen <-100
 
 ############
 #Model name#
@@ -59,7 +53,15 @@ if(nb_seeds_dep_abund==TRUE){
 
 if(mortality_fixed==TRUE){
   mort <- "mort_fixed"
-}else{mort <- "mort_stocha"}
+}
+if(mortality_stocha==TRUE){
+  if(mortality_stocha_basal==TRUE){
+    mort <- "mort_stocha_basal"
+  }else{mort <- "mort_stocha"}
+}
+if(mortality_proportion==TRUE){
+    mort <- "mort_prop"
+}
 
 if(start_ten_ind_per_species==TRUE){
   start <- "start_10"

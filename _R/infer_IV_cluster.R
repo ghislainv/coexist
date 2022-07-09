@@ -1,11 +1,11 @@
-infer_IV <- function(n_observed_axes){
+infer_IV <- function(n_observed_axes, mortality, fecundity, seed, seed_r){
   
   #source(file=here::here("_R", "Plot_functions.R"))
   
-  load(here::here("outputs", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_perf_E_Sp.RData")))
-  load(here::here("outputs", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_env.RData")))
-  load(here::here("outputs", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
-  load(file=here::here("outputs", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_perf_E_Sp.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_env.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
   
   nsp <- ncol(perf_E_Sp)
   n_axes <- length(env)
@@ -48,7 +48,7 @@ infer_IV <- function(n_observed_axes){
   }
   
   lm_fit <- lm(formula, data=df_perf)
-  save(lm_fit, file = here::here("outputs", glue::glue("lm_fit_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
+  #save(lm_fit, file = paste0(directory_writing, "/outputs/", glue::glue("lm_fit_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
   
   #Histogram of the residuals to check normality
   #hist(summary(lm_fit)$residuals)
@@ -73,9 +73,9 @@ infer_IV <- function(n_observed_axes){
     }
   }
   
-  save(Inferred_species_parameters, file=here::here("outputs", glue::glue("Inferred_species_parameters_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
+  save(Inferred_species_parameters, file=paste0(directory_writing, "/outputs/", glue::glue("Inferred_species_parameters_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
   
-  load(file=here::here("outputs", glue::glue("Inferred_species_parameters_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
+  load(file=paste0(directory_writing, "/outputs/", glue::glue("Inferred_species_parameters_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
   
   #plot_optima_real_estim(nsp, n_observed_axes, niche_optimum, Inferred_species_parameters, fig_width)
   
@@ -83,9 +83,9 @@ infer_IV <- function(n_observed_axes){
     mutate(res=lm_fit$residuals) %>%
     group_by(Species) %>%
     summarise(V=var(res))
-  save(V_intra, file = here::here("outputs", glue::glue("V_intra_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
+  save(V_intra, file = paste0(directory_writing, "/outputs/", glue::glue("V_intra_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
   
-  load(here::here("outputs", glue::glue("V_intra_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
+  load(paste0(directory_writing, "/outputs/", glue::glue("V_intra_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_{seed_r}.RData")))
   
   #plot_IV(V_intra, fig_width)
   

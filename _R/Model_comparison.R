@@ -597,7 +597,7 @@ compare_models<-function(nb_obs_axes, Seeds, nrep, nsp, ngen, nsite_side, n_axes
     ggplot2::geom_boxplot(ggplot2::aes(colour=as.factor(Combi_model)), alpha = 0.6)+
     ggplot2::geom_boxplot(data=Percentage_similarity_all_models[Percentage_similarity_all_models$Combi_model=="1-1"&Percentage_similarity_all_models$Nb_obs_axes==1,],
                           ggplot2::aes(x="Perfect \n knowledge", y=Percentage_similarity, colour=as.factor(Combi_model)), alpha = 0.6)+
-    ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+    ggplot2::scale_colour_manual(values=c("#4C5866", "#808080", "black"))+
     ggplot2::labs(x = "Number of observed axes",
                   y = "Percentage similarity of the final species abundances")+
     ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")

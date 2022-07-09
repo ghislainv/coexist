@@ -1,4 +1,4 @@
-generate_species_optima <- function(model, randomOptSp, niche_width, nsp, env, seed){
+generate_species_optima <- function(model, randomOptSp, niche_width, nsp, env){
   if (!randomOptSp){
     
     # Niches per axis

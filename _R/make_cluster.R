@@ -5,33 +5,36 @@
 ## license         :GPLv3
 ## ==============================================================================
 
+slurm_arrayid <- Sys.getenv('SLURM_ARRAY_TASK_ID')
+s <- as.integer(slurm_arrayid)
 
-load(here::here("Array_simulations.RData"))
+directory_reading <- "/home/girardtercieuxc/Chap_2"
+directory_writing <- "/lustre/girardtercieuxc"
 
-source(file = here::here("_R", "call_libraries.R"))
+setwd(directory_reading)
 
-source(file=here::here("_R", "Math_functions.R"))
+source(file = paste0(directory_reading, "/_R/call_libraries.R"), local=TRUE)
 
-source(file=here::here("_R", "Plot_functions_cluster.R"))
+source(file=here::here("_R", "Math_functions.R"), local=TRUE)
 
-source(file=here::here("_R", "Generate_environment_cluster.R"))
+source(file=here::here("_R", "Generate_environment_cluster.R"), local=TRUE)
 
-source(file=here::here("_R", "Species_parameters_cluster.R"))
+source(file=here::here("_R", "Species_parameters_cluster.R"), local=TRUE)
 
-source(file = here::here("_R", "launch_script_cluster.R"))
+source(file = here::here("_R", "launch_script_cluster.R"), local=TRUE)
 
-source(here::here("_R", "infer_IV_cluster.R"))
+source(here::here("_R", "infer_IV_cluster.R"), local=TRUE)
 
 # Number of observed axes in partial models
-nb_obs_axes <- c(0:10)
+nb_obs_axes <- c(0:15)
 
 # Seeds for reproducibility: it controls the environment × species parameters configuration.
 # Seeds <- sample(1:10^6, 10)
 # save(Seeds, file=here::here("outputs", "Seeds.RData"))
 load(here::here("Seeds.RData"))
 
-s=1
-  
+load(here::here("Array_simulations.RData"))
+
   # ========================================
   # Launch perfect knowledge model
   # ========================================
@@ -48,10 +51,7 @@ s=1
   # ========================================
   
   for(n_observed_axes in nb_obs_axes){
-    
-    if(perf_know==TRUE){
-      infer_IV(n_observed_axes)
-    }
+    infer_IV(n_observed_axes=n_observed_axes, mortality=Simulations[s, 1], fecundity=Simulations[s, 2], seed=as.numeric(Simulations[s, 3]), seed_r=as.numeric(Simulations[s, 4]))
   }
   
   # ========================================
