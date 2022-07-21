@@ -899,7 +899,7 @@ plot_perf_opt_clandestine <- function(
 source("~/Code/coexist/_R/call_libraries.R")
 source("~/Code/coexist/_R/Math_functions.R")
 
-fig_width <- 16.6 # in cm
+fig_width <- 35
 
 load(here::here("Array_simulations.RData"))
 ngen = 10000
@@ -1015,61 +1015,6 @@ for (simu in c(1:nrow(Simulations))){
 save(Abundances_all, file = here::here("outputs", "Comparison", "Abundances_all.RData"))
 save(Species_all, file = here::here("outputs", "Comparison", "Species_all.RData"))
 
-load(here::here("outputs", "Comparison", "Species_all.RData"))
-#Species_all[Species_all$Mod=="Perf_know",]$Nb_obs <- "Perfect knowledge"
-#Species_all$Nb_obs <- as.factor(Species_all$Nb_obs)
-
-#Plot species richness and Shannon index
-
-#One plot per Mortality * Fecundity option
-for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
-  for (fecundity in c("abund", "fixed")) {
-    
-    data_figure <- Species_all[which(Species_all$Mortality==mortality&Species_all$Fecundity==fecundity),]
-    
-    #X axis = ratio structured/unstructured IV i.e. 1-->15/15 axes
-    #Y axis = delta unstructured-structured IV i.e. Part know with IV - Part know without IV
-    #Colors = repetition
-    
-    data_figure <- data_figure[data_figure$Mod!="Perf_know",]
-    
-    #data_figure <- Species_all[Species_all$Nb_obs!=n_axes,]
-    
-    #Compute delta between with and without
-    data_figure <- data_figure%>%
-      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
-      dplyr::mutate(Delta_SR = N_sp - dplyr::lag(N_sp),
-                    Delta_Shannon = Shannon - dplyr::lag(Shannon),
-                    ID_delta=Nb_obs)%>%
-      dplyr::filter(is.na(Delta_SR)==FALSE)%>%
-      dplyr::ungroup()%>%
-      dplyr::select(Seed, Seed_r, ID_delta, Delta_SR, Delta_Shannon)
-    
-    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta_SR))+
-      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
-      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
-      ggplot2::scale_colour_viridis_d()+
-      ggplot2::labs(x = expression(frac(sIV,uIV)),
-                    y = expression(paste(Delta, " species richness")))+
-      ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
-    
-    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Species_richness_{mortality}_{fecundity}.png")),
-                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
-    
-    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta_Shannon))+
-      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
-      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
-      ggplot2::scale_colour_viridis_d()+
-      ggplot2::labs(x = expression(frac(sIV,uIV)),
-                    y = expression(paste(Delta, " Shannon index")))+
-      ggplot2::theme(text = ggplot2::element_text(size = 16), legend.position = "none")
-    
-    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Shannon_{mortality}_{fecundity}.png")),
-                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
-  }
-}
-
-
 Percentage_similarity <- data.frame(
   Mortality = numeric(),
   Fecundity = numeric(),
@@ -1091,6 +1036,17 @@ for (simu in c(1:nrow(Simulations))){
   load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
   Abundances_perf <- Abundances[ngen,]
   
+  Percentage_similarity <- rbind(Percentage_similarity,
+                                 data.frame(
+                                   Mortality = mortality,
+                                   Fecundity = fecundity,
+                                   Seed = seed,
+                                   Seed_r = seed_r,
+                                   Mod_comp = "Perf_know",
+                                   Nb_obs = NA,
+                                   PS = 1
+                                 ))
+  
   for(nb_obs in 0:15){
     
     load(here::here("outputs_cluster", glue::glue("Part_know_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_Abundances.RData")))
@@ -1100,257 +1056,20 @@ for (simu in c(1:nrow(Simulations))){
     Abundances_part_IV <- Abundances[ngen,]
     
     Percentage_similarity <- rbind(Percentage_similarity,
-                                       data.frame(
-                                         Mortality = rep(mortality,2),
-                                         Fecundity = rep(fecundity,2),
-                                         Seed = rep(seed,2),
-                                         Seed_r = rep(seed_r,2),
-                                         Mod_comp = c("Part_know", "Part_know_IV"),
-                                         Nb_obs = rep(nb_obs,2),
-                                         PS = c(percentage_similarity(Abundances_perf, Abundances_part), percentage_similarity(Abundances_perf, Abundances_part_IV))
-                                       ))
+                                   data.frame(
+                                     Mortality = rep(mortality,2),
+                                     Fecundity = rep(fecundity,2),
+                                     Seed = rep(seed,2),
+                                     Seed_r = rep(seed_r,2),
+                                     Mod_comp = c("Part_know", "Part_know_IV"),
+                                     Nb_obs = rep(nb_obs,2),
+                                     PS = c(percentage_similarity(Abundances_perf, Abundances_part), percentage_similarity(Abundances_perf, Abundances_part_IV))
+                                   ))
   }
 }
 
 save(Percentage_similarity, file = here::here("outputs", "Comparison", "Percentage_similarity.RData"))
 
-load(here::here("outputs", "Comparison", "Percentage_similarity.RData"))
-
-#One plot per Mortality * Fecundity option
-for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
-  for (fecundity in c("abund", "fixed")) {
-    
-    data_figure <- Percentage_similarity[which(Percentage_similarity$Mortality==mortality&Percentage_similarity$Fecundity==fecundity),]
-
-    data_figure <- data_figure%>%
-      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
-      dplyr::mutate(Delta= PS - lag(PS), ID_delta=Nb_obs)%>%
-      dplyr::filter(is.na(Delta)==FALSE)%>%
-      dplyr::select(Nb_obs, Seed, Seed_r, ID_delta, Delta)
-    
-    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta))+
-      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
-      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
-      ggplot2::scale_colour_viridis_d()+
-      ggplot2::labs(x = expression(frac(sIV,uIV)),
-                    y = expression(paste(Delta, " Similarity with perfect knowledge")))+
-      ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
-                     axis.text = ggplot2::element_text(size=7),
-                     legend.position = "none")
-    
-    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Percentage_similarity_{mortality}_{fecundity}.png")),
-                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
-  }
-}
-
-# Compute multidimensional semivariance
-
-Correlation_env_sp <- data.frame(
-  Mortality = numeric(),
-  Fecundity = numeric(),
-  Seed = numeric(),
-  Seed_r = numeric(),
-  Mod = character(),
-  Nb_obs = numeric(),
-  Correlation = numeric()
-  )
-
-for (simu in c(1:nrow(Simulations))){
-  print(paste("Simu", simu))
-  
-  mortality <- Simulations[simu,1]
-  fecundity <- Simulations[simu,2]
-  seed <- Simulations[simu,3]
-  seed_r <- Simulations[simu,4]
-  
-  #Load the environment and species optima once per configuration (seed)
-  if(seed_r==1){
-    load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
-    load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
-  }
-  
-  for (mod in c("Perf_know", "Part_know", "Part_know_IV")){
-    
-    if(mod == "Perf_know"){
-      
-      load(here::here("outputs_cluster", glue::glue("{mod}_0_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
-      sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
-      names(sp_XY) <- c("x", "y", "sp")
-      vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
-      
-      semivar_multidim <- compute_semivar_multidim(sites, n_axes, niche_optimum, sp_XY, vario_sp, nsp, community_end)
-      semivar_multidim$Vario_sp_geoR <- vario_sp$u
-      semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
-      semivar_multidim$Sample_size <- vario_sp$n
-      
-      semivar_multidim<-semivar_multidim%>%
-        filter(Sample_size>500)
-      
-      m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
-      
-      Correlation_env_sp_temp <- data.frame(
-        Mortality = mortality,
-        Fecundity = fecundity,
-        Seed = seed,
-        Seed_r = seed_r,
-        Mod = mod,
-        Nb_obs = NA,
-        Correlation = round(sqrt(summary(m)$r.squared), digits = 2)
-      )
-      
-      Correlation_env_sp <- rbind(Correlation_env_sp, Correlation_env_sp_temp)
-      
-    }else{
-      
-      for (nb_obs in c(0:15)){
-        
-        load(here::here("outputs_cluster", glue::glue("{mod}_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
-        sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
-        names(sp_XY) <- c("x", "y", "sp")
-        vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
-        
-        semivar_multidim <- compute_semivar_multidim(sites, n_axes, niche_optimum, sp_XY, vario_sp, nsp, community_end)
-        semivar_multidim$Vario_sp_geoR <- vario_sp$u
-        semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
-        semivar_multidim$Sample_size <- vario_sp$n
-        
-        semivar_multidim<-semivar_multidim%>%
-          filter(Sample_size>500)
-        
-        m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
-        
-        Correlation_env_sp_temp <- data.frame(
-          Mortality = mortality,
-          Fecundity = fecundity,
-          Seed = seed,
-          Seed_r = seed_r,
-          Mod = mod,
-          Nb_obs = nb_obs,
-          Correlation = round(sqrt(summary(m)$r.squared), digits = 2)
-        )
-        
-        Correlation_env_sp <- rbind(Correlation_env_sp, Correlation_env_sp_temp)
-        
-      }#for n_obs
-    }#else Part_know
-  }#for mod
-}#for simu
-
-save(Correlation_env_sp, file=here::here("outputs", "Comparison", "Correlation_env_sp.RData"))
-
-load(file=here::here("outputs", "Comparison", "Correlation_env_sp.RData"))
-
-#One plot per Mortality * Fecundity option
-for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
-  for (fecundity in c("abund", "fixed")){
-    
-    data_figure <- Correlation_env_sp[which(Correlation_env_sp$Mortality==mortality&Correlation_env_sp$Fecundity==fecundity),]
-
-    Summary_correlation_env_sp<-data_figure%>%
-      dplyr::group_by(Mod, Nb_obs)%>%
-      dplyr::mutate(Mean_corr=mean(Correlation, na.rm=TRUE), Sd=sd(Correlation, na.rm=TRUE))%>%
-      dplyr::slice(1)%>%
-      dplyr::ungroup()%>%
-      dplyr::select(-Correlation, -Seed, -Seed_r)
-    
-    save(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", glue::glue("Mean_correlation_env_sp_{mortality}_{fecundity}.RData")))
-    
-    data_figure <- data_figure[data_figure$Mod!="Perf_know",]
-    
-    #Compute delta between with and without
-    data_figure <- data_figure%>%
-      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
-      dplyr::mutate(Delta = Correlation - dplyr::lag(Correlation) , ID_delta=Nb_obs)%>%
-      dplyr::filter(is.na(Delta)==FALSE)%>%
-      dplyr::ungroup()%>%
-      dplyr::select(Seed, Seed_r, ID_delta, Delta)
-    
-    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta))+
-      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
-      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
-      ggplot2::scale_colour_viridis_d()+
-      ggplot2::labs(x = expression(frac(sIV,uIV)),
-                    y = expression(paste(Delta, " environment-species correlation")))+
-      ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
-                     axis.text = ggplot2::element_text(size=7),
-                     legend.position = "none")
-    
-    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Corr_env_sp_{mortality}_{fecundity}.png")),
-                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
-  }
-}
-
-# ##### Moran's analysis #####
-# 
-# Moran <- data.frame(
-#   Mortality = numeric(),
-#   Fecundity = numeric(),
-#   Seed = numeric(),
-#   Seed_r = numeric(),
-#   Mod = character(),
-#   Nb_obs = numeric(),
-#   Moran = numeric()
-# )
-# 
-# for (simu in c(1:nrow(Simulations))){
-#   print(paste("Simu", simu))
-#   
-#   mortality <- Simulations[simu,1]
-#   fecundity <- Simulations[simu,2]
-#   seed <- Simulations[simu,3]
-#   seed_r <- Simulations[simu,4]
-#   
-#   for (mod in c("Perf_know", "Part_know", "Part_know_IV")){
-#     
-#     if(mod == "Perf_know"){
-#       
-#       load(here::here("outputs_cluster", glue::glue("{mod}_0_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
-#       sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
-#       names(sp_XY) <- c("x", "y", "sp")
-#       distance_inv <- 1/as.matrix(dist(cbind(sp_XY$x, sp_XY$y)))
-#       diag(distance_inv) <- 0
-#       mor <- ape::Moran.I(x = sp_XY$sp, weight = distance_inv)
-#       
-#       
-#       Moran_temp <- data.frame(
-#         Mortality = mortality,
-#         Fecundity = fecundity,
-#         Seed = seed,
-#         Seed_r = seed_r,
-#         Mod = mod,
-#         Nb_obs = NA,
-#         Moran = round(as.numeric(mor[1]), digits = 2)
-#       )
-#       
-#       Moran <- rbind(Moran, Moran_temp)
-#       
-#     }else{
-#       
-#       for (nb_obs in c(0:15)){
-#         
-#         load(here::here("outputs_cluster", glue::glue("{mod}_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
-#         sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
-#         names(sp_XY) <- c("x", "y", "sp")
-#         distance_inv <- 1/as.matrix(dist(cbind(sp_XY$x, sp_XY$y)))
-#         diag(distance_inv) <- 0
-#         mor <- ape::Moran.I(x = sp_XY$sp, weight = distance_inv)
-#         
-#         Moran_temp <- data.frame(
-#           Mortality = mortality,
-#           Fecundity = fecundity,
-#           Seed = seed,
-#           Seed_r = seed_r,
-#           Mod = mod,
-#           Nb_obs = nb_obs,
-#           Moran = round(as.numeric(mor[1]), digits = 2)
-#         )
-#         
-#         Moran <- rbind(Moran, Moran_temp)
-#         
-#       }#for n_obs
-#     }#else Part_know
-#   }#for mod
-# }#for simu
 
 #### Performance on sites where the species is present in the final community ####
 
@@ -1428,14 +1147,288 @@ for (simu in c(1:nrow(Simulations))){
   }#for mod
 }#for simu
 
+save(Perf_on_sites, file = here::here("outputs", "Comparison", "Perf_on_sites.RData"))
+
+# Retrieve R2 of statistical model #
+
+R2_df <- data.frame(Mortality=character(),
+                    Fecundity=character(),
+                    Seed=integer(),
+                    Nb_obs=integer(),
+                    R2=numeric())
+
+IV_all <- data.frame(Mortality=character(),
+                     Fecundity=character(),
+                     Seed=integer(),
+                     Nb_obs=integer(),
+                     IV=numeric())
+
+for (simu in c(1:nrow(Simulations[Simulations[,4]==1,]))){
+  
+  print(paste("Simu", simu))
+  
+  mortality <- Simulations[Simulations[,4]==1,][simu,1]
+  fecundity <- Simulations[Simulations[,4]==1,][simu,2]
+  seed <- Simulations[Simulations[,4]==1,][simu,3]
+  
+  load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_1_perf_E_Sp.RData")))
+  load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_1_env.RData")))
+  load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_1_sites.RData")))
+  load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_1_niche_optimum.RData")))
+  
+  nsp <- ncol(perf_E_Sp)
+  n_axes <- length(env)
+  
+  for(n_observed_axes in c(0:n_axes)){
+    
+    if(n_observed_axes>0){
+      Obs_env <- sites[,1:n_observed_axes]
+    }
+    
+    # Data-set
+    df <- data.frame(perf_E_Sp)
+    names(df) <- c(sprintf("Sp %02d", 1:nsp))
+    
+    df_perf <- data.frame(matrix(nrow=nrow(df), ncol=ncol(df)+2*n_axes))
+    df_perf[,1:ncol(df)] <- df
+    for(k in 1:n_axes){
+      df_perf[,ncol(df)+k] <- raster::values(raster::raster(env[[k]]))
+      df_perf[,ncol(df)+(k+n_axes)] <- (df_perf[,ncol(df)+k])^2
+    }
+    
+    colnames(df_perf) <- c(sprintf("Sp %02d", 1:nsp), sprintf("Env_%d", 1:n_axes), sprintf("Env_%d_sq", 1:n_axes))
+    
+    df_perf <- df_perf %>%
+      tidyr::pivot_longer(cols=c("Sp 01":glue::glue("Sp {nsp}")), names_to="Species", values_to="Perf")
+    
+    
+    if(n_observed_axes>0){
+      
+      formula <- as.formula(paste0("Perf~-1+Species+Species:",
+                                   paste0(colnames(df_perf)[1:n_observed_axes], collapse= "+Species:"),
+                                   "+Species:",
+                                   paste0(colnames(df_perf)[(n_axes+1):(n_axes+n_observed_axes)], collapse= "+Species:")))
+    }
+    if(n_observed_axes==0){
+      formula <- as.formula(paste0("Perf~-1+Species"))
+    }
+    
+    lm_fit <- lm(formula, data=df_perf)
+    
+    R2_df_temp <- data.frame(Mortality=mortality,
+                             Fecundity=fecundity,
+                             Seed=seed,
+                             Nb_obs=n_observed_axes,
+                             R2=summary(lm_fit)$r.squared)
+    R2_df <- rbind(R2_df, R2_df_temp)
+    
+    load(here::here("outputs_cluster", glue::glue("V_intra_{n_observed_axes}_obs_axes_{mortality}_{fecundity}_{seed}_1.RData")))
+    IV_all_temp <- data.frame(Mortality=rep(mortality, nsp),
+                             Fecundity=rep(fecundity, nsp),
+                             Seed=rep(seed, nsp),
+                             Nb_obs=rep(n_observed_axes, nsp),
+                             IV=V_intra$V)
+    IV_all <- rbind(IV_all, IV_all_temp)
+    
+  }
+}
+
+save(R2_df, file = here::here("outputs", "Comparison", "R2_df.RData"))
+save(IV_all, file = here::here("outputs", "Comparison", "IV_all.RData"))
+
+## PLOTS ##
+
+load(here::here("outputs", "Comparison", "Species_all.RData"))
+load(here::here("outputs", "Comparison", "Percentage_similarity.RData"))
+load(here::here("outputs", "Comparison", "Perf_on_sites.RData"))
+load(here::here("outputs", "Comparison", "R2_df.RData"))
+
+Summary_level_explanation_axes_nb <- R2_df%>%
+  dplyr::group_by(Mortality, Fecundity, Nb_obs)%>%
+  dplyr::mutate(Mean_explanation=mean(R2), Sd=sd(R2))%>%
+  dplyr::slice(1)%>%
+  dplyr::ungroup()%>%
+  dplyr::select(-Seed, -R2)
+
+#One plot per Mortality * Fecundity option
 for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
-  for (fecundity in c("abund", "fixed")){
+  for (fecundity in c("abund", "fixed")) {
+    
+    # Level of IV and of explained variation #
+    
+    data_figure <- IV_all[which(IV_all$Mortality==mortality&IV_all$Fecundity==fecundity),]
+    
+    data_figure_2 <- Summary_level_explanation_axes_nb[which(Summary_level_explanation_axes_nb$Mortality==mortality&Summary_level_explanation_axes_nb$Fecundity==fecundity),]
+    
+    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(Nb_obs), y=IV))+
+      ggplot2::geom_ribbon(data=data_figure_2, ggplot2::aes(x=as.factor(Nb_obs), y=Mean_explanation, ymin=Mean_explanation-Sd, ymax=Mean_explanation+Sd, group=1), colour="deeppink3", fill="hotpink3", alpha=0.3)+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6)+
+      ggplot2::geom_boxplot(alpha=0.6)+
+      ggplot2::geom_point(data=data_figure_2, ggplot2::aes(x=as.factor(Nb_obs), y=Mean_explanation), colour="deeppink3")+
+      ggplot2::geom_line(data=data_figure_2, ggplot2::aes(x=as.factor(Nb_obs), y=Mean_explanation, group=1), colour="deeppink3")+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = "Number of observed axes",
+                    y = "Observed uIV")+
+      ggplot2::scale_x_discrete(labels=c(0:n_axes))+
+      ggplot2::theme(text = ggplot2::element_text(size = 20), legend.position = "none")+
+      ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ . * 1 / 1 , name = "Proportion of variance explained by the axes"))
+    
+    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("IV_nb_axes_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    # Species richness and Shannon diversity index #
+    
+    data_figure <- Species_all[which(Species_all$Mortality==mortality&Species_all$Fecundity==fecundity),]
+    
+    data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+    
+    #Compute delta between with and without uIV
+    data_figure <- data_figure%>%
+      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+      dplyr::mutate(Delta_SR = N_sp - dplyr::lag(N_sp),
+                    Delta_Shannon = Shannon - dplyr::lag(Shannon),
+                    ID_delta=Nb_obs)%>%
+      dplyr::filter(is.na(Delta_SR)==FALSE)%>%
+      dplyr::ungroup()%>%
+      dplyr::select(Seed, Seed_r, ID_delta, Delta_SR, Delta_Shannon)
+    
+    p5 <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(ID_delta), y=Delta_SR))+
+      ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = expression(paste(Delta, " Species richness")))+
+      ggplot2::theme(text = ggplot2::element_text(size = 16),
+                     axis.text = ggplot2::element_text(size=14, colour = "grey20"),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p5, filename=here::here("outputs", "Comparison", glue::glue("Delta_species_richness_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    p6 <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(ID_delta), y=Delta_Shannon))+
+      ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = expression(paste(Delta, " Shannon index")))+
+      ggplot2::theme(text = ggplot2::element_text(size = 16),
+                     axis.text = ggplot2::element_text(size=14, colour = "grey20"),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p6, filename=here::here("outputs", "Comparison", glue::glue("Delta_Shannon_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    #without deltas
+    data_figure <- Species_all[which(Species_all$Mortality==mortality&Species_all$Fecundity==fecundity),]
+    data_figure <- data_figure[data_figure$Mod!="Part_know",]
+    data_figure[which(data_figure$Mod=="Perf_know"),]$Nb_obs <- "PK"
+    data_figure$Nb_obs <- factor(data_figure$Nb_obs,
+                                 levels = c(as.character(c(0:n_axes)), "PK"))
+    
+    data_figure$Boxplot_colour <- rep(0, nrow(data_figure))
+    data_figure[which(data_figure$Mod=="Perf_know"),]$Boxplot_colour <- 1
+    color_text <- c(rep("grey20", length(0:n_axes)), "darkred")
+    
+    p1 <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(Nb_obs), y=N_sp))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::scale_colour_viridis_d()+
+      ggnewscale::new_scale("colour")+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(colour=as.factor(Boxplot_colour)))+
+      ggplot2::scale_colour_manual(values=c("black", "darkred"))+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = "Species richness with uIV")+
+      ggplot2::theme(text = ggplot2::element_text(size = 16),
+                     axis.text = ggplot2::element_text(size=14),
+                     axis.text.x = ggplot2::element_text(colour = color_text),
+                     axis.text.y = ggplot2::element_text(colour = "grey20"),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p1, filename=here::here("outputs", "Comparison", glue::glue("Species_richness_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    p2 <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(Nb_obs), y=Shannon))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::scale_colour_viridis_d()+
+      ggnewscale::new_scale("colour")+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(colour=as.factor(Boxplot_colour)))+
+      ggplot2::scale_colour_manual(values=c("black", "darkred"))+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = "Shannon index with uIV")+
+      ggplot2::theme(text = ggplot2::element_text(size = 16),
+                     axis.text = ggplot2::element_text(size=14),
+                     axis.text.x = ggplot2::element_text(colour = color_text),
+                     axis.text.y = ggplot2::element_text(colour = "grey20"),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p2, filename=here::here("outputs", "Comparison", glue::glue("Shannon_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    # Percentage similarity #
+    
+    data_figure <- Percentage_similarity[which(Percentage_similarity$Mortality==mortality&Percentage_similarity$Fecundity==fecundity),]
+    
+    #Compute delta between with and without uIV
+    data_figure <- data_figure%>%
+      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+      dplyr::mutate(Delta= PS - lag(PS), ID_delta=Nb_obs)%>%
+      dplyr::filter(is.na(Delta)==FALSE)%>%
+      dplyr::select(Nb_obs, Seed, Seed_r, ID_delta, Delta)
+    
+    p7 <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(ID_delta), y=Delta))+
+      ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = expression(paste(Delta, " Similarity with perfect knowledge")))+
+      ggplot2::theme(text = ggplot2::element_text(size = 16),
+                     axis.text = ggplot2::element_text(size=14, colour = "grey20"),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p7, filename=here::here("outputs", "Comparison", glue::glue("Delta_percentage_similarity_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    #without deltas
+    data_figure <- Percentage_similarity[which(Percentage_similarity$Mortality==mortality&Percentage_similarity$Fecundity==fecundity),]
+    data_figure <- data_figure[data_figure$Mod!="Part_know",]
+    
+    # data_figure[which(data_figure$Mod=="Perf_know"),]$Nb_obs <- "PK"
+    # data_figure$Nb_obs <- factor(data_figure$Nb_obs,
+    #                              levels = c(as.character(c(0:n_axes)), "PK"))
+    
+    color_text <- c(rep("grey20", length(0:n_axes)), "darkred")
+    
+    data_figure[which(data_figure$Mod=="Perf_know"),]$Nb_obs <- 16
+    data_figure$Nb_obs <- as.integer(data_figure$Nb_obs)
+    data_1 <- data_figure[data_figure$Mod!="Perf_know",]
+    data_2 <- data_figure[data_figure$Mod=="Perf_know",]
+    
+    p3 <- ggplot2::ggplot(data=data_1, ggplot2::aes(x=Nb_obs, y=PS))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::geom_boxplot(alpha=0.6, colour="black", aes(group=Nb_obs))+
+      geom_point(data=data_2, ggplot2::aes(x=Nb_obs, y=PS), colour="darkred")+
+      ggplot2::scale_x_continuous(breaks=c(0:(n_axes+1)), labels=c(0:n_axes, "PK"))+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = "Similarity between PK and IP with uIV")+
+      ggplot2::theme(text = ggplot2::element_text(size = 16),
+                     axis.text = ggplot2::element_text(size=14),
+                     axis.text.x = ggplot2::element_text(colour = color_text),
+                     axis.text.y = ggplot2::element_text(colour = "grey20"),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p3, filename=here::here("outputs", "Comparison", glue::glue("Percentage_similarity_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    # Theoretical performance (from the perfect knowledge model) of the final species community #
     
     data_figure <- Perf_on_sites[which(Perf_on_sites$Mortality==mortality&Perf_on_sites$Fecundity==fecundity),]
     
     data_figure <- data_figure[data_figure$Mod!="Perf_know",]
     
-    #Compute delta between with and without
+    #Compute delta between with and without uIV
     data_figure <- data_figure%>%
       dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
       dplyr::mutate(Delta = Perf - dplyr::lag(Perf) , ID_delta=Nb_obs)%>%
@@ -1443,17 +1436,560 @@ for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
       dplyr::ungroup()%>%
       dplyr::select(Seed, Seed_r, ID_delta, Delta)
     
-    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=ID_delta, y=Delta))+
+    p8 <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(ID_delta), y=Delta))+
+      ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
       ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
       ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
       ggplot2::scale_colour_viridis_d()+
-      ggplot2::labs(x = expression(frac(sIV,uIV)),
-                    y = expression(paste(Delta, " performance")))+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = expression(paste(Delta, " Theoretical performance")))+
+      ggplot2::theme(text = ggplot2::element_text(size = 16),
+                     axis.text = ggplot2::element_text(size=14, colour = "grey20"),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p8, filename=here::here("outputs", "Comparison", glue::glue("Delta_performance_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    data_figure <- Perf_on_sites[which(Perf_on_sites$Mortality==mortality&Perf_on_sites$Fecundity==fecundity),]
+    data_figure <- data_figure[data_figure$Mod!="Part_know",]
+    data_figure[which(data_figure$Mod=="Perf_know"),]$Nb_obs <- "PK"
+    data_figure$Nb_obs <- factor(data_figure$Nb_obs,
+                                 levels = c(as.character(c(0:n_axes)), "PK"))
+    data_figure$Boxplot_colour <- rep(0, nrow(data_figure))
+    data_figure[which(data_figure$Mod=="Perf_know"),]$Boxplot_colour <- 1
+    color_text <- c(rep("grey20", length(0:n_axes)), "darkred")
+    
+    #without deltas
+    p4 <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(Nb_obs), y=Perf))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::scale_colour_viridis_d()+
+      ggnewscale::new_scale("colour")+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(colour=as.factor(Boxplot_colour)))+
+      ggplot2::scale_colour_manual(values=c("black", "darkred"))+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = "Theoretical performance with uIV")+
+      ggplot2::theme(text = ggplot2::element_text(size = 16),
+                     axis.text = ggplot2::element_text(size=14),
+                     axis.text.x = ggplot2::element_text(colour = color_text),
+                     axis.text.y = ggplot2::element_text(colour = "grey20"),
+                     legend.position = "none")
+    
+    ggplot2::ggsave(p4, filename=here::here("outputs", "Comparison", glue::glue("Performance_{mortality}_{fecundity}.png")),
+                    width=fig_width, height=fig_width/2, units="cm", dpi=300)
+    
+    
+    data_level_explanation <- Summary_level_explanation_axes_nb[Summary_level_explanation_axes_nb$Mortality==mortality&Summary_level_explanation_axes_nb$Fecundity==fecundity,]
+    
+    fun <- function(x) ifelse(x == 0, "0", sub("^0+", "", x))
+    
+    labels <- fun(round(data_level_explanation$Mean_explanation, digits=2))
+    
+    plot_level_explanation <- ggplot(data_level_explanation, aes(Nb_obs, Mean_explanation))+
+      geom_blank()+
+      theme_classic()+
+      scale_x_continuous(name="Level of explained variance", breaks=data_level_explanation$Nb_obs, labels=labels)+
+      theme(text = ggplot2::element_text(size = 16),
+            axis.text = ggplot2::element_text(size=13),
+            axis.line.x = ggplot2::element_line(arrow = arrow(length=unit(0.15, "inches")), colour="deeppink3"),
+            axis.ticks.x=ggplot2::element_line(colour="deeppink3"),
+            axis.text.x=ggplot2::element_text(colour="deeppink3"),
+            axis.line.y=element_blank(),
+            axis.text.y=element_blank(),
+            axis.ticks.y=element_blank(),
+            axis.title.y=element_blank(),
+            panel.grid.minor.y=element_blank(),
+            panel.grid.major.y=element_blank(),
+            plot.margin = margin(l = 50,
+                                 r = 0,
+                                 t = 0,
+                                 b = 0.5))
+    
+    arrange_SR_Shannon <- ggpubr::ggarrange(p1, p2, p5, p6,
+                                   nrow=2, ncol=2, align = "v")
+    arrange_PS_Perf <- ggpubr::ggarrange(p3, p4, p7, p8,
+                                            nrow=2, ncol=2, align = "v")
+    arrange_arrow <- ggpubr::ggarrange(plot_level_explanation, plot_level_explanation,
+                                       nrow=1, ncol=2, align="v")
+    arrange_results_1 <- ggpubr::ggarrange(arrange_SR_Shannon, arrange_arrow, nrow=2, ncol=1, heights=c(15, 1))
+    arrange_results_2 <- ggpubr::ggarrange(arrange_PS_Perf, arrange_arrow, nrow=2, ncol=1, heights=c(15, 1))
+    ggplot2::ggsave(arrange_results_1, filename=here::here("outputs", "Comparison", glue::glue("Results_1_{mortality}_{fecundity}.png")),
+                    width=40, height=30, units="cm", dpi=300)
+    ggplot2::ggsave(arrange_results_2, filename=here::here("outputs", "Comparison", glue::glue("Results_2_{mortality}_{fecundity}.png")),
+                    width=40, height=30, units="cm", dpi=300)
+    
+    arrange_a <- ggpubr::ggarrange(p1, p2, p3, p4, p5, p6, p7, p8,
+                      nrow=2, ncol=4, align = "v")
+    arrange_b <- ggpubr::ggarrange(plot_level_explanation, plot_level_explanation, plot_level_explanation, plot_level_explanation,
+                           nrow=1, ncol=4, align="v")
+    final_plot <- ggpubr::ggarrange(arrange_a, arrange_b, nrow=2, ncol=1, heights=c(15, 1))
+    
+    ggplot2::ggsave(final_plot, filename=here::here("outputs", "Comparison", glue::glue("Results_all_{mortality}_{fecundity}.png")),
+                    width=50, height=50/2, units="cm", dpi=300)
+    
+    }
+}
+
+# # Compute multidimensional semivariance
+# 
+# Correlation_env_sp <- data.frame(
+#   Mortality = numeric(),
+#   Fecundity = numeric(),
+#   Seed = numeric(),
+#   Seed_r = numeric(),
+#   Mod = character(),
+#   Nb_obs = numeric(),
+#   Correlation = numeric()
+#   )
+# 
+# for (simu in c(1:nrow(Simulations))){
+#   print(paste("Simu", simu))
+#   
+#   mortality <- Simulations[simu,1]
+#   fecundity <- Simulations[simu,2]
+#   seed <- Simulations[simu,3]
+#   seed_r <- Simulations[simu,4]
+#   
+#   #Load the environment and species optima once per configuration (seed)
+#   if(seed_r==1){
+#     load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_sites.RData")))
+#     load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_{seed_r}_niche_optimum.RData")))
+#   }
+#   
+#   for (mod in c("Perf_know", "Part_know", "Part_know_IV")){
+#     
+#     if(mod == "Perf_know"){
+#       
+#       load(here::here("outputs_cluster", glue::glue("{mod}_0_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+#       sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
+#       names(sp_XY) <- c("x", "y", "sp")
+#       vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
+#       
+#       semivar_multidim <- compute_semivar_multidim(sites, n_axes, niche_optimum, sp_XY, vario_sp, nsp, community_end)
+#       semivar_multidim$Vario_sp_geoR <- vario_sp$u
+#       semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
+#       semivar_multidim$Sample_size <- vario_sp$n
+#       
+#       semivar_multidim<-semivar_multidim%>%
+#         filter(Sample_size>500)
+#       
+#       m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
+#       
+#       Correlation_env_sp_temp <- data.frame(
+#         Mortality = mortality,
+#         Fecundity = fecundity,
+#         Seed = seed,
+#         Seed_r = seed_r,
+#         Mod = mod,
+#         Nb_obs = NA,
+#         Correlation = round(sqrt(summary(m)$r.squared), digits = 2)
+#       )
+#       
+#       Correlation_env_sp <- rbind(Correlation_env_sp, Correlation_env_sp_temp)
+#       
+#     }else{
+#       
+#       for (nb_obs in c(0:15)){
+#         
+#         load(here::here("outputs_cluster", glue::glue("{mod}_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+#         sp_XY <- data.frame(raster::rasterToPoints(raster::raster(community_end)))
+#         names(sp_XY) <- c("x", "y", "sp")
+#         vario_sp <- geoR::variog(coords=cbind(sp_XY$x, sp_XY$y), data=sp_XY$sp)
+#         
+#         semivar_multidim <- compute_semivar_multidim(sites, n_axes, niche_optimum, sp_XY, vario_sp, nsp, community_end)
+#         semivar_multidim$Vario_sp_geoR <- vario_sp$u
+#         semivar_multidim$Distance <- vario_sp$bins.lim[-length(vario_sp$bins.lim)]
+#         semivar_multidim$Sample_size <- vario_sp$n
+#         
+#         semivar_multidim<-semivar_multidim%>%
+#           filter(Sample_size>500)
+#         
+#         m <- lm(semivar_multidim$Vario_sp ~ semivar_multidim$Vario_env)
+#         
+#         Correlation_env_sp_temp <- data.frame(
+#           Mortality = mortality,
+#           Fecundity = fecundity,
+#           Seed = seed,
+#           Seed_r = seed_r,
+#           Mod = mod,
+#           Nb_obs = nb_obs,
+#           Correlation = round(sqrt(summary(m)$r.squared), digits = 2)
+#         )
+#         
+#         Correlation_env_sp <- rbind(Correlation_env_sp, Correlation_env_sp_temp)
+#         
+#       }#for n_obs
+#     }#else Part_know
+#   }#for mod
+# }#for simu
+# 
+# save(Correlation_env_sp, file=here::here("outputs", "Comparison", "Correlation_env_sp.RData"))
+# 
+# load(file=here::here("outputs", "Comparison", "Correlation_env_sp.RData"))
+# 
+# #One plot per Mortality * Fecundity option
+# for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
+#   for (fecundity in c("abund", "fixed")){
+#     
+#     data_figure <- Correlation_env_sp[which(Correlation_env_sp$Mortality==mortality&Correlation_env_sp$Fecundity==fecundity),]
+# 
+#     Summary_correlation_env_sp<-data_figure%>%
+#       dplyr::group_by(Mod, Nb_obs)%>%
+#       dplyr::mutate(Mean_corr=mean(Correlation, na.rm=TRUE), Sd=sd(Correlation, na.rm=TRUE))%>%
+#       dplyr::slice(1)%>%
+#       dplyr::ungroup()%>%
+#       dplyr::select(-Correlation, -Seed, -Seed_r)
+#     
+#     save(Summary_correlation_env_sp, file=here::here("outputs", "Comparison", glue::glue("Mean_correlation_env_sp_{mortality}_{fecundity}.RData")))
+#     
+#     data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+#     
+#     #Compute delta between with and without
+#     data_figure <- data_figure%>%
+#       dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+#       dplyr::mutate(Delta = Correlation - dplyr::lag(Correlation) , ID_delta=Nb_obs)%>%
+#       dplyr::filter(is.na(Delta)==FALSE)%>%
+#       dplyr::ungroup()%>%
+#       dplyr::select(Seed, Seed_r, ID_delta, Delta)
+#     
+#     p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(ID_delta), y=Delta))+
+#       ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
+#       ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+#       ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+#       ggplot2::scale_colour_viridis_d()+
+#       ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+#                     y = expression(paste(Delta, " environment-species correlation")))+
+#       ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+#                      axis.text = ggplot2::element_text(size=7),
+#                      legend.position = "none")
+#     
+#     ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Delta_corr_env_sp_{mortality}_{fecundity}.png")),
+#                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
+#   }
+# }
+
+
+## Understanding why delta performance is higher than 0 with the proportional mortality ##
+
+Comparison_clandestines <- data.frame(
+  Mortality=character(),
+  Fecundity=character(),
+  Mod=character(),
+  Nb_obs=integer(),
+  Seed=integer(),
+  Seed_r=integer(),
+  Abund_clandestines=numeric(),
+  perf_clandestines=numeric(),
+  perf_not_clandestines=numeric(),
+  perf_tot=numeric())
+
+for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
+  for (fecundity in c("abund", "fixed")){
+    
+    for(seed in 1:10){
+      
+      #same perf_E_Sp for all repetitions of the same configuration
+      load(here::here("outputs_cluster", glue::glue("Perf_know_0_{mortality}_{fecundity}_{seed}_1_perf_E_Sp.RData")))
+      winner <- apply(X=perf_E_Sp, MARGIN=1, FUN=which.max)
+      
+      for(seed_r in 1:10){
+        mod <- "Perf_know"
+        load(here::here("outputs_cluster", glue::glue("{mod}_0_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+        
+        perf_present <- rep(NA, length(community_end))
+        w0 <- (as.vector(t(community_end))==0)
+        perf_present[w0] <- NA
+        perf_present[!w0] <- diag(perf_E_Sp[!w0, as.vector(t(community_end))[!w0]])
+        
+        Comparison_clandestines_temp <- data.frame(
+          Mortality=mortality,
+          Fecundity=fecundity,
+          Mod=mod,
+          Nb_obs=NA,
+          Seed=seed,
+          Seed_r=seed_r,
+          Abund_clandestines=length(perf_present[which((winner==as.vector(t(community_end)))==FALSE)]),
+          perf_clandestines=mean(perf_present[which((winner==as.vector(t(community_end)))==FALSE)]),
+          perf_not_clandestines=mean(perf_present[which((winner==as.vector(t(community_end)))==TRUE)]),
+          perf_tot=mean(perf_present, na.rm = TRUE))
+        
+        Comparison_clandestines <- rbind(Comparison_clandestines, Comparison_clandestines_temp)
+        
+        for (mod in c("Part_know", "Part_know_IV")){
+          for (nb_obs in 1:n_axes){
+            
+            load(here::here("outputs_cluster", glue::glue("{mod}_{nb_obs}_{mortality}_{fecundity}_{seed}_{seed_r}_community_end.RData")))
+            
+            
+            perf_present <- rep(NA, length(community_end))
+            w0 <- (as.vector(t(community_end))==0)
+            perf_present[w0] <- NA
+            perf_present[!w0] <- diag(perf_E_Sp[!w0, as.vector(t(community_end))[!w0]])
+            
+            Comparison_clandestines_temp <- data.frame(
+              Mortality=mortality,
+              Fecundity=fecundity,
+              Mod=mod,
+              Nb_obs=nb_obs,
+              Seed=seed,
+              Seed_r=seed_r,
+              Abund_clandestines=length(perf_present[which((winner==as.vector(t(community_end)))==FALSE)]),
+              perf_clandestines=mean(perf_present[which((winner==as.vector(t(community_end)))==FALSE)]),
+              perf_not_clandestines=mean(perf_present[which((winner==as.vector(t(community_end)))==TRUE)]),
+              perf_tot=mean(perf_present, na.rm = TRUE))
+            
+            Comparison_clandestines <- rbind(Comparison_clandestines, Comparison_clandestines_temp)
+          }
+        }
+      }
+    }
+  }
+}
+
+save(Comparison_clandestines, file = here::here("outputs", "Comparison", "Comparison_clandestines.RData"))
+
+load(here::here("outputs", "Comparison", "Comparison_clandestines.RData"))
+
+
+for (mortality in c("fixed", "prop", "stocha", "stocha_basal")){
+  for (fecundity in c("abund", "fixed")){
+    
+    data_figure <- Comparison_clandestines[which(Comparison_clandestines$Mortality==mortality&Comparison_clandestines$Fecundity==fecundity),]
+    
+    data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+    
+    #Compute delta between with and without
+    data_figure <- data_figure%>%
+      dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+      dplyr::mutate(Delta = Abund_clandestines - dplyr::lag(Abund_clandestines) , ID_delta=Nb_obs)%>%
+      dplyr::filter(is.na(Delta)==FALSE)%>%
+      dplyr::ungroup()%>%
+      dplyr::select(Seed, Seed_r, ID_delta, Delta)
+    
+    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(ID_delta), y=Delta))+
+      ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed)), alpha=0.6, height=0, width=0.3, shape=16)+
+      ggplot2::geom_boxplot(alpha=0.6, ggplot2::aes(group=ID_delta))+
+      ggplot2::scale_colour_viridis_d()+
+      ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                    y = expression(paste(Delta, " Sub-optimal species abundance")))+
+      ggplot2::ggtitle(paste0("Mortality ", mortality, ", Fecundity ", fecundity))+
       ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
                      axis.text = ggplot2::element_text(size=7),
                      legend.position = "none")
     
-    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Performance_{mortality}_{fecundity}.png")),
+    ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Delta_abundance_clandestines_{mortality}_{fecundity}.png")),
                     width=fig_width, height=fig_width/2, units="cm", dpi=300)
   }
 }
+
+
+mortality <- c("prop", "stocha")
+fecundity <- "abund"
+
+data_figure <- Perf_on_sites[which(Perf_on_sites$Mortality%in%mortality&Perf_on_sites$Fecundity==fecundity),]
+
+data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+
+#Compute delta between with and without
+data_figure <- data_figure%>%
+  dplyr::group_by(Mortality, Seed, Seed_r, Nb_obs)%>%
+  dplyr::mutate(Delta = Perf - dplyr::lag(Perf) , ID_delta=Nb_obs)%>%
+  dplyr::filter(is.na(Delta)==FALSE)%>%
+  dplyr::ungroup()%>%
+  dplyr::select(Mortality, Seed, Seed_r, ID_delta, Delta)
+
+p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(ID_delta), y=Delta))+
+  ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
+  ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed),
+                                    shape=as.factor(Mortality),
+                                    group=Mortality),
+                       alpha=0.6,
+                       position=ggplot2::position_jitterdodge(jitter.width=0.5),
+                       show.legend=F)+
+  ggplot2::scale_colour_viridis_d()+
+  ggnewscale::new_scale("colour")+
+  ggplot2::geom_boxplot(ggplot2::aes(colour=Mortality), alpha=0.6)+
+  ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+  ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                y = expression(paste(Delta, " Theoretical performance")))+
+  ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                 axis.text = ggplot2::element_text(size=7))
+
+ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Delta_performance_comparison_mortality.png")),
+                width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+
+mortality <- c("prop", "stocha")
+fecundity <- "abund"
+
+for (mod in c("Part_know", "Part_know_IV")){
+  
+  data_figure <- Perf_on_sites[which(Perf_on_sites$Mortality%in%mortality&Perf_on_sites$Fecundity==fecundity),]
+  
+  data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+  
+  data_figure <- data_figure[data_figure$Mod==mod,]
+  
+  p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(Nb_obs), y=Perf))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed),
+                                      shape=as.factor(Mortality),
+                                      group=Mortality),
+                         alpha=0.6,
+                         position=ggplot2::position_jitterdodge(jitter.width=0.5),
+                         show.legend=F)+
+    ggplot2::scale_colour_viridis_d()+
+    ggnewscale::new_scale("colour")+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=Mortality), alpha=0.6)+
+    ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+    ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                  y = "Theoretical performance")+
+    ggplot2::ggtitle(paste0(mod))+
+    ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                   axis.text = ggplot2::element_text(size=7))
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Performance_comparison_mortality_{mod}.png")),
+                  width=fig_width, height=fig_width/2, units="cm", dpi=300)
+}
+
+
+mortality <- c("prop", "stocha")
+fecundity <- "abund"
+
+data_figure <- Comparison_clandestines[which(Comparison_clandestines$Mortality%in%mortality&Comparison_clandestines$Fecundity==fecundity),]
+
+data_figure <- data_figure[data_figure$Mod!="Perf_know",]
+
+#Compute delta between with and without
+data_figure <- data_figure%>%
+  dplyr::group_by(Mortality, Seed, Seed_r, Nb_obs)%>%
+  dplyr::mutate(Delta = Abund_clandestines - dplyr::lag(Abund_clandestines) , ID_delta=Nb_obs)%>%
+  dplyr::filter(is.na(Delta)==FALSE)%>%
+  dplyr::ungroup()%>%
+  dplyr::select(Mortality, Seed, Seed_r, ID_delta, Delta)
+
+p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(ID_delta), y=Delta))+
+  ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
+  ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed),
+                                    shape=as.factor(Mortality),
+                                    group=Mortality),
+                       alpha=0.6,
+                       position=ggplot2::position_jitterdodge(jitter.width=0.5),
+                       show.legend=F)+
+  ggplot2::scale_colour_viridis_d()+
+  ggnewscale::new_scale("colour")+
+  ggplot2::geom_boxplot(ggplot2::aes(colour=Mortality), alpha=0.6)+
+  ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+  ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                y = expression(paste(Delta, " Sub-optimal species abundance")))+
+  ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                 axis.text = ggplot2::element_text(size=7))
+
+ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Delta_abundance_clandestines_comparison_mortality.png")),
+                width=fig_width, height=fig_width/2, units="cm", dpi=300)
+
+
+mortality <- c("prop", "stocha")
+fecundity <- "abund"
+
+for (mod in c("Perf_know", "Part_know", "Part_know_IV")){
+  
+  data_figure <- Comparison_clandestines[which(Comparison_clandestines$Mortality%in%mortality&Comparison_clandestines$Fecundity==fecundity),]
+  
+  data_figure <- data_figure[data_figure$Mod==mod,]
+  
+  if(mod=="Perf_know"){
+    p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(Nb_obs), y=Abund_clandestines))+
+      ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed),
+                                        shape=as.factor(Mortality),
+                                        group=Mortality),
+                           alpha=0.6,
+                           position=ggplot2::position_jitterdodge(jitter.width=0.5),
+                           show.legend=F)+
+      ggplot2::scale_colour_viridis_d()+
+      ggnewscale::new_scale("colour")+
+      ggplot2::geom_boxplot(ggplot2::aes(colour=Mortality), alpha=0.6)+
+      ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+      ggplot2::labs(x="", y = "Sub-optimal species abundance")+
+      ggplot2::ggtitle(paste0(mod))+
+      ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                     axis.text = ggplot2::element_text(size=7),
+                     axis.text.x=element_blank(), #remove x axis labels
+                     axis.ticks.x=element_blank(),)
+  }else{
+  
+  p <- ggplot2::ggplot(data=data_figure, ggplot2::aes(x=as.factor(Nb_obs), y=Abund_clandestines))+
+    ggplot2::geom_jitter(ggplot2::aes(colour=as.factor(Seed),
+                                      shape=as.factor(Mortality),
+                                      group=Mortality),
+                         alpha=0.6,
+                         position=ggplot2::position_jitterdodge(jitter.width=0.5),
+                         show.legend=F)+
+    ggplot2::scale_colour_viridis_d()+
+    ggnewscale::new_scale("colour")+
+    ggplot2::geom_boxplot(ggplot2::aes(colour=Mortality), alpha=0.6)+
+    ggplot2::scale_colour_manual(values=c("#808080","black", "#4C5866"))+
+    ggplot2::labs(x = expression(paste("Number of observed axes ( ~ ", frac(sIV,uIV), " )")),
+                  y = "Sub-optimal species abundance")+
+    ggplot2::ggtitle(paste0(mod))+
+    ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                   axis.text = ggplot2::element_text(size=7))
+  }
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Abund_clandestines_comparison_mortality_{mod}.png")),
+                  width=fig_width, height=fig_width/2, units="cm", dpi=300)
+}
+
+
+fecundity <- "abund"
+for (mortality in c("prop", "stocha")){
+
+  Perf_vs_clandestine_abundance <- Comparison_clandestines[which(Comparison_clandestines$Mortality==mortality&Comparison_clandestines$Fecundity==fecundity),]
+  Perf_vs_clandestine_abundance <- Perf_vs_clandestine_abundance[Perf_vs_clandestine_abundance$Mod!="Perf_know",]
+  
+  Perf_vs_clandestine_abundance <- Perf_vs_clandestine_abundance%>%
+    dplyr::group_by(Seed, Seed_r, Nb_obs)%>%
+    dplyr::mutate(Delta_perf = perf_tot - dplyr::lag(perf_tot) , ID_delta=Nb_obs)%>%
+    dplyr::mutate(Delta_abund_clandestine = Abund_clandestines - dplyr::lag(Abund_clandestines) , ID_delta=Nb_obs)%>%
+    dplyr::filter(is.na(Delta_perf)==FALSE, is.na(Delta_abund_clandestine)==FALSE)%>%
+    dplyr::ungroup()%>%
+    dplyr::select(Seed, Seed_r, ID_delta, Delta_perf, Delta_abund_clandestine)
+  
+  p <- ggplot2::ggplot(data=Perf_vs_clandestine_abundance, ggplot2::aes(x=Delta_abund_clandestine, y=Delta_perf))+
+    ggplot2::geom_hline(yintercept=0, colour="grey60", linetype='dashed')+
+    ggplot2::geom_point(ggplot2::aes(colour=as.factor(ID_delta)), alpha=0.6)+
+    ggplot2::scale_colour_viridis_d("Number of observed axes", option="inferno")+
+    ggplot2::labs(x = expression(paste(Delta, "Sub-optimal species abundance")),
+                  y = expression(paste(Delta, " Theoretical performance")))+
+    ggplot2::ggtitle(paste0("Mortality ", mortality))+
+    ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                   axis.text = ggplot2::element_text(size=7))
+  
+  ggplot2::ggsave(p, filename=here::here("outputs", "Comparison", glue::glue("Delta_abund_clandestines_vs_delta_perf_{mortality}.png")),
+                  width=fig_width, height=fig_width, units="cm", dpi=300)
+}
+
+
+mortality <- "prop"
+fecundity <- "abund"
+
+Perf_vs_clandestine_abundance <- Comparison_clandestines[which(Comparison_clandestines$Mortality==mortality&Comparison_clandestines$Fecundity==fecundity),]
+Perf_vs_clandestine_abundance <- Perf_vs_clandestine_abundance[Perf_vs_clandestine_abundance$Mod!="Perf_know",]
+
+ggplot2::ggplot(data=Perf_vs_clandestine_abundance, ggplot2::aes(x=Abund_clandestines, y=perf_tot))+
+  ggplot2::geom_point(ggplot2::aes(colour=as.factor(Nb_obs)), alpha=0.6)+
+  ggplot2::scale_colour_viridis_d("Number of observed axes", option="inferno")+
+  ggplot2::labs(x = "Abundance of sub-optimal species",
+                y = "Theoretical performance")+
+  ggplot2::ggtitle(paste0("Mortality ", mortality))+
+  ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                 axis.text = ggplot2::element_text(size=7))
+
+ggplot2::ggplot(data=Perf_vs_clandestine_abundance, ggplot2::aes(x=Abund_clandestines, y=perf_tot))+
+  ggplot2::geom_point(ggplot2::aes(colour=as.factor(Mod)), alpha=0.6)+
+  ggplot2::scale_colour_manual("Model", values=c("darkblue","gold"))+
+  ggplot2::labs(x = "Abundance of sub-optimal species",
+                y = "Theoretical performance")+
+  ggplot2::ggtitle(paste0("Mortality ", mortality))+
+  ggplot2::theme(axis.title = ggplot2::element_text(size = 10),
+                 axis.text = ggplot2::element_text(size=7))
+
